@@ -574,6 +574,7 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .pip-sign.ok{border-style:solid;border-color:#bfe6cc;background:var(--green-50)}.pip-sign.ok>.msr{color:var(--green)}
 .pip-sign .ok-t{color:var(--green)!important}
 .pip-tbl td{vertical-align:top}
+.btn-warn-soft{background:#fff4e5;color:#b45309;border:1px solid #f6d5a8}.btn-warn-soft:hover{background:#ffead0}
 .pip-pst{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--muted);margin-top:3px}
 .pip-pst .msr{font-size:15px}.pip-pst.ok{color:#15803d}.pip-pst.wait{color:#b45309;font-weight:500}
 .b-purple{background:#f3efff;color:#6d28d9}
@@ -986,7 +987,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.0.0'
+  VERSION: '4.1.0'
 };
 
 const PAGES = {
@@ -2252,7 +2253,7 @@ function renderDashboard() {
         }).join('') : '<p class="muted small">ยังไม่มีกิจกรรม</p>'}</div></div>
       </div>`;
   const left = sysCardHtml + docCardHtml, right = annCardHtml + logCardHtml;
-  return `${!A && S.pip && (S.pip.todo || S.pip.draft) && canSee('pip') ? `<div class="notice" style="background:#fff7e6;cursor:pointer" data-go="pip"><span class="msr">${S.pip.todo ? 'draw' : 'edit_note'}</span><div>แผนพัฒนาการปฏิบัติงาน (PIP):${S.pip.draft ? ` รอร่วมกำหนดเป้าหมาย <b>${S.pip.draft} รายการ</b>` : ''}${S.pip.todo ? ` รอให้คุณลงนาม <b>${S.pip.todo} รายการ</b>` : ''} — <u>คลิกเพื่อไปที่แผน PIP</u></div></div>` : ''}
+  return `${!A && S.pip && (S.pip.todo || S.pip.draft) && canSee('pip') ? `<div class="notice" style="background:#fff7e6;cursor:pointer" data-go="pip"><span class="msr">${S.pip.todo ? 'draw' : 'edit_note'}</span><div>แผนพัฒนาการปฏิบัติงาน (PIP):${S.pip.draft ? ` รอคุณกำหนดเป้าหมาย KPI <b>${S.pip.draft} รายการ</b>` : ''}${S.pip.todo ? ` รอให้คุณลงนาม <b>${S.pip.todo} รายการ</b>` : ''} — <u>คลิกเพื่อไปที่แผน PIP</u></div></div>` : ''}
   <div class="hero"><div class="hero-in">
     <div><small><span class="msr" style="font-size:18px">waving_hand</span>${greeting()}</small>
       <h2>${esc(u.fullName || u.username)}</h2>
@@ -2873,15 +2874,16 @@ function pipSignCount(r) { return ['emp', 'sup1', 'sup2'].filter(k => r.signs &&
 function pipCur() { return S.pips.find(x => x.id === S.pv.id) || null; }
 function pipCan(r) {
   const A = isAdmin(), roles = r ? r.myRoles || [] : [], sup1 = roles.indexOf('sup1') > -1;
-  const ed = A || roles.indexOf('emp') > -1 || sup1;
+  const ed = A || roles.indexOf('emp') > -1;
   const st = r ? r.status : 'draft';
   return {
     edit: st === 'draft' && ed,
     submit: st === 'draft' && ed && !!(r && (r.kpis || []).length),
     sign: !!r && pipSignable(r).length > 0,
     forward: !!r && pipCanForward(r),
-    ret: (st === 'signing' && (roles.indexOf('emp') > -1 || sup1)) || (st === 'review' && roles.indexOf('sup2') > -1),
-    recall: (A && st !== 'draft') || (sup1 && (st === 'signing' || st === 'review')),
+    ret: (st === 'signing' && sup1) || (st === 'review' && (sup1 || roles.indexOf('sup2') > -1)),
+    pull: st === 'signing' && roles.indexOf('emp') > -1 && !sup1,
+    recall: A && st !== 'draft',
     openEval: A && st === 'active',
     closeEval: A && st === 'evalOpen',
     evaluate: (st === 'evalOpen' || st === 'evaluated') && (A || sup1),
@@ -2890,7 +2892,7 @@ function pipCan(r) {
 }
 function pipSetSummary() {
   if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review').length }; }
-  else S.pip = { count: S.pips.length, todo: S.pips.filter(pipTodo).length, draft: S.pips.filter(r => r.status === 'draft' && (r.myRoles || []).some(k => k === 'emp' || k === 'sup1')).length };
+  else S.pip = { count: S.pips.length, todo: S.pips.filter(pipTodo).length, draft: S.pips.filter(r => r.status === 'draft' && (r.myRoles || []).indexOf('emp') > -1).length };
   refreshCounts();
 }
 async function loadPips() {
@@ -2999,7 +3001,7 @@ function renderPipList() {
   }).join('');
   return `
   ${!A && S.pip.todo ? `<div class="notice" style="background:#fff7e6"><span class="msr">draw</span><div>มีแผน PIP <b>${S.pip.todo} รายการ</b> รอการดำเนินการจากคุณ (ลงนาม / ส่งต่อ / บันทึกผลลัพธ์และประเมินผล)</div></div>` : ''}
-  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอ<b>ร่วมกันกำหนดเป้าหมาย KPI</b> ระหว่างผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรง — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข"</div></div>` : ''}
+  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอคุณ<b>กำหนดเป้าหมาย KPI</b> — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข" เสร็จแล้วกด "ส่งลงนาม" ให้ผู้บังคับบัญชาพิจารณา${S.pips.some(r => r.status === 'draft' && r.note && (r.myRoles || []).indexOf('emp') > -1) ? ' · <b style="color:var(--red)">มีแผนที่ถูกส่งกลับให้แก้ไข</b>' : ''}</div></div>` : ''}
   <div class="toolbar">
     <label class="pip-fy"><span class="msr">event</span><select class="input" id="pipFy">
       <option value="all"${S.pf.fy === 'all' ? ' selected' : ''}>ทุกปีงบประมาณ</option>
@@ -3014,7 +3016,7 @@ function renderPipList() {
     <div class="search"><span class="msr">search</span><input id="pipQ" placeholder="ค้นหารหัสบุคลากร ชื่อ ฝ่าย ผู้บังคับบัญชา..." value="${esc(S.pv.q)}"></div>
     <div class="seg pip-chips">${chips.map(c => `<label><input type="radio" name="pipSt" value="${c[0]}" ${S.pv.st === c[0] ? 'checked' : ''}><span>${c[1]}${c[0] === 'todo' ? '' : ' (' + cnt(c[0]) + ')'}</span></label>`).join('')}</div>
   </div>
-  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงร่วมกันตั้งเป้าหมาย KPI → ลงนาม → ผบ.โดยตรง<b>ส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · <b>ขั้นที่ 2</b> เมื่อถึงรอบ Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} แล้ว<b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
+  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนากำหนดเป้าหมาย KPI → ส่งลงนาม → ผบ.โดยตรงพิจารณา (ลงนาม หรือ<b>ส่งกลับแก้ไข</b>พร้อมเหตุผล) → ผบ.โดยตรง<b>ส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · <b>ขั้นที่ 2</b> เมื่อถึงรอบ Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} แล้ว<b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
   ${S.pips.length ? sections : `<div class="card">${emptyState('trending_up', 'ยังไม่มีแผนพัฒนาการปฏิบัติงาน', A ? 'เพิ่มแผน PIP ทีละคน หรือนำเข้าหลายคนจากตาราง' : 'เมื่อมีแผน PIP ที่เกี่ยวข้องกับคุณ รายการจะแสดงที่นี่', A ? { label: 'เพิ่มแผน PIP', attr: 'data-action="pipNew"' } : null)}</div>`}`;
 }
 function pipBlankData() {
@@ -3085,15 +3087,15 @@ function renderPipEditor() {
     </div></div></div>`;
   const kpiSec = `
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI และการดำเนินการ</h3><span class="muted small">สูงสุด 3 เป้าหมาย ตามแบบฟอร์ม</span></div><div class="card-b" id="pipKpis">
-    ${A ? '<p class="small muted" style="margin-top:0">ปกติผู้เข้ารับการพัฒนาและผู้บังคับบัญชาเป็นผู้กำหนดร่วมกัน — Admin แก้ไขได้เมื่อจำเป็น</p>' : ''}
+    ${A ? '<p class="small muted" style="margin-top:0">ปกติผู้เข้ารับการพัฒนาเป็นผู้กำหนด — Admin แก้ไขได้เมื่อจำเป็น</p>' : ''}
     ${d.kpis.map((k, i) => pipKpiHtml(k, i, d.kpis.length)).join('')}
     ${d.kpis.length < 3 ? `<button type="button" class="btn btn-light" data-action="pipAddKpi"><span class="msr">add</span>เพิ่มเป้าหมาย</button>` : ''}
   </div></div>`;
   return `
   ${cur && cur.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(cur.note)}</div></div>` : ''}
   <div class="req-note"><span class="msr">info</span><div>${A
-    ? (isNew ? 'Admin เพิ่มผู้เกี่ยวข้อง รอบ และวันที่เริ่ม → กด <b>"บันทึก"</b> แล้ว <b>ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาจะร่วมกันกำหนดเป้าหมาย KPI</b> จากบัญชีของตนเอง (ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งาน) · เพิ่มหลายคนพร้อมกันใช้ปุ่ม "นำเข้าจากตาราง"' : 'แก้ไขข้อมูลแผน (สถานะกำหนดเป้าหมาย)')
-    : 'ผู้เข้ารับการพัฒนา ผู้บังคับบัญชาโดยตรง และผู้บังคับบัญชาที่สูงขึ้นไป <b>แก้ไขเป้าหมายร่วมกันได้</b> — เมื่อตกลงกันแล้วกด <b>"บันทึกและส่งลงนาม"</b> ทั้ง 3 ท่านจะลงนามอิเล็กทรอนิกส์'}
+    ? (isNew ? 'Admin เพิ่มผู้เกี่ยวข้อง รอบ และวันที่เริ่ม → กด <b>"บันทึก"</b> แล้ว <b>ผู้เข้ารับการพัฒนาจะกำหนดเป้าหมาย KPI</b> จากบัญชีของตนเอง (ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งาน) · เพิ่มหลายคนพร้อมกันใช้ปุ่ม "นำเข้าจากตาราง"' : 'แก้ไขข้อมูลแผน (สถานะกำหนดเป้าหมาย)')
+    : 'กำหนด<b>เป้าหมาย KPI และการดำเนินการ</b> — เสร็จแล้วกด <b>"บันทึกและส่งลงนาม"</b> ผู้บังคับบัญชาจะพิจารณาและลงนาม หรือส่งกลับให้แก้ไขพร้อมเหตุผล'}
     ${cur && cur.updatedBy ? `<br><small>แก้ไขล่าสุดโดย @${esc(cur.updatedBy)} · ${esc(timeAgo(cur.updatedAt))}</small>` : ''}</div></div>
   <form id="pipForm" onsubmit="return false" autocomplete="off">${people}
   ${header}
@@ -3166,7 +3168,7 @@ function validatePip(forSubmit) {
 async function savePipAction(submit) {
   if (!validatePip(submit)) return;
   const ok = await ask(submit
-    ? { tone: 'primary', icon: 'send', title: 'บันทึกและส่งลงนาม?', message: 'ตรวจสอบว่าผู้เข้ารับการพัฒนาและผู้บังคับบัญชาตกลงเป้าหมายร่วมกันแล้ว เมื่อส่งแล้วจะแก้ไขไม่ได้ ทั้ง 3 ท่านจะลงนามอิเล็กทรอนิกส์', okText: 'ส่งลงนาม', cancelText: 'กลับไปตรวจสอบ' }
+    ? { tone: 'primary', icon: 'send', title: 'บันทึกและส่งลงนาม?', message: 'เมื่อส่งแล้วจะแก้ไขไม่ได้ ผู้บังคับบัญชาโดยตรงจะพิจารณาและลงนาม (หรือส่งกลับให้แก้ไขพร้อมเหตุผล)', okText: 'ส่งลงนาม', cancelText: 'กลับไปตรวจสอบ' }
     : ASK.save(!!S.pv.id));
   if (!ok) return;
   const btn = submit ? $('[data-action=pipSaveSubmit]') : null;
@@ -3359,7 +3361,7 @@ function renderPipImp() {
       <div style="text-align:center;padding:6px 0 14px">
         <div class="done-ic" style="margin:0 auto 10px"><span class="msr fill">task_alt</span></div>
         <h3 style="font-size:19px">เพิ่มแผน PIP สำเร็จ ${ok.length} แผน${fail.length ? ` · ไม่สำเร็จ ${fail.length}` : ''}</h3>
-        <p class="muted">ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาจะเห็นแผนในเมนู "แผนพัฒนาการปฏิบัติงาน (PIP)" เพื่อร่วมกันกำหนดเป้าหมาย KPI</p></div>
+        <p class="muted">ผู้เข้ารับการพัฒนาจะเห็นแผนในเมนู "แผนพัฒนาการปฏิบัติงาน (PIP)" เพื่อกำหนดเป้าหมาย KPI</p></div>
       ${fail.length ? `<div class="imp-scroll"><table class="tbl"><thead><tr><th>แถว</th><th>รหัส</th><th>สาเหตุ</th></tr></thead><tbody>
         ${fail.map(r => `<tr class="bad"><td>${r.row}</td><td class="mono">${esc(r.name)}</td><td class="imp-err">${esc(r.error)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
   }
@@ -3370,7 +3372,7 @@ function renderPipImp() {
   if (modalCfg) {
     modalCfg.confirmCancel = st === 'preview';
     modalCfg.confirmSave = st === 'preview' ? { tone: 'primary', icon: 'upload_file', title: 'ยืนยันเพิ่มแผน PIP ' + good + ' แผน?',
-      message: 'ระบบจะสร้างแผนสถานะ "กำหนดเป้าหมาย" ให้ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาเข้าไปกรอก KPI ร่วมกัน' + (S.pimp.notify ? ' และส่งอีเมลแจ้ง' : ''), okText: 'ยืนยันเพิ่มแผน', cancelText: 'กลับไปตรวจสอบ' } : null;
+      message: 'ระบบจะสร้างแผนสถานะ "กำหนดเป้าหมาย" ให้ผู้เข้ารับการพัฒนาเข้าไปกำหนด KPI' + (S.pimp.notify ? ' และส่งอีเมลแจ้ง' : ''), okText: 'ยืนยันเพิ่มแผน', cancelText: 'กลับไปตรวจสอบ' } : null;
   }
 }
 function pipSignBox(r, k) {
@@ -3393,7 +3395,8 @@ function renderPipView() {
     <div class="grow"></div>
     ${c.edit ? btn('pipEdit', A ? 'edit' : 'edit_note', A ? 'แก้ไข' : 'กำหนดเป้าหมาย / แก้ไข', !A && !(r.kpis || []).length ? 'btn-primary' : 'btn-light') : ''}
     ${c.submit ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : ''}
-    ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับให้แก้ไข') : ''}
+    ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับแก้ไข (ระบุเหตุผล)', 'btn-warn-soft') : ''}
+    ${c.pull ? btn('pipPull', 'edit_note', 'ดึงกลับมาแก้ไข') : ''}
     ${c.sign ? btn('pipSign', 'draw', 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
     ${c.forward ? btn('pipForward', 'forward_to_inbox', 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป', 'btn-primary') : ''}
     ${c.openEval ? btn('pipOpenOne', 'lock_open', 'เปิดการประเมินผล', 'btn-primary') : ''}
@@ -3406,8 +3409,8 @@ function renderPipView() {
   ${r.status === 'active' ? `<div class="req-note"><span class="msr">lock_clock</span><div><b>ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)</b> — ดำเนินการตามแผน และรอรอบ${PIP_EVAL_T} ซึ่งผู้ดูแลระบบจะเป็นผู้เปิด</div></div>` : ''}
   ${r.status === 'evalOpen' ? `<div class="notice" style="background:#f3efff;color:#5b21b6;border-color:#ddd2fb"><span class="msr">grading</span><div>เปิดรอบ<b>${PIP_EVAL_T}</b>แล้ว — ผู้บังคับบัญชาโดยตรงบันทึกผล แล้วพิมพ์เอกสารเพื่อลงนามด้วยปากกา</div></div>` : ''}
   ${r.status === 'signing' && (r.signs || {}).emp && (r.signs || {}).sup1 ? `<div class="req-note"><span class="msr">forward_to_inbox</span><div>ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงลงนามแล้ว — รอผู้บังคับบัญชาโดยตรงกด <b>"ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป"</b></div></div>` : ''}
-  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงแก้ไขเป้าหมายร่วมกันได้ เมื่อตกลงกันแล้วกด "ส่งลงนาม"${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
-  ${r.status === 'draft' && r.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(r.note)}</div></div>` : ''}
+  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาเป็นผู้กำหนดและแก้ไขเป้าหมาย KPI แล้วกด "ส่งลงนาม" (ผู้บังคับบัญชาแก้ไขเองไม่ได้ ใช้ "ส่งกลับแก้ไข" พร้อมเหตุผล)${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
+  ${r.status === 'draft' && r.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(r.note)}${(r.myRoles || []).indexOf('emp') > -1 ? '<br><small>กด "กำหนดเป้าหมาย / แก้ไข" เพื่อแก้ตามเหตุผล แล้วส่งลงนามใหม่</small>' : ''}</div></div>` : ''}
   ${!r.hashOk ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">gpp_bad</span><div>เนื้อหาแผนไม่ตรงกับฉบับที่ลงนาม (ข้อมูลในชีตอาจถูกแก้ไขโดยตรง) กรุณาตรวจสอบ</div></div>` : ''}
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">trending_up</span>${esc(r.fullName)}</h3>${pipBadge(r)}</div><div class="card-b">
     <div class="pip-info">
@@ -3451,13 +3454,22 @@ function pipSign(id) {
     }
   });
 }
+async function pipPullBack(id) {
+  const r = S.pips.find(x => x.id === id); if (!r) return;
+  if (!(await ask({ tone: 'warn', icon: 'edit_note', title: 'ดึงแผนกลับมาแก้ไข?', message: 'แผนจะกลับเป็นสถานะ "กำหนดเป้าหมาย" ลายมือชื่อที่ลงไว้จะถูกยกเลิก แก้ไขเสร็จแล้วส่งลงนามใหม่', okText: 'ดึงกลับมาแก้ไข' }))) return;
+  loader(true);
+  try { S.pips = (await api('pipAction', S.token, id, 'return', 'ผู้เข้ารับการพัฒนาขอแก้ไขเอง')).list; pipSetSummary(); toast('ดึงกลับมาแก้ไขแล้ว'); render(); }
+  catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
 function pipReturn(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   openModal({
-    title: 'ส่งกลับให้แก้ไข', icon: 'undo', okText: 'ส่งกลับ', okClass: 'btn-warn', size: 'sm',
-    body: `<p class="small" style="color:var(--text-2);margin-top:0">แผนจะกลับเป็น "ร่าง" และลายมือชื่ออิเล็กทรอนิกส์ที่ลงไว้แล้วจะถูกยกเลิก เพื่อให้ผู้บังคับบัญชาโดยตรง/ผู้ดูแลระบบแก้ไข แล้วส่งลงนามใหม่</p>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipNote', label: 'สิ่งที่ต้องการให้แก้ไข', type: 'textarea', req: true }, '')}</form>`,
-    onOk: async () => { S.pips = (await api('pipAction', S.token, r.id, 'return', $('#f_pipNote').value)).list; pipSetSummary(); toast('ส่งกลับให้แก้ไขแล้ว'); render(); }
+    title: 'ส่งกลับแก้ไขให้ผู้เข้ารับการพัฒนา', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn',
+    body: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff7e6;border-color:#f6dfb5"><b>${esc(r.fullName)}</b><div class="small muted">${esc(pipPeriod(r))}</div></div>
+      <p class="small" style="color:var(--text-2);margin-top:0">แผนจะกลับเป็นสถานะ "กำหนดเป้าหมาย" ให้<b>ผู้เข้ารับการพัฒนา</b>แก้ไขตามเหตุผลที่ระบุ แล้วส่งลงนามใหม่ · ลายมือชื่ออิเล็กทรอนิกส์ที่ลงไว้แล้วจะถูกยกเลิก · ระบบส่งอีเมลแจ้งผู้เข้ารับการพัฒนา (ถ้ามีอีเมล)</p>
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipNote', label: 'เหตุผล / สิ่งที่ต้องการให้แก้ไข', type: 'textarea', req: true, ph: 'เช่น เป้าหมายข้อ 2 ยังวัดผลไม่ได้ ขอให้ระบุตัวชี้วัดเป็นตัวเลข' }, '')}</form>`,
+    validate: () => { if (String($('#f_pipNote').value).trim().length < 5) { toast('กรุณาระบุเหตุผลให้ชัดเจน', 'err'); return false; } },
+    onOk: async () => { S.pips = (await api('pipAction', S.token, r.id, 'return', $('#f_pipNote').value)).list; pipSetSummary(); toast('ส่งกลับให้ผู้เข้ารับการพัฒนาแก้ไขแล้ว'); render(); }
   });
 }
 async function pipDo(id, action) {
@@ -5256,6 +5268,7 @@ function bindEvents() {
       case 'pipSaveSubmit': return savePipAction(true);
       case 'pipSubmit': return pipDo(d.id, 'submit');
       case 'pipForward': return pipDo(d.id, 'forward');
+      case 'pipPull': return pipPullBack(d.id);
       case 'pipCloseEval': return pipDo(d.id, 'closeEval');
       case 'pipOpenEval': return openPipEvalModal();
       case 'pipOpenOne': return openPipEvalModal(d.id);
