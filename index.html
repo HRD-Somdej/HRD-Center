@@ -574,6 +574,13 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .pip-sign.ok{border-style:solid;border-color:#bfe6cc;background:var(--green-50)}.pip-sign.ok>.msr{color:var(--green)}
 .pip-sign .ok-t{color:var(--green)!important}
 .pip-tbl td{vertical-align:top}
+.pip-pst{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--muted);margin-top:3px}
+.pip-pst .msr{font-size:15px}.pip-pst.ok{color:#15803d}.pip-pst.wait{color:#b45309;font-weight:500}
+.b-purple{background:#f3efff;color:#6d28d9}
+.sel-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;margin-bottom:12px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239}
+.sel-bar .grow{flex:1}
+.u-cb{width:18px;height:18px;accent-color:var(--teal);cursor:pointer}
+tr.u-sel td{background:#f0fbfb}
 .pip-fy{position:relative;display:flex;align-items:center}.pip-fy .msr{position:absolute;left:12px;color:var(--teal);font-size:20px;pointer-events:none}
 .pip-fy select{height:42px;padding-left:40px;min-width:200px;font-weight:500}
 .pip-rnd{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;color:#fff;font-size:14px;font-weight:700;margin-right:2px}
@@ -593,7 +600,7 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .trk-dot .msr{font-size:15px;color:#fff;font-weight:700}
 .trk-pt.ok .trk-dot{background:#16a34a;border-color:#16a34a}
 .trk-pt.now .trk-dot,.trk-dot.now{background:#fff7e6;border-color:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.22)}
-.trk-lb{position:absolute;top:27px;width:96px;left:50%;transform:translateX(-50%);text-align:center;font-size:11.5px;line-height:1.3;color:var(--text-2)}
+.trk-lb{position:absolute;top:27px;width:104px;left:50%;transform:translateX(-50%);text-align:center;font-size:11.5px;line-height:1.3;color:var(--text-2)}
 .trk-pt.ok .trk-lb{color:#15803d}.trk-pt.now .trk-lb{color:#b45309;font-weight:600}
 .trk-pt small{position:absolute;top:58px;width:96px;left:50%;transform:translateX(-50%);text-align:center;font-size:10.5px;color:var(--muted)}
 .trk-pt small.bad{color:var(--red);font-weight:600}.trk-pt small.good{color:#15803d;font-weight:600}
@@ -979,7 +986,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '3.9.0'
+  VERSION: '4.0.0'
 };
 
 const PAGES = {
@@ -2848,7 +2855,17 @@ async function printReq(d, win, auto) {
   toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ จึงพิมพ์จากหน้านี้แทน', 'info');
 }
 
-const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], active: ['กำลังดำเนินการ', 'b-blue', 'pending_actions'], evaluated: ['ประเมินแล้ว', 'b-green', 'task_alt'] };
+const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evaluated: ['ประเมินแล้ว', 'b-green', 'task_alt'] };
+const PIP_EVAL_T = 'ผลลัพธ์การปฏิบัติงานและประเมินผล';
+function pipSignable(r) {
+  const allow = r.status === 'signing' ? ['emp', 'sup1'] : r.status === 'review' ? ['sup2'] : [];
+  return (r.myRoles || []).filter(k => allow.indexOf(k) > -1 && !(r.signs || {})[k]);
+}
+function pipCanForward(r) { const sg = r.signs || {}; return r.status === 'signing' && !!sg.emp && !!sg.sup1 && (isAdmin() || (r.myRoles || []).indexOf('sup1') > -1); }
+function pipTodo(r) {
+  if (isAdmin()) return false;
+  return pipSignable(r).length > 0 || (pipCanForward(r)) || (r.status === 'evalOpen' && (r.myRoles || []).indexOf('sup1') > -1);
+}
 const PIP_ROLE = { emp: 'ผู้เข้ารับการพัฒนา', sup1: 'ผู้บังคับบัญชาโดยตรง', sup2: 'ผู้บังคับบัญชาที่สูงขึ้นไป' };
 S.pips = []; S.pip = { count: 0, todo: 0 }; S.pv = { mode: 'list', id: null, data: null, q: '', st: 'all' };
 function pipBadge(r) { const s = PIP_ST[r.status] || PIP_ST.draft; return `<span class="badge ${s[1]}">${s[0]}</span>`; }
@@ -2856,21 +2873,24 @@ function pipSignCount(r) { return ['emp', 'sup1', 'sup2'].filter(k => r.signs &&
 function pipCur() { return S.pips.find(x => x.id === S.pv.id) || null; }
 function pipCan(r) {
   const A = isAdmin(), roles = r ? r.myRoles || [] : [], sup1 = roles.indexOf('sup1') > -1;
+  const ed = A || roles.indexOf('emp') > -1 || sup1;
   const st = r ? r.status : 'draft';
-  const unsigned = r ? roles.filter(k => !(r.signs || {})[k]) : [];
   return {
-    edit: st === 'draft' && (A || roles.length > 0),
-    submit: st === 'draft' && (A || roles.length > 0) && !!(r && (r.kpis || []).length),
-    sign: st === 'signing' && unsigned.length > 0,
-    ret: st === 'signing' && roles.length > 0,
-    recall: (A && st !== 'draft') || (sup1 && st === 'signing'),
-    evaluate: (st === 'active' || st === 'evaluated') && (A || sup1),
+    edit: st === 'draft' && ed,
+    submit: st === 'draft' && ed && !!(r && (r.kpis || []).length),
+    sign: !!r && pipSignable(r).length > 0,
+    forward: !!r && pipCanForward(r),
+    ret: (st === 'signing' && (roles.indexOf('emp') > -1 || sup1)) || (st === 'review' && roles.indexOf('sup2') > -1),
+    recall: (A && st !== 'draft') || (sup1 && (st === 'signing' || st === 'review')),
+    openEval: A && st === 'active',
+    closeEval: A && st === 'evalOpen',
+    evaluate: (st === 'evalOpen' || st === 'evaluated') && (A || sup1),
     del: A
   };
 }
 function pipSetSummary() {
-  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing').length }; }
-  else S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' && (r.myRoles || []).some(k => !(r.signs || {})[k])).length, draft: S.pips.filter(r => r.status === 'draft').length };
+  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review').length }; }
+  else S.pip = { count: S.pips.length, todo: S.pips.filter(pipTodo).length, draft: S.pips.filter(r => r.status === 'draft' && (r.myRoles || []).some(k => k === 'emp' || k === 'sup1')).length };
   refreshCounts();
 }
 async function loadPips() {
@@ -2905,17 +2925,15 @@ function pipFY(r) {
 }
 function pipStages(r) {
   const k = r.round === '2' ? '2' : '1', sg = r.signs || {}, st = r.status;
-  const end = r['r' + k + 'End'] || '', today = todayStr();
+  const end = r['r' + k + 'End'] || '';
   const sent = st !== 'draft';
-  const due = st === 'evaluated' || (sg.emp && sg.sup1 && sg.sup2 && end && today > end);
   return [
     { t: 'เพิ่มแผน', done: true, at: r.createdAt },
     { t: 'กำหนดเป้าหมาย KPI', done: sent, at: sent ? r.submittedAt : '', sub: !sent && (r.kpis || []).length ? 'กำลังกำหนด ' + r.kpis.length + ' ข้อ' : '' },
     { t: 'ผู้เข้ารับการพัฒนาลงนาม', done: !!sg.emp, at: sg.emp && sg.emp.at },
     { t: 'ผบ.โดยตรงลงนาม', done: !!sg.sup1, at: sg.sup1 && sg.sup1.at },
-    { t: 'ผบ.ที่สูงขึ้นไปลงนาม', done: !!sg.sup2, at: sg.sup2 && sg.sup2.at },
-    { t: 'ดำเนินการตามแผน', done: !!due, at: end, sub: !due && end ? 'ถึง ' + thDateShort(end) : '' },
-    { t: 'ประเมินผล', done: st === 'evaluated', at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : '' }
+    { t: 'ผบ.ที่สูงขึ้นไปลงนาม', done: !!sg.sup2, at: sg.sup2 && sg.sup2.at, sub: !sg.sup2 && st === 'review' ? 'ส่งต่อแล้ว' : !sg.sup2 && st === 'signing' && sg.emp && sg.sup1 ? 'รอส่งต่อ' : '' },
+    { t: PIP_EVAL_T, done: st === 'evaluated', at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : st === 'evalOpen' ? 'เปิดประเมินแล้ว' : st === 'active' && end ? 'ครบแผน ' + thDateShort(end) : '' }
   ];
 }
 function pipTrackLine(r) {
@@ -2929,9 +2947,19 @@ function pipTrackLine(r) {
     return `${seg}<div class="trk-pt ${cls}" title="${esc(x.t)}"><b class="trk-dot">${x.done ? '<span class="msr">check</span>' : ''}</b><span class="trk-lb">${esc(x.t)}</span>${d ? `<small class="${x.sub === 'ไม่ผ่าน' ? 'bad' : x.sub === 'ผ่าน' && x.done ? 'good' : ''}">${esc(d)}</small>` : ''}</div>`;
   }).join('')}</div>`;
 }
+function pipPersonSt(r, k, plain) {
+  const sg = (r.signs || {})[k], st = r.status;
+  let t, c;
+  if (sg) { t = 'ลงนามแล้ว ' + thDateShort(String(sg.at).slice(0, 10)); c = 'ok'; }
+  else if (st === 'draft') { t = k === 'sup2' ? 'รอขั้นลงนาม' : 'กำหนดเป้าหมาย'; c = ''; }
+  else if (st === 'signing') { t = k === 'sup2' ? ((r.signs || {}).emp && (r.signs || {}).sup1 ? 'รอ ผบ.โดยตรงส่งต่อ' : 'รอขั้นลงนาม') : 'รอลงนาม'; c = k === 'sup2' ? '' : 'wait'; }
+  else if (st === 'review') { t = k === 'sup2' ? 'รอลงนาม (ส่งต่อแล้ว)' : '-'; c = k === 'sup2' ? 'wait' : ''; }
+  else { t = '-'; c = ''; }
+  return `<span class="pip-pst ${c}">${c === 'ok' ? '<span class="msr">check_circle</span>' : c === 'wait' ? '<span class="msr">schedule</span>' : ''}${esc(t)}</span>`;
+}
 function renderPipList() {
   const A = isAdmin();
-  const todo = r => r.status === 'signing' && (r.myRoles || []).some(k => !(r.signs || {})[k]);
+  const todo = pipTodo;
   const fys = Array.from(new Set(S.pips.map(pipFY).filter(Boolean).concat([fiscalYearBE()]))).sort((a, b) => b - a);
   if (S.pf.fy === '') S.pf.fy = S.pips.some(r => pipFY(r) === fiscalYearBE()) || !S.pips.length ? String(fiscalYearBE()) : 'all';
   const inFy = S.pips.filter(r => S.pf.fy === 'all' || String(pipFY(r)) === S.pf.fy);
@@ -2942,18 +2970,19 @@ function renderPipList() {
   const rc = k => list.filter(r => (r.round === '2' ? '2' : '1') === k).length;
   const rounds = S.pf.rnd === 'all' ? ['1', '2'] : [S.pf.rnd];
   const tableHtml = rows => `<div class="table-wrap"><table class="tbl">
-    <thead><tr><th>ผู้เข้ารับการพัฒนา</th><th>ระยะเวลา</th><th>ผู้บังคับบัญชา</th><th>สถานะ</th><th>ผลการประเมิน</th><th></th></tr></thead>
+    <thead><tr><th>ผู้เข้ารับการพัฒนา</th><th>ระยะเวลา</th><th>ผู้บังคับบัญชาโดยตรง</th><th>ผู้บังคับบัญชาที่สูงขึ้นไป</th><th>สถานะแผน</th><th>ผลการประเมิน</th><th></th></tr></thead>
     <tbody>${rows.map(r => `<tr${todo(r) ? ' class="pip-todo"' : ''}>
       <td style="min-width:260px"><div class="t-main"><div class="doc-ic" style="${cvar('indigo')}"><span class="msr">trending_up</span></div>
         <div><a class="doc-link" data-action="pipView" data-id="${esc(r.id)}">${esc(r.fullName)}</a>
         <div class="muted small">รหัส ${esc(r.employeeId)} · ${esc([r.position, r.department].filter(Boolean).join(' · '))}</div>
         ${!A && r.myRoles && r.myRoles.length ? `<div class="type-chips" style="margin-top:4px">${r.myRoles.map(k => `<span class="tag">ฉัน: ${PIP_ROLE[k]}</span>`).join('')}</div>` : ''}</div></div></td>
       <td class="small" style="min-width:140px">${esc(thRange(r['r' + (r.round === '2' ? '2' : '1') + 'Start'], r['r' + (r.round === '2' ? '2' : '1') + 'End']) || '-')}</td>
-      <td class="small" style="min-width:160px">${esc(r.sup1Name)}<br><span class="muted">${esc(r.sup2Name)}</span></td>
-      <td>${pipBadge(r)}${r.status === 'signing' ? `<div class="small muted" style="margin-top:4px">ลงนามแล้ว ${pipSignCount(r)}/3</div>` : ''}${r.status === 'draft' && r.note ? '<div class="small" style="color:var(--red);margin-top:4px">ถูกส่งกลับแก้ไข</div>' : ''}</td>
+      <td class="small" style="min-width:150px">${esc(r.sup1Name)}<br>${pipPersonSt(r, 'sup1')}</td>
+      <td class="small" style="min-width:150px">${esc(r.sup2Name)}<br>${pipPersonSt(r, 'sup2')}</td>
+      <td>${pipBadge(r)}<div class="small muted" style="margin-top:4px">ผู้เข้ารับฯ: ${pipPersonSt(r, 'emp', true)}</div>${r.status === 'draft' && r.note ? '<div class="small" style="color:var(--red);margin-top:4px">ถูกส่งกลับแก้ไข</div>' : ''}</td>
       <td>${r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : r.summary === 'fail' ? '<span class="badge b-red">ไม่ผ่าน</span>' : '<span class="muted small">-</span>'}</td>
       <td><div class="actions">
-        ${todo(r) ? `<button class="btn btn-primary btn-sm" data-action="pipSign" data-id="${esc(r.id)}"><span class="msr">draw</span>ลงนาม</button>` : ''}
+        ${pipSignable(r).length ? `<button class="btn btn-primary btn-sm" data-action="pipSign" data-id="${esc(r.id)}"><span class="msr">draw</span>ลงนาม</button>` : pipCanForward(r) && !isAdmin() ? `<button class="btn btn-primary btn-sm" data-action="pipForward" data-id="${esc(r.id)}"><span class="msr">forward_to_inbox</span>ส่งต่อ</button>` : r.status === 'evalOpen' && !isAdmin() && (r.myRoles || []).indexOf('sup1') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipEval" data-id="${esc(r.id)}"><span class="msr">grading</span>ประเมินผล</button>` : ''}
         <button class="icon-btn" data-action="pipView" data-id="${esc(r.id)}" title="ดูรายละเอียด"><span class="msr">visibility</span></button>
         <button class="icon-btn" data-action="pipPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>
       </div></td></tr>`).join('')}</tbody></table></div>`;
@@ -2969,8 +2998,8 @@ function renderPipList() {
       ${rows.length ? (S.pf.view === 'track' ? trackHtml(rows) : tableHtml(rows)) : `<div class="card-b muted small">ไม่มีแผนรอบที่ ${k}${S.pf.fy !== 'all' ? ' ในปีงบประมาณ ' + S.pf.fy : ''}${S.pv.q || S.pv.st !== 'all' ? ' ตามตัวกรองนี้' : ''}</div>`}</div>`;
   }).join('');
   return `
-  ${!A && S.pip.todo ? `<div class="notice" style="background:#fff7e6"><span class="msr">draw</span><div>มีแผน PIP <b>${S.pip.todo} รายการ</b> รอให้คุณตรวจสอบและ<b>ลงนามอิเล็กทรอนิกส์</b></div></div>` : ''}
-  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอ<b>ร่วมกันกำหนดเป้าหมาย KPI</b> ระหว่างผู้เข้ารับการพัฒนาและผู้บังคับบัญชา — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข"</div></div>` : ''}
+  ${!A && S.pip.todo ? `<div class="notice" style="background:#fff7e6"><span class="msr">draw</span><div>มีแผน PIP <b>${S.pip.todo} รายการ</b> รอการดำเนินการจากคุณ (ลงนาม / ส่งต่อ / บันทึกผลลัพธ์และประเมินผล)</div></div>` : ''}
+  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอ<b>ร่วมกันกำหนดเป้าหมาย KPI</b> ระหว่างผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรง — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข"</div></div>` : ''}
   <div class="toolbar">
     <label class="pip-fy"><span class="msr">event</span><select class="input" id="pipFy">
       <option value="all"${S.pf.fy === 'all' ? ' selected' : ''}>ทุกปีงบประมาณ</option>
@@ -2979,13 +3008,13 @@ function renderPipList() {
     <div class="seg">${[['list', 'รายการ'], ['track', 'ติดตามการดำเนินการ']].map(o => `<label><input type="radio" name="pipView" value="${o[0]}" ${S.pf.view === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>
     <div class="grow"></div>
     <button class="btn btn-light" data-action="pipBlank"><span class="msr">print</span>พิมพ์แบบฟอร์มเปล่า</button>
-    ${A ? `<button class="btn btn-light" data-action="pipImport"><span class="msr">upload_file</span>นำเข้าจากตาราง</button><button class="btn btn-primary" data-action="pipNew"><span class="msr">add</span>เพิ่มแผน PIP</button>` : ''}
+    ${A ? `<button class="btn btn-light" data-action="pipOpenEval"><span class="msr">lock_open</span>เปิดการประเมินผล${inFy.filter(r => r.status === 'active').length ? ` <em class="count">${inFy.filter(r => r.status === 'active').length}</em>` : ''}</button><button class="btn btn-light" data-action="pipImport"><span class="msr">upload_file</span>นำเข้าจากตาราง</button><button class="btn btn-primary" data-action="pipNew"><span class="msr">add</span>เพิ่มแผน PIP</button>` : ''}
   </div>
   <div class="toolbar">
     <div class="search"><span class="msr">search</span><input id="pipQ" placeholder="ค้นหารหัสบุคลากร ชื่อ ฝ่าย ผู้บังคับบัญชา..." value="${esc(S.pv.q)}"></div>
     <div class="seg pip-chips">${chips.map(c => `<label><input type="radio" name="pipSt" value="${c[0]}" ${S.pv.st === c[0] ? 'checked' : ''}><span>${c[1]}${c[0] === 'todo' ? '' : ' (' + cnt(c[0]) + ')'}</span></label>`).join('')}</div>
   </div>
-  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาร่วมกันตั้งเป้าหมาย KPI → ทั้ง 3 ท่าน <b>ลงนามอิเล็กทรอนิกส์</b> · <b>ขั้นที่ 2</b> ผู้บังคับบัญชาโดยตรงบันทึกผลการประเมิน แล้ว<b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
+  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงร่วมกันตั้งเป้าหมาย KPI → ลงนาม → ผบ.โดยตรง<b>ส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · <b>ขั้นที่ 2</b> เมื่อถึงรอบ Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} แล้ว<b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
   ${S.pips.length ? sections : `<div class="card">${emptyState('trending_up', 'ยังไม่มีแผนพัฒนาการปฏิบัติงาน', A ? 'เพิ่มแผน PIP ทีละคน หรือนำเข้าหลายคนจากตาราง' : 'เมื่อมีแผน PIP ที่เกี่ยวข้องกับคุณ รายการจะแสดงที่นี่', A ? { label: 'เพิ่มแผน PIP', attr: 'data-action="pipNew"' } : null)}</div>`}`;
 }
 function pipBlankData() {
@@ -3350,9 +3379,9 @@ function pipSignBox(r, k) {
   const pos = k === 'emp' ? r.position : k === 'sup1' ? r.sup1Position : r.sup2Position;
   const mine = (r.myRoles || []).indexOf(k) > -1;
   return `<div class="pip-sign${s ? ' ok' : ''}">
-    <span class="msr${s ? ' fill' : ''}">${s ? 'verified' : r.status === 'signing' ? 'hourglass_top' : 'radio_button_unchecked'}</span>
+    <span class="msr${s ? ' fill' : ''}">${s ? 'verified' : (r.status === 'signing' && k !== 'sup2') || (r.status === 'review' && k === 'sup2') ? 'hourglass_top' : 'radio_button_unchecked'}</span>
     <div><small>${PIP_ROLE[k]}${mine ? ' (คุณ)' : ''}</small><b>${esc(name)}</b><small>${esc(pos || '')}</small>
-    <small class="${s ? 'ok-t' : ''}">${s ? 'ลงนามอิเล็กทรอนิกส์ ' + fmtDate(s.at, true) : r.status === 'signing' ? 'รอลงนาม' : r.status === 'draft' ? 'ยังไม่ส่งลงนาม' : '-'}</small></div></div>`;
+    <small class="${s ? 'ok-t' : ''}">${s ? 'ลงนามอิเล็กทรอนิกส์ ' + fmtDate(s.at, true) : pipPersonSt(r, k).replace(/<[^>]+>/g, '')}</small></div></div>`;
 }
 function renderPipView() {
   const r = pipCur(), c = pipCan(r), A = isAdmin();
@@ -3366,12 +3395,18 @@ function renderPipView() {
     ${c.submit ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : ''}
     ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับให้แก้ไข') : ''}
     ${c.sign ? btn('pipSign', 'draw', 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
-    ${c.evaluate ? btn('pipEval', 'grading', r.status === 'evaluated' ? 'แก้ไขผลการประเมิน' : 'บันทึกผลการประเมิน (ขั้นที่ 2)', r.status === 'active' ? 'btn-primary' : 'btn-light') : ''}
+    ${c.forward ? btn('pipForward', 'forward_to_inbox', 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป', 'btn-primary') : ''}
+    ${c.openEval ? btn('pipOpenOne', 'lock_open', 'เปิดการประเมินผล', 'btn-primary') : ''}
+    ${c.closeEval ? btn('pipCloseEval', 'lock', 'ปิดการประเมินผล') : ''}
+    ${c.evaluate ? btn('pipEval', 'grading', r.status === 'evaluated' ? 'แก้ไข' + PIP_EVAL_T : PIP_EVAL_T, r.status === 'evalOpen' ? 'btn-primary' : 'btn-light') : ''}
     ${c.recall ? btn('pipRecall', 'restart_alt', 'ดึงกลับเป็นร่าง') : ''}
     ${btn('pipPrint', 'print', 'พิมพ์')}
     ${c.del ? `<button class="icon-btn danger" data-action="pipDel" data-id="${esc(r.id)}" title="ลบแผน"><span class="msr">delete</span></button>` : ''}
   </div>
-  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาแก้ไขเป้าหมายร่วมกันได้ เมื่อตกลงกันแล้วกด "ส่งลงนาม"${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
+  ${r.status === 'active' ? `<div class="req-note"><span class="msr">lock_clock</span><div><b>ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)</b> — ดำเนินการตามแผน และรอรอบ${PIP_EVAL_T} ซึ่งผู้ดูแลระบบจะเป็นผู้เปิด</div></div>` : ''}
+  ${r.status === 'evalOpen' ? `<div class="notice" style="background:#f3efff;color:#5b21b6;border-color:#ddd2fb"><span class="msr">grading</span><div>เปิดรอบ<b>${PIP_EVAL_T}</b>แล้ว — ผู้บังคับบัญชาโดยตรงบันทึกผล แล้วพิมพ์เอกสารเพื่อลงนามด้วยปากกา</div></div>` : ''}
+  ${r.status === 'signing' && (r.signs || {}).emp && (r.signs || {}).sup1 ? `<div class="req-note"><span class="msr">forward_to_inbox</span><div>ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงลงนามแล้ว — รอผู้บังคับบัญชาโดยตรงกด <b>"ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป"</b></div></div>` : ''}
+  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงแก้ไขเป้าหมายร่วมกันได้ เมื่อตกลงกันแล้วกด "ส่งลงนาม"${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
   ${r.status === 'draft' && r.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(r.note)}</div></div>` : ''}
   ${!r.hashOk ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">gpp_bad</span><div>เนื้อหาแผนไม่ตรงกับฉบับที่ลงนาม (ข้อมูลในชีตอาจถูกแก้ไขโดยตรง) กรุณาตรวจสอบ</div></div>` : ''}
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">trending_up</span>${esc(r.fullName)}</h3>${pipBadge(r)}</div><div class="card-b">
@@ -3384,33 +3419,34 @@ function renderPipView() {
       <div><small>ระยะเวลา</small><b>${esc(thRange(r['r' + k + 'Start'], r['r' + k + 'End']) || '-')}</b></div>
     </div>
   </div></div>
-  <div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI และผลการปฏิบัติงาน</h3></div>
+  ${r.kpiHidden ? `<div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI</h3></div><div class="card-b"><div class="empty" style="padding:26px 10px"><span class="msr" style="font-size:40px;color:var(--muted)">lock</span><p style="margin:8px 0 0">ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงกำลังดำเนินการ — คุณจะเห็นเป้าหมาย KPI เมื่อผู้บังคับบัญชาโดยตรงกด <b>"ส่งต่อ"</b></p></div></div></div>` : `<div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI และผลการปฏิบัติงาน</h3></div>
     <div class="table-wrap"><table class="tbl pip-tbl"><thead><tr><th style="width:26%">เป้าหมาย KPI ที่ต้องพัฒนา</th><th style="width:30%">การดำเนินการเพื่อให้บรรลุเป้าหมาย</th><th>ผลลัพธ์การปฏิบัติงาน<br><small class="muted">(ประเมินโดยผู้บังคับบัญชา)</small></th><th style="width:100px">การประเมิน</th></tr></thead>
     <tbody>${(r.kpis || []).map((x, i) => `<tr><td><b>${i + 1}.</b> ${esc(x.goal)}</td>
       <td>${(x.actions || []).map((a, j) => a ? `<div>${j + 1}. ${esc(a)}</div>` : '').join('')}</td>
       <td>${x.result ? esc(x.result).replace(/\n/g, '<br>') : '<span class="muted small">-</span>'}</td>
       <td>${x.eval === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : x.eval === 'fail' ? '<span class="badge b-red">ไม่ผ่าน</span>' : '<span class="muted small">-</span>'}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">ยังไม่ได้กำหนดเป้าหมาย</td></tr>'}</tbody></table></div>
     ${r.summary ? `<div class="card-b"><b>สรุปผลการประเมิน:</b> ${r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : '<span class="badge b-red">ไม่ผ่าน</span>'} ${r.reason ? '<span class="muted">เหตุผล</span> ' + esc(r.reason) : ''}</div>` : ''}
-  </div>
+  </div>`}
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">draw</span>การลงนาม (ขั้นที่ 1 · อิเล็กทรอนิกส์)</h3>${r.docHash ? `<span class="muted small">รหัสยืนยันเอกสาร ${esc(r.docHash)}</span>` : ''}</div>
     <div class="card-b"><div class="pip-signs">${['emp', 'sup1', 'sup2'].map(x => pipSignBox(r, x)).join('')}</div>
-    ${r.status === 'active' || r.status === 'evaluated' ? '<p class="small muted" style="margin:12px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">print</span> ขั้นที่ 2 (สรุปผลการประเมิน) ให้พิมพ์เอกสาร แล้วลงนามด้วยปากกาในกรอบ "สรุปผลการประเมิน"</p>' : ''}</div></div>`;
+    ${r.status === 'evalOpen' || r.status === 'evaluated' ? '<p class="small muted" style="margin:12px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">print</span> ขั้นที่ 2 (สรุปผลการประเมิน) ให้พิมพ์เอกสาร แล้วลงนามด้วยปากกาในกรอบ "สรุปผลการประเมิน"</p>' : ''}</div></div>`;
 }
 function pipSign(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
-  const roles = (r.myRoles || []).filter(k => !(r.signs || {})[k]);
+  const roles = pipSignable(r);
   openModal({
     title: 'ลงนามอิเล็กทรอนิกส์ แผน PIP', icon: 'draw', okText: 'ลงนาม', size: 'sm',
     body: `<div class="card" style="padding:14px 16px;margin-bottom:14px;background:var(--teal-50);border-color:#bfe6e6">
       <b style="font-size:16px">แผนพัฒนาการปฏิบัติงานของ ${esc(r.fullName)}</b>
       <div class="small" style="color:var(--text-2);margin-top:4px">${esc(pipPeriod(r))}<br>ลงนามในฐานะ: <b>${roles.map(k => PIP_ROLE[k]).join(', ')}</b><br>รหัสยืนยันเอกสาร ${esc(r.docHash || '-')}</div></div>
-      <p class="small" style="color:var(--text-2)">ข้าพเจ้าได้อ่านและรับทราบเป้าหมาย KPI และการดำเนินการตามแผนนี้แล้ว การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า</p>
+      <p class="small" style="color:var(--text-2)">ข้าพเจ้าได้อ่านและรับทราบเป้าหมาย KPI และการดำเนินการตามแผนนี้แล้ว การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า${roles.indexOf('sup2') > -1 ? ' <b>(การลงนามของผู้บังคับบัญชาที่สูงขึ้นไปถือเป็นที่สิ้นสุดของขั้นกำหนดแผน)</b>' : ''}</p>
       <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pipPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
     onOk: async () => {
       const res = await api('signPip', S.token, r.id, $('#f_pipPw').value);
       S.pips = res.list; pipSetSummary();
-      toast(res.done ? 'ลงนามเรียบร้อย — แผนนี้ลงนามครบทั้ง 3 ท่านแล้ว' : 'ลงนามอิเล็กทรอนิกส์เรียบร้อย');
+      const cur = S.pips.find(x => x.id === r.id);
+      toast(res.done ? 'ลงนามเรียบร้อย — แผนนี้ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)' : cur && pipCanForward(cur) ? 'ลงนามเรียบร้อย — กด "ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป" ได้แล้ว' : 'ลงนามอิเล็กทรอนิกส์เรียบร้อย');
       S.pv.mode = 'view'; S.pv.id = r.id; render();
     }
   });
@@ -3428,6 +3464,8 @@ async function pipDo(id, action) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   const Q = {
     submit: { tone: 'primary', icon: 'send', title: 'ส่งลงนาม?', message: 'เมื่อส่งแล้วจะแก้ไขเนื้อหาไม่ได้ จนกว่าจะดึงกลับเป็นร่าง', okText: 'ส่งลงนาม' },
+    forward: { tone: 'primary', icon: 'forward_to_inbox', title: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป?', message: 'ผู้บังคับบัญชาที่สูงขึ้นไป (' + r.sup2Name + ') จะเห็นเป้าหมาย KPI และลงนามอิเล็กทรอนิกส์ ซึ่งถือเป็นที่สิ้นสุดของขั้นกำหนดแผน', okText: 'ส่งต่อ' },
+    closeEval: { tone: 'warn', icon: 'lock', title: 'ปิดการประเมินผล?', message: 'แผนจะกลับเป็นสถานะ "ลงนามครบ รอรอบประเมิน" ผลที่บันทึกไว้ยังอยู่', okText: 'ปิดการประเมินผล' },
     recall: { tone: 'warn', icon: 'restart_alt', title: 'ดึงกลับเป็นร่าง?', message: 'ลายมือชื่ออิเล็กทรอนิกส์ทั้งหมดของแผนนี้จะถูกยกเลิก และต้องส่งลงนามใหม่' + (r.status === 'evaluated' || r.status === 'active' ? ' (ผลการประเมินที่บันทึกไว้ยังอยู่)' : ''), okText: 'ดึงกลับเป็นร่าง' },
     delete: { tone: 'danger', icon: 'delete_forever', title: 'ลบแผน PIP?', message: 'ลบแผนของ ' + r.fullName + ' — ไม่สามารถกู้คืนได้', okText: 'ลบแผน' }
   };
@@ -3436,9 +3474,33 @@ async function pipDo(id, action) {
   try {
     S.pips = (await api('pipAction', S.token, id, action)).list; pipSetSummary();
     if (action === 'delete') S.pv = { mode: 'list', id: null, data: null, q: S.pv.q, st: S.pv.st };
-    toast(action === 'submit' ? 'ส่งแผนให้ลงนามแล้ว' : action === 'recall' ? 'ดึงกลับเป็นร่างแล้ว' : 'ลบแผนแล้ว');
+    toast({ submit: 'ส่งแผนให้ลงนามแล้ว', recall: 'ดึงกลับเป็นร่างแล้ว', forward: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว', closeEval: 'ปิดการประเมินผลแล้ว' }[action] || 'ลบแผนแล้ว');
     render();
   } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+function openPipEvalModal(oneId) {
+  const today = todayStr();
+  const pool = S.pips.filter(r => r.status === 'active' && (oneId ? r.id === oneId : (S.pf.fy === 'all' || String(pipFY(r)) === S.pf.fy) && (S.pf.rnd === 'all' || (r.round === '2' ? '2' : '1') === S.pf.rnd)));
+  if (!pool.length) return toast('ไม่มีแผนที่ลงนามครบและรอเปิดการประเมินผล' + (oneId ? '' : ' ในปีงบประมาณ/รอบที่เลือก'), 'info');
+  const endOf = r => r['r' + (r.round === '2' ? '2' : '1') + 'End'] || '';
+  const sel = new Set(pool.filter(r => oneId || !endOf(r) || endOf(r) <= today).map(r => r.id));
+  if (!sel.size) pool.forEach(r => sel.add(r.id));
+  openModal({
+    title: 'เปิดการประเมินผล — ' + PIP_EVAL_T, icon: 'lock_open', size: oneId ? 'sm' : 'lg', okText: 'เปิดการประเมินผล',
+    body: `<p class="small" style="color:var(--text-2);margin-top:0">ผู้บังคับบัญชาโดยตรงจะบันทึก${PIP_EVAL_T}ได้ เฉพาะแผนที่เปิดการประเมินแล้ว ${oneId ? '' : '· ระบบเลือกแผนที่ครบกำหนด (ถึงวันสิ้นสุดแผน) ไว้ให้ก่อน'}</p>
+      ${oneId ? '' : `<label class="check small" style="margin-bottom:8px"><input type="checkbox" id="peAll"> เลือกทั้งหมด (${pool.length} แผน)</label>`}
+      <div class="imp-scroll" style="max-height:340px"><table class="tbl"><thead><tr><th style="width:36px"></th><th>รหัส</th><th>ผู้เข้ารับการพัฒนา</th><th>รอบ</th><th>สิ้นสุดแผน</th></tr></thead><tbody>
+      ${pool.map(r => `<tr><td><input type="checkbox" class="pe-cb" value="${esc(r.id)}" ${sel.has(r.id) ? 'checked' : ''}></td><td class="mono">${esc(r.employeeId)}</td><td>${esc(r.fullName)}<br><small class="muted">${esc(r.sup1Name)}</small></td><td>${esc(r.round)}</td>
+        <td class="small">${endOf(r) ? fmtDate(endOf(r)) : '-'}${endOf(r) && endOf(r) <= today ? ' <span class="badge b-green">ครบกำหนด</span>' : ''}</td></tr>`).join('')}</tbody></table></div>
+      <label class="check small" style="margin-top:10px"><input type="checkbox" id="peNotify" checked> ส่งอีเมลแจ้งผู้บังคับบัญชาโดยตรง</label>`,
+    onOpen: () => { const a = $('#peAll'); if (a) a.addEventListener('change', () => $$('.pe-cb').forEach(c => { c.checked = a.checked; })); },
+    onOk: async () => {
+      const ids = $$('.pe-cb').filter(c => c.checked).map(c => c.value);
+      if (!ids.length) { toast('กรุณาเลือกอย่างน้อย 1 แผน', 'err'); return false; }
+      const res = await api('openPipEval', S.token, ids, { notify: $('#peNotify').checked });
+      S.pips = res.list; pipSetSummary(); toast('เปิดการประเมินผลแล้ว ' + res.opened + ' แผน'); render();
+    }
+  });
 }
 function pipEvalStart(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
@@ -3449,7 +3511,7 @@ function renderPipEval() {
   const r = pipCur(), d = S.pv.data;
   const seg = (name, val) => `<div class="seg">${[['pass', 'ผ่าน'], ['fail', 'ไม่ผ่าน']].map(o => `<label><input type="radio" name="${name}" value="${o[0]}" ${val === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>`;
   return `
-  <div class="req-note"><span class="msr">info</span><div>ขั้นที่ 2: ผู้บังคับบัญชาโดยตรงกรอก <b>ผลลัพธ์การปฏิบัติงาน</b> และ <b>ผลการประเมิน</b> ของแต่ละเป้าหมาย พร้อมสรุปผล แล้ว <b>พิมพ์เอกสาร</b> ให้ผู้รับการประเมินและผู้บังคับบัญชาลงนามด้วยปากกา</div></div>
+  <div class="req-note"><span class="msr">info</span><div>ขั้นที่ 2 · ${PIP_EVAL_T}: ผู้บังคับบัญชาโดยตรงกรอก <b>ผลลัพธ์การปฏิบัติงาน</b> และ <b>ผลการประเมิน</b> ของแต่ละเป้าหมาย พร้อมสรุปผล แล้ว <b>พิมพ์เอกสาร</b> ให้ผู้รับการประเมินและผู้บังคับบัญชาลงนามด้วยปากกา</div></div>
   <form id="pipEvalForm" onsubmit="return false" autocomplete="off">
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">person</span>${esc(r.fullName)}</h3><span class="muted small">${esc(pipPeriod(r))}</span></div></div>
   ${(r.kpis || []).map((k, i) => `<div class="card req-sec pip-ev" data-ev="${i}"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมายที่ ${i + 1}</h3></div><div class="card-b">
@@ -3461,7 +3523,7 @@ function renderPipEval() {
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">fact_check</span>สรุปผลการประเมิน</h3></div><div class="card-b">
     ${seg('summary', d.summary)}
     <label class="field" style="margin-top:12px"><span>เหตุผล</span><textarea class="input" name="reason" rows="2" maxlength="500">${esc(d.reason)}</textarea></label>
-    <small class="hint">ถ้ายังไม่เลือกสรุปผล ระบบจะบันทึกไว้ก่อน (สถานะยังเป็น "กำลังดำเนินการ")</small>
+    <small class="hint">ถ้ายังไม่เลือกสรุปผล ระบบจะบันทึกไว้ก่อน (สถานะยังเป็น "เปิดประเมินผล")</small>
   </div></div>
   </form>
   <div class="req-actions">
@@ -3486,7 +3548,7 @@ async function savePipEval(andPrint) {
   if (btn) setBtnLoading(btn, true); else loader(true);
   try {
     S.pips = (await api('evaluatePip', S.token, id, d)).list; pipSetSummary();
-    toast('บันทึกผลการประเมินแล้ว');
+    toast('บันทึก' + PIP_EVAL_T + 'แล้ว');
     S.pv = { mode: 'view', id, data: null, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0);
     if (andPrint) await printPip(pipCur(), win, true);
   } catch (e) { if (win) win.close(); toast(e.message, 'err'); }
@@ -4672,9 +4734,25 @@ function setUsers(list) {
   S.counts.users = list.filter(u => u.status === 'active').length;
   refreshCounts(); render();
 }
-function renderUsers() {
-  const list = S.users.filter(u => (S.f.userSt === 'all' || u.status === S.f.userSt) &&
+S.userSel = new Set();
+function userListFiltered() {
+  return S.users.filter(u => (S.f.userSt === 'all' || u.status === S.f.userSt) &&
     match(S.f.userQ, u.fullName, u.fullNameEn, u.username, u.employeeId, u.position, u.department, u.email, u.level, u.adminPosition, u.academicPosition));
+}
+async function deleteSelectedUsers() {
+  const ids = Array.from(S.userSel).filter(id => S.users.some(u => u.id === id));
+  if (!ids.length) return toast('ยังไม่ได้เลือกผู้ใช้งาน', 'err');
+  const names = S.users.filter(u => ids.indexOf(u.id) > -1).slice(0, 6).map(u => u.fullName).join(', ') + (ids.length > 6 ? ' และอีก ' + (ids.length - 6) + ' คน' : '');
+  const inPip = (S.pips || []).filter(r => ids.some(id => [r.empUserId, r.sup1UserId, r.sup2UserId].indexOf(id) > -1)).length;
+  if (!(await ask({ tone: 'danger', icon: 'group_remove', title: 'ลบผู้ใช้งาน ' + ids.length + ' คน?', message: names + ' — บัญชีจะถูกลบถาวรและออกจากระบบทันที กู้คืนไม่ได้' + (inPip ? ' (มีแผน PIP ที่เกี่ยวข้อง ' + inPip + ' แผน ข้อมูลแผนยังอยู่ แต่ผู้ที่ถูกลบจะลงนามไม่ได้)' : ''), okText: 'ลบ ' + ids.length + ' คน' }))) return;
+  loader(true);
+  try { S.users = await api('deleteUsers', S.token, ids); S.userSel.clear(); refreshCounts(); toast('ลบผู้ใช้งาน ' + ids.length + ' คนแล้ว'); render(); }
+  catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+function renderUsers() {
+  const list = userListFiltered();
+  const nSel = Array.from(S.userSel).filter(id => S.users.some(u => u.id === id)).length;
+  const allOn = list.length && list.every(u => S.userSel.has(u.id));
   const cnt = st => S.users.filter(u => u.status === st).length;
   const chips = [['all', 'ทั้งหมด', S.users.length], ['pending', 'รออนุมัติ', cnt('pending')], ['active', 'ใช้งาน', cnt('active')], ['inactive', 'ปิดใช้งาน', cnt('inactive')]];
   return `
@@ -4685,9 +4763,13 @@ function renderUsers() {
     <button class="btn btn-primary" data-action="importUsers"><span class="msr">group_add</span>นำเข้าจากไฟล์</button>
   </div>
   <div class="chips">${chips.map(c => `<button class="fchip ${S.f.userSt === c[0] ? 'active' : ''}" data-userst="${c[0]}">${c[1]} <em>${c[2]}</em></button>`).join('')}</div>
+  ${nSel ? `<div class="sel-bar"><span class="msr">check_box</span><b>เลือก ${nSel} คน</b><div class="grow"></div>
+    <button class="btn btn-light btn-sm" data-action="userSelClear">ยกเลิกการเลือก</button>
+    <button class="btn btn-danger btn-sm" data-action="userDelMany"><span class="msr">delete</span>ลบที่เลือก (${nSel})</button></div>` : ''}
   <div class="card">${list.length ? `<div class="table-wrap"><table class="tbl">
-    <thead><tr><th>ผู้ใช้งาน</th><th>รหัสบุคลากร</th><th>ตำแหน่ง / ฝ่าย</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th></th></tr></thead>
-    <tbody>${list.map(u => { const st = USER_ST[u.status] || USER_ST.inactive; return `<tr>
+    <thead><tr><th style="width:38px"><input type="checkbox" class="u-cb" data-action="userSelAll" ${allOn ? 'checked' : ''} title="เลือกทั้งหมดในรายการนี้"></th><th>ผู้ใช้งาน</th><th>รหัสบุคลากร</th><th>ตำแหน่ง / ฝ่าย</th><th>สถานะ</th><th>เข้าใช้ล่าสุด</th><th></th></tr></thead>
+    <tbody>${list.map(u => { const st = USER_ST[u.status] || USER_ST.inactive; return `<tr${S.userSel.has(u.id) ? ' class="u-sel"' : ''}>
+      <td><input type="checkbox" class="u-cb" data-usel="${esc(u.id)}" ${S.userSel.has(u.id) ? 'checked' : ''}></td>
       <td><div class="t-main"><div class="avatar sm">${esc(initial(u.fullName))}</div>
         <div><b>${esc(u.fullName)}</b><small>${esc(u.fullNameEn)} · @${esc(u.username)}</small>${u.email ? `<small class="muted"><span class="msr" style="font-size:13px;vertical-align:-2px">mail</span> ${esc(u.email)}</small>` : '<small class="muted" style="color:var(--amber,#b7791f)">ยังไม่มีอีเมล</small>'}</div></div></td>
       <td><span class="mono">${esc(u.employeeId)}</span></td>
@@ -5173,6 +5255,13 @@ function bindEvents() {
       case 'pipSave': return savePipAction(false);
       case 'pipSaveSubmit': return savePipAction(true);
       case 'pipSubmit': return pipDo(d.id, 'submit');
+      case 'pipForward': return pipDo(d.id, 'forward');
+      case 'pipCloseEval': return pipDo(d.id, 'closeEval');
+      case 'pipOpenEval': return openPipEvalModal();
+      case 'pipOpenOne': return openPipEvalModal(d.id);
+      case 'userSelAll': { const ids = userListFiltered().map(u => u.id); const all = ids.every(i => S.userSel.has(i)); ids.forEach(i => all ? S.userSel.delete(i) : S.userSel.add(i)); return render(); }
+      case 'userSelClear': S.userSel.clear(); return render();
+      case 'userDelMany': return deleteSelectedUsers();
       case 'pipRecall': return pipDo(d.id, 'recall');
       case 'pipDel': return pipDo(d.id, 'delete');
       case 'pipReturn': return pipReturn(d.id);
@@ -5235,7 +5324,7 @@ function bindEvents() {
   };
   $('#chatPanel').addEventListener('click', chatClicks);
   $('#content').addEventListener('click', chatClicks);
-  $('#content').addEventListener('change', e => { if (e.target.closest && e.target.closest('#reqForm')) onReqInput(e); if (e.target.closest && e.target.closest('#pipForm')) onPipInput(e); if (e.target.name === 'pipSt') { S.pv.st = e.target.value; render(); } if (e.target.name === 'pipRnd') { S.pf.rnd = e.target.value; render(); } if (e.target.name === 'pipView') { S.pf.view = e.target.value; render(); } if (e.target.id === 'pipFy') { S.pf.fy = e.target.value; render(); } });
+  $('#content').addEventListener('change', e => { if (e.target.dataset && e.target.dataset.usel) { e.target.checked ? S.userSel.add(e.target.dataset.usel) : S.userSel.delete(e.target.dataset.usel); return render(); } if (e.target.closest && e.target.closest('#reqForm')) onReqInput(e); if (e.target.closest && e.target.closest('#pipForm')) onPipInput(e); if (e.target.name === 'pipSt') { S.pv.st = e.target.value; render(); } if (e.target.name === 'pipRnd') { S.pf.rnd = e.target.value; render(); } if (e.target.name === 'pipView') { S.pf.view = e.target.value; render(); } if (e.target.id === 'pipFy') { S.pf.fy = e.target.value; render(); } });
   $('#content').addEventListener('keydown', e => {
     if (e.target.id === 'stScan' && e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.value = ''; stationScan(v); }
   });
