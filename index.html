@@ -575,6 +575,8 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .pip-sign .ok-t{color:var(--green)!important}
 .pip-tbl td{vertical-align:top}
 .btn-warn-soft{background:#fff4e5;color:#b45309;border:1px solid #f6d5a8}.btn-warn-soft:hover{background:#ffead0}
+.via-bar{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(90deg,#0b2545,#13315c);color:#fff;font-size:14px}
+.via-bar b{margin:0 3px}.via-bar .btn{margin-left:auto;background:#fff;color:var(--navy)}
 .pip-pst{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--muted);margin-top:3px}
 .pip-pst .msr{font-size:15px}.pip-pst.ok{color:#15803d}.pip-pst.wait{color:#b45309;font-weight:500}
 .b-purple{background:#f3efff;color:#6d28d9}
@@ -913,10 +915,12 @@ tr.u-sel td{background:#f0fbfb}
           <div class="dd-head"><b class="js-name">-</b><small class="js-username">-</small></div>
           <button data-action="profile"><span class="msr">badge</span>ข้อมูลส่วนตัว</button>
           <button data-action="password"><span class="msr">key</span>เปลี่ยนรหัสผ่าน</button>
+          <div id="ddSwitch"></div>
           <button data-action="logout" class="danger"><span class="msr">logout</span>ออกจากระบบ</button>
         </div>
       </div>
     </header>
+    <div class="via-bar hidden" id="viaBar"><span class="msr">swap_horiz</span><span>คุณกำลังใช้งาน<b>หน้าผู้ใช้งาน</b> (สลับมาจากบัญชี Admin <b id="viaName"></b>)</span><button class="btn btn-sm" data-action="backAdmin"><span class="msr">admin_panel_settings</span>กลับหน้า Admin</button></div>
     <div class="content" id="content"></div>
   </main>
   <button id="chatFab" class="chat-fab hidden" title="แชทกับผู้ดูแลระบบ"><span class="msr fill">chat</span><em id="chatBadge" class="hidden">0</em></button>
@@ -987,7 +991,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.1.0'
+  VERSION: '4.2.0'
 };
 
 const PAGES = {
@@ -2114,7 +2118,9 @@ async function doLogout() {
   if (!(await ask(ASK.logout))) return;
   const t = S.token;
   stopChat();
-  S.token = null; S.user = null; store.del('hrd_token'); store.del('hrd_page');
+  const at = store.get('hrd_admin_token');
+  S.token = null; S.user = null; store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_admin_token');
+  if (at) api('logout', at).catch(() => {});
   showLogin('home'); toast('ออกจากระบบเรียบร้อย', 'info');
   if (t) api('logout', t).catch(() => {});
 }
@@ -2136,6 +2142,61 @@ function renderUser() {
   renderNav();
   $$('.admin-only').forEach(e => e.classList.toggle('hidden', !isAdmin()));
   $$('#nav a[data-page]').forEach(a => a.classList.toggle('hidden', !canSee(a.dataset.page)));
+  const via = !isAdmin() && !!store.get('hrd_admin_token');
+  $('#viaBar').classList.toggle('hidden', !via);
+  if (via) $('#viaName').textContent = '@' + (u.viaAdmin || '');
+  $('#ddSwitch').innerHTML = isAdmin()
+    ? (u.linkedUserId ? `<button data-action="switchUser"><span class="msr">swap_horiz</span>สลับไปหน้าผู้ใช้งาน</button><button data-action="linkUser"><span class="msr">link</span>จัดการบัญชีผู้ใช้งานที่ผูกไว้</button>`
+      : `<button data-action="linkUser"><span class="msr">add_link</span>ผูกบัญชีผู้ใช้งานของฉัน</button>`)
+    : via ? `<button data-action="backAdmin"><span class="msr">admin_panel_settings</span>กลับไปหน้า Admin</button>` : '';
+}
+async function switchToUserView() {
+  closeDropdown();
+  if (!S.user.linkedUserId) return openLinkUser();
+  loader(true);
+  try {
+    const r = await api('switchToUser', S.token);
+    store.set('hrd_admin_token', S.token);
+    stopChat();
+    S.token = r.token; store.set('hrd_token', r.token); store.del('hrd_page');
+    await loadAll(); enterApp(); toast('สลับไปหน้าผู้ใช้งาน ' + S.user.fullName);
+  } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+async function backToAdmin() {
+  closeDropdown();
+  const at = store.get('hrd_admin_token'); if (!at) return;
+  loader(true);
+  const ut = S.token;
+  try {
+    stopChat();
+    S.token = at; store.set('hrd_token', at); store.del('hrd_admin_token'); store.del('hrd_page');
+    await loadAll(); enterApp(); toast('กลับสู่หน้า Admin แล้ว');
+    if (ut) api('logout', ut).catch(() => {});
+  } catch (e) { toast('เซสชัน Admin หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง', 'err'); onExpired(); } finally { loader(false); }
+}
+async function openLinkUser() {
+  closeDropdown();
+  let info = { linked: null, guess: [] };
+  loader(true); try { info = await api('linkedUserInfo', S.token); } catch (e) { } finally { loader(false); }
+  openModal({
+    title: 'ผูกบัญชีผู้ใช้งานกับบัญชี Admin', icon: 'link', okText: 'ผูกบัญชี', size: 'sm',
+    body: `${info.linked ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--green-50);border-color:#bfe6cc"><small class="muted">ผูกอยู่กับ</small><br><b>${esc(info.linked.name)}</b> <span class="muted">@${esc(info.linked.username)} · ${esc(info.linked.employeeId)}</span>
+        <div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn btn-primary btn-sm" data-action="switchUser"><span class="msr">swap_horiz</span>สลับไปหน้าผู้ใช้งาน</button><button type="button" class="btn btn-light btn-sm" id="unlinkBtn">ยกเลิกการผูก</button></div></div>` : ''}
+      <p class="small" style="color:var(--text-2);margin-top:0">ใส่ชื่อผู้ใช้งานและรหัสผ่านของ<b>บัญชีผู้ใช้งาน (บุคลากร) ของคุณเอง</b> เพื่อยืนยันว่าเป็นเจ้าของบัญชี — ผูกแล้วสลับไปหน้าผู้ใช้งานได้จากเมนูมุมขวาบนโดยไม่ต้องเข้าสู่ระบบใหม่</p>
+      ${info.guess && info.guess.length && !info.linked ? `<p class="small">บัญชีที่ชื่อตรงกับคุณ: ${info.guess.map(g => `<a class="link" data-guess="${esc(g.username)}">${esc(g.name)} (@${esc(g.username)})</a>`).join(', ')}</p>` : ''}
+      <form id="mForm" onsubmit="return false" autocomplete="off">
+        ${fieldHtml({ k: 'lkUser', label: 'ชื่อผู้ใช้งาน (บุคลากร)', req: true }, '')}
+        ${fieldHtml({ k: 'lkPw', label: 'รหัสผ่านของบัญชีผู้ใช้งาน', type: 'password', req: true }, '')}</form>`,
+    onOpen: () => {
+      $$('[data-guess]').forEach(a => a.addEventListener('click', () => { $('#f_lkUser').value = a.dataset.guess; $('#f_lkPw').focus(); }));
+      const ub = $('#unlinkBtn'); if (ub) ub.addEventListener('click', async () => { await api('unlinkAdminUser', S.token); S.user.linkedUserId = ''; closeModal(true); renderUser(); toast('ยกเลิกการผูกบัญชีแล้ว'); });
+    },
+    onOk: async () => {
+      const r = await api('linkAdminUser', S.token, $('#f_lkUser').value, $('#f_lkPw').value);
+      S.user.linkedUserId = r.linkedUserId; renderUser();
+      toast('ผูกบัญชี ' + r.name + ' แล้ว — กด "สลับไปหน้าผู้ใช้งาน" ที่เมนูมุมขวาบน');
+    }
+  });
 }
 function refreshCounts() {
   $('#cntSystems').textContent = S.systems.length;
@@ -2856,7 +2917,8 @@ async function printReq(d, win, auto) {
   toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ จึงพิมพ์จากหน้านี้แทน', 'info');
 }
 
-const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evaluated: ['ประเมินแล้ว', 'b-green', 'task_alt'] };
+const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evalReview: ['รอ ผบ.ที่สูงขึ้นไปอนุมัติผล', 'b-amber', 'approval'], evaluated: ['อนุมัติผลแล้ว', 'b-green', 'task_alt'] };
+function pipCanPrint(r) { return !r || (r.status !== 'evalOpen' && r.status !== 'evalReview'); }
 const PIP_EVAL_T = 'ผลลัพธ์การปฏิบัติงานและประเมินผล';
 function pipSignable(r) {
   const allow = r.status === 'signing' ? ['emp', 'sup1'] : r.status === 'review' ? ['sup2'] : [];
@@ -2865,7 +2927,7 @@ function pipSignable(r) {
 function pipCanForward(r) { const sg = r.signs || {}; return r.status === 'signing' && !!sg.emp && !!sg.sup1 && (isAdmin() || (r.myRoles || []).indexOf('sup1') > -1); }
 function pipTodo(r) {
   if (isAdmin()) return false;
-  return pipSignable(r).length > 0 || (pipCanForward(r)) || (r.status === 'evalOpen' && (r.myRoles || []).indexOf('sup1') > -1);
+  return pipSignable(r).length > 0 || (pipCanForward(r)) || (r.status === 'evalOpen' && (r.myRoles || []).indexOf('sup1') > -1) || (r.status === 'evalReview' && (r.myRoles || []).indexOf('sup2') > -1);
 }
 const PIP_ROLE = { emp: 'ผู้เข้ารับการพัฒนา', sup1: 'ผู้บังคับบัญชาโดยตรง', sup2: 'ผู้บังคับบัญชาที่สูงขึ้นไป' };
 S.pips = []; S.pip = { count: 0, todo: 0 }; S.pv = { mode: 'list', id: null, data: null, q: '', st: 'all' };
@@ -2881,17 +2943,20 @@ function pipCan(r) {
     submit: st === 'draft' && ed && !!(r && (r.kpis || []).length),
     sign: !!r && pipSignable(r).length > 0,
     forward: !!r && pipCanForward(r),
-    ret: (st === 'signing' && sup1) || (st === 'review' && (sup1 || roles.indexOf('sup2') > -1)),
+    ret: (st === 'signing' && sup1) || (st === 'review' && roles.indexOf('sup2') > -1),
     pull: st === 'signing' && roles.indexOf('emp') > -1 && !sup1,
     recall: A && st !== 'draft',
     openEval: A && st === 'active',
     closeEval: A && st === 'evalOpen',
-    evaluate: (st === 'evalOpen' || st === 'evaluated') && (A || sup1),
+    evaluate: st === 'evalOpen' && (A || sup1),
+    approve: st === 'evalReview' && (A || roles.indexOf('sup2') > -1),
+    reopen: A && (st === 'evalReview' || st === 'evaluated'),
+    print: pipCanPrint(r),
     del: A
   };
 }
 function pipSetSummary() {
-  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review').length }; }
+  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review' || r.status === 'evalReview').length }; }
   else S.pip = { count: S.pips.length, todo: S.pips.filter(pipTodo).length, draft: S.pips.filter(r => r.status === 'draft' && (r.myRoles || []).indexOf('emp') > -1).length };
   refreshCounts();
 }
@@ -2935,7 +3000,7 @@ function pipStages(r) {
     { t: 'ผู้เข้ารับการพัฒนาลงนาม', done: !!sg.emp, at: sg.emp && sg.emp.at },
     { t: 'ผบ.โดยตรงลงนาม', done: !!sg.sup1, at: sg.sup1 && sg.sup1.at },
     { t: 'ผบ.ที่สูงขึ้นไปลงนาม', done: !!sg.sup2, at: sg.sup2 && sg.sup2.at, sub: !sg.sup2 && st === 'review' ? 'ส่งต่อแล้ว' : !sg.sup2 && st === 'signing' && sg.emp && sg.sup1 ? 'รอส่งต่อ' : '' },
-    { t: PIP_EVAL_T, done: st === 'evaluated', at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : st === 'evalOpen' ? 'เปิดประเมินแล้ว' : st === 'active' && end ? 'ครบแผน ' + thDateShort(end) : '' }
+    { t: PIP_EVAL_T, done: st === 'evaluated', at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : st === 'evalOpen' ? 'เปิดประเมินแล้ว' : st === 'evalReview' ? 'รอ ผบ.ที่สูงขึ้นไปอนุมัติ' : st === 'active' && end ? 'ครบแผน ' + thDateShort(end) : '' }
   ];
 }
 function pipTrackLine(r) {
@@ -2957,6 +3022,11 @@ function pipPersonSt(r, k, plain) {
   else if (st === 'signing') { t = k === 'sup2' ? ((r.signs || {}).emp && (r.signs || {}).sup1 ? 'รอ ผบ.โดยตรงส่งต่อ' : 'รอขั้นลงนาม') : 'รอลงนาม'; c = k === 'sup2' ? '' : 'wait'; }
   else if (st === 'review') { t = k === 'sup2' ? 'รอลงนาม (ส่งต่อแล้ว)' : '-'; c = k === 'sup2' ? 'wait' : ''; }
   else { t = '-'; c = ''; }
+  const es = r.evalSigns || {};
+  if (k === 'sup1' && st === 'evalOpen') { t = r.evalNote ? 'ถูกส่งกลับ รอแก้ผล' : 'รอบันทึกผลประเมิน'; c = 'wait'; }
+  if (k === 'sup1' && (st === 'evalReview' || st === 'evaluated') && es.sup1) { t = 'ส่งผลแล้ว ' + thDateShort(String(es.sup1.at).slice(0, 10)); c = 'ok'; }
+  if (k === 'sup2' && st === 'evalReview') { t = 'รออนุมัติผลประเมิน'; c = 'wait'; }
+  if (k === 'sup2' && st === 'evaluated' && es.sup2) { t = 'อนุมัติผลแล้ว ' + thDateShort(String(es.sup2.at).slice(0, 10)); c = 'ok'; }
   return `<span class="pip-pst ${c}">${c === 'ok' ? '<span class="msr">check_circle</span>' : c === 'wait' ? '<span class="msr">schedule</span>' : ''}${esc(t)}</span>`;
 }
 function renderPipList() {
@@ -2967,7 +3037,7 @@ function renderPipList() {
   const inFy = S.pips.filter(r => S.pf.fy === 'all' || String(pipFY(r)) === S.pf.fy);
   const base = inFy.filter(r => match(S.pv.q, r.fullName, r.employeeId, r.department, r.unit, r.sup1Name, r.sup2Name));
   const cnt = k => base.filter(r => k === 'all' || r.status === k).length;
-  const list = base.filter(r => S.pv.st === 'all' || r.status === S.pv.st || (S.pv.st === 'todo' && todo(r)));
+  const list = base;
   const chips = [['all', 'ทั้งหมด']].concat(A ? [] : [['todo', 'รอฉันลงนาม']]).concat(Object.keys(PIP_ST).map(k => [k, PIP_ST[k][0]]));
   const rc = k => list.filter(r => (r.round === '2' ? '2' : '1') === k).length;
   const rounds = S.pf.rnd === 'all' ? ['1', '2'] : [S.pf.rnd];
@@ -2984,9 +3054,9 @@ function renderPipList() {
       <td>${pipBadge(r)}<div class="small muted" style="margin-top:4px">ผู้เข้ารับฯ: ${pipPersonSt(r, 'emp', true)}</div>${r.status === 'draft' && r.note ? '<div class="small" style="color:var(--red);margin-top:4px">ถูกส่งกลับแก้ไข</div>' : ''}</td>
       <td>${r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : r.summary === 'fail' ? '<span class="badge b-red">ไม่ผ่าน</span>' : '<span class="muted small">-</span>'}</td>
       <td><div class="actions">
-        ${pipSignable(r).length ? `<button class="btn btn-primary btn-sm" data-action="pipSign" data-id="${esc(r.id)}"><span class="msr">draw</span>ลงนาม</button>` : pipCanForward(r) && !isAdmin() ? `<button class="btn btn-primary btn-sm" data-action="pipForward" data-id="${esc(r.id)}"><span class="msr">forward_to_inbox</span>ส่งต่อ</button>` : r.status === 'evalOpen' && !isAdmin() && (r.myRoles || []).indexOf('sup1') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipEval" data-id="${esc(r.id)}"><span class="msr">grading</span>ประเมินผล</button>` : ''}
+        ${pipSignable(r).length ? `<button class="btn btn-primary btn-sm" data-action="pipSign" data-id="${esc(r.id)}"><span class="msr">draw</span>ลงนาม</button>` : pipCanForward(r) && !isAdmin() ? `<button class="btn btn-primary btn-sm" data-action="pipForward" data-id="${esc(r.id)}"><span class="msr">forward_to_inbox</span>ส่งต่อ</button>` : r.status === 'evalOpen' && !isAdmin() && (r.myRoles || []).indexOf('sup1') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipEval" data-id="${esc(r.id)}"><span class="msr">grading</span>ประเมินผล</button>` : r.status === 'evalReview' && !isAdmin() && (r.myRoles || []).indexOf('sup2') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipView" data-id="${esc(r.id)}"><span class="msr">approval</span>พิจารณาผล</button>` : ''}
         <button class="icon-btn" data-action="pipView" data-id="${esc(r.id)}" title="ดูรายละเอียด"><span class="msr">visibility</span></button>
-        <button class="icon-btn" data-action="pipPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>
+        ${pipCanPrint(r) ? `<button class="icon-btn" data-action="pipPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>` : `<span class="icon-btn" style="opacity:.35;cursor:not-allowed" title="พิมพ์ได้หลังผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติผล"><span class="msr">print_disabled</span></span>`}
       </div></td></tr>`).join('')}</tbody></table></div>`;
   const trackHtml = rows => `<div class="trk-list">${rows.map(r => `<div class="trk-row${todo(r) ? ' pip-todo' : ''}">
       <div class="trk-who"><span class="mono">${esc(r.employeeId)}</span><a class="doc-link" data-action="pipView" data-id="${esc(r.id)}">${esc(r.fullName)}</a>
@@ -3001,7 +3071,7 @@ function renderPipList() {
   }).join('');
   return `
   ${!A && S.pip.todo ? `<div class="notice" style="background:#fff7e6"><span class="msr">draw</span><div>มีแผน PIP <b>${S.pip.todo} รายการ</b> รอการดำเนินการจากคุณ (ลงนาม / ส่งต่อ / บันทึกผลลัพธ์และประเมินผล)</div></div>` : ''}
-  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอคุณ<b>กำหนดเป้าหมาย KPI</b> — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข" เสร็จแล้วกด "ส่งลงนาม" ให้ผู้บังคับบัญชาพิจารณา${S.pips.some(r => r.status === 'draft' && r.note && (r.myRoles || []).indexOf('emp') > -1) ? ' · <b style="color:var(--red)">มีแผนที่ถูกส่งกลับให้แก้ไข</b>' : ''}</div></div>` : ''}
+  ${!A && S.pip.draft ? `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">edit_note</span><div>มีแผน PIP <b>${S.pip.draft} รายการ</b> รอคุณ<b>กำหนดเป้าหมาย KPI</b> — เปิดแผนแล้วกด "กำหนดเป้าหมาย / แก้ไข" เสร็จแล้วกด "บันทึก ลงนาม และส่งต่อ" ให้ผู้บังคับบัญชาโดยตรงพิจารณา${S.pips.some(r => r.status === 'draft' && r.note && (r.myRoles || []).indexOf('emp') > -1) ? ' · <b style="color:var(--red)">มีแผนที่ถูกส่งกลับให้แก้ไข</b>' : ''}</div></div>` : ''}
   <div class="toolbar">
     <label class="pip-fy"><span class="msr">event</span><select class="input" id="pipFy">
       <option value="all"${S.pf.fy === 'all' ? ' selected' : ''}>ทุกปีงบประมาณ</option>
@@ -3012,11 +3082,10 @@ function renderPipList() {
     <button class="btn btn-light" data-action="pipBlank"><span class="msr">print</span>พิมพ์แบบฟอร์มเปล่า</button>
     ${A ? `<button class="btn btn-light" data-action="pipOpenEval"><span class="msr">lock_open</span>เปิดการประเมินผล${inFy.filter(r => r.status === 'active').length ? ` <em class="count">${inFy.filter(r => r.status === 'active').length}</em>` : ''}</button><button class="btn btn-light" data-action="pipImport"><span class="msr">upload_file</span>นำเข้าจากตาราง</button><button class="btn btn-primary" data-action="pipNew"><span class="msr">add</span>เพิ่มแผน PIP</button>` : ''}
   </div>
-  <div class="toolbar">
+  ${A || S.pips.some(r => (r.myRoles || []).some(k => k !== 'emp')) ? `<div class="toolbar">
     <div class="search"><span class="msr">search</span><input id="pipQ" placeholder="ค้นหารหัสบุคลากร ชื่อ ฝ่าย ผู้บังคับบัญชา..." value="${esc(S.pv.q)}"></div>
-    <div class="seg pip-chips">${chips.map(c => `<label><input type="radio" name="pipSt" value="${c[0]}" ${S.pv.st === c[0] ? 'checked' : ''}><span>${c[1]}${c[0] === 'todo' ? '' : ' (' + cnt(c[0]) + ')'}</span></label>`).join('')}</div>
-  </div>
-  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนากำหนดเป้าหมาย KPI → ส่งลงนาม → ผบ.โดยตรงพิจารณา (ลงนาม หรือ<b>ส่งกลับแก้ไข</b>พร้อมเหตุผล) → ผบ.โดยตรง<b>ส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · <b>ขั้นที่ 2</b> เมื่อถึงรอบ Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} แล้ว<b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
+  </div>` : ''}
+  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนากำหนด KPI → <b>บันทึก ลงนาม และส่งต่อ</b> → ผบ.โดยตรง<b>ลงนามและส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · ส่งกลับแก้ไขเป็นลำดับขั้นพร้อมเหตุผล · <b>ขั้นที่ 2</b> Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} ลงนามและส่งต่อ → ผบ.ที่สูงขึ้นไป<b>อนุมัติ</b> → <b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
   ${S.pips.length ? sections : `<div class="card">${emptyState('trending_up', 'ยังไม่มีแผนพัฒนาการปฏิบัติงาน', A ? 'เพิ่มแผน PIP ทีละคน หรือนำเข้าหลายคนจากตาราง' : 'เมื่อมีแผน PIP ที่เกี่ยวข้องกับคุณ รายการจะแสดงที่นี่', A ? { label: 'เพิ่มแผน PIP', attr: 'data-action="pipNew"' } : null)}</div>`}`;
 }
 function pipBlankData() {
@@ -3095,7 +3164,7 @@ function renderPipEditor() {
   ${cur && cur.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(cur.note)}</div></div>` : ''}
   <div class="req-note"><span class="msr">info</span><div>${A
     ? (isNew ? 'Admin เพิ่มผู้เกี่ยวข้อง รอบ และวันที่เริ่ม → กด <b>"บันทึก"</b> แล้ว <b>ผู้เข้ารับการพัฒนาจะกำหนดเป้าหมาย KPI</b> จากบัญชีของตนเอง (ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งาน) · เพิ่มหลายคนพร้อมกันใช้ปุ่ม "นำเข้าจากตาราง"' : 'แก้ไขข้อมูลแผน (สถานะกำหนดเป้าหมาย)')
-    : 'กำหนด<b>เป้าหมาย KPI และการดำเนินการ</b> — เสร็จแล้วกด <b>"บันทึกและส่งลงนาม"</b> ผู้บังคับบัญชาจะพิจารณาและลงนาม หรือส่งกลับให้แก้ไขพร้อมเหตุผล'}
+    : 'กำหนด<b>เป้าหมาย KPI และการดำเนินการ</b> — <b>"บันทึกร่าง"</b> = เก็บไว้แก้ต่อ · <b>"บันทึก ลงนาม และส่งต่อ"</b> = ยืนยันด้วยรหัสผ่าน แล้วส่งให้ผู้บังคับบัญชาโดยตรงพิจารณาทันที'}
     ${cur && cur.updatedBy ? `<br><small>แก้ไขล่าสุดโดย @${esc(cur.updatedBy)} · ${esc(timeAgo(cur.updatedAt))}</small>` : ''}</div></div>
   <form id="pipForm" onsubmit="return false" autocomplete="off">${people}
   ${header}
@@ -3104,8 +3173,8 @@ function renderPipEditor() {
   <div class="req-actions">
     <button class="btn btn-light" data-action="pipCancel">ยกเลิก</button>
     ${A && isNew ? '' : `<button class="btn btn-light" data-action="pipPreview"><span class="msr">visibility</span>ดูตัวอย่าง</button>`}
-    <button class="btn ${A && isNew ? 'btn-primary' : 'btn-light'}" data-action="pipSave"><span class="msr">save</span>${A && isNew ? 'บันทึก (ให้ผู้เกี่ยวข้องกำหนดเป้าหมาย)' : 'บันทึก'}</button>
-    ${A && isNew ? '' : `<button class="btn btn-primary" data-action="pipSaveSubmit"><span class="spinner"></span><span class="msr">send</span><span class="btn-label">บันทึกและส่งลงนาม</span></button>`}
+    <button class="btn ${A && isNew ? 'btn-primary' : 'btn-light'}" data-action="pipSave"><span class="msr">save</span>${A && isNew ? 'บันทึก (ให้ผู้เกี่ยวข้องกำหนดเป้าหมาย)' : A ? 'บันทึก' : 'บันทึกร่าง'}</button>
+    ${A && isNew ? '' : `<button class="btn btn-primary" data-action="pipSaveSubmit"><span class="spinner"></span><span class="msr">${A ? 'send' : 'draw'}</span><span class="btn-label">${A ? 'บันทึกและส่งลงนาม' : 'บันทึก ลงนาม และส่งต่อ'}</span></button>`}
   </div>`;
 }
 function readPipForm() {
@@ -3165,8 +3234,39 @@ function validatePip(forSubmit) {
   if (miss.length) { toast('กรุณาตรวจสอบ: ' + miss.join(', '), 'err'); const f = $('#pipForm .req-field-err'); if (f) f.focus(); return false; }
   return true;
 }
+function pwConfirm(o) {
+  return new Promise(res => {
+    let done = false;
+    openModal({
+      title: o.title, icon: o.icon || 'draw', okText: o.okText || 'ยืนยัน', size: 'sm',
+      body: `${o.info || ''}<p class="small" style="color:var(--text-2)">${o.text || 'การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า'}</p>
+        <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'cfPw', label: 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      onOpen: () => { const i = $('#f_cfPw'); if (i) { i.focus(); i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); } },
+      onOk: async () => { await o.run($('#f_cfPw').value); done = true; res(true); },
+      onCancel: () => { if (!done) res(false); }
+    });
+  });
+}
+async function pipEmpSend(id) {
+  const r = S.pips.find(x => x.id === id); if (!r) return false;
+  return pwConfirm({ title: 'บันทึก ลงนาม และส่งต่อ', icon: 'draw', okText: 'ลงนามและส่งต่อ',
+    info: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--teal-50);border-color:#bfe6e6"><b>${esc(r.fullName)}</b><div class="small muted">${esc(pipPeriod(r))} · ${(r.kpis || []).length} เป้าหมาย</div></div>`,
+    text: 'ข้าพเจ้ายืนยันเป้าหมาย KPI และการดำเนินการตามแผนนี้ และส่งให้ผู้บังคับบัญชาโดยตรงพิจารณา — การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า',
+    run: async pw => { S.pips = (await api('pipSubmitSign', S.token, id, pw)).list; pipSetSummary(); toast('ลงนามและส่งต่อผู้บังคับบัญชาโดยตรงแล้ว'); S.pv = { mode: 'view', id, data: null, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0); } });
+}
 async function savePipAction(submit) {
   if (!validatePip(submit)) return;
+  if (submit && !isAdmin()) {
+    loader(true);
+    try {
+      const cur = S.pv.id ? pipCur() : null;
+      const r = await api('savePip', S.token, Object.assign({}, S.pv.data, { id: S.pv.id, baseUpdatedAt: cur ? cur.updatedAt : '' }));
+      S.pips = r.list; pipSetSummary();
+    } catch (e) { toast(e.message, 'err'); return; } finally { loader(false); }
+    const sent = await pipEmpSend(S.pv.id);
+    if (!sent) { toast('บันทึกร่างไว้แล้ว (ยังไม่ได้ลงนามและส่งต่อ)', 'info'); S.pv = { mode: 'view', id: S.pv.id, data: null, q: S.pv.q, st: S.pv.st }; render(); }
+    return;
+  }
   const ok = await ask(submit
     ? { tone: 'primary', icon: 'send', title: 'บันทึกและส่งลงนาม?', message: 'เมื่อส่งแล้วจะแก้ไขไม่ได้ ผู้บังคับบัญชาโดยตรงจะพิจารณาและลงนาม (หรือส่งกลับให้แก้ไขพร้อมเหตุผล)', okText: 'ส่งลงนาม', cancelText: 'กลับไปตรวจสอบ' }
     : ASK.save(!!S.pv.id));
@@ -3181,7 +3281,7 @@ async function savePipAction(submit) {
     S.pips = r.list;
     if (submit) S.pips = (await api('pipAction', S.token, r.id, 'submit')).list;
     pipSetSummary();
-    toast(submit ? 'ส่งแผนให้ลงนามอิเล็กทรอนิกส์แล้ว' : !S.pv.id && isAdmin() ? 'เพิ่มแผนแล้ว — ผู้เกี่ยวข้องเข้าไปกำหนดเป้าหมายได้ทันที' : 'บันทึกแล้ว');
+    toast(submit ? 'ส่งแผนให้ลงนามอิเล็กทรอนิกส์แล้ว' : !S.pv.id && isAdmin() ? 'เพิ่มแผนแล้ว — ผู้เกี่ยวข้องเข้าไปกำหนดเป้าหมายได้ทันที' : isAdmin() ? 'บันทึกแล้ว' : 'บันทึกร่างแล้ว');
     S.pv = { mode: 'view', id: r.id, data: null, q: S.pv.q, st: S.pv.st };
     render(); window.scrollTo(0, 0);
   } catch (e) { toast(e.message, 'err'); }
@@ -3394,22 +3494,28 @@ function renderPipView() {
     <button class="btn btn-light" data-action="pipBack"><span class="msr">arrow_back</span>กลับ</button>
     <div class="grow"></div>
     ${c.edit ? btn('pipEdit', A ? 'edit' : 'edit_note', A ? 'แก้ไข' : 'กำหนดเป้าหมาย / แก้ไข', !A && !(r.kpis || []).length ? 'btn-primary' : 'btn-light') : ''}
-    ${c.submit ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : ''}
+    ${c.submit ? (A ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : btn('pipEmpSend', 'draw', 'ลงนามและส่งต่อ', 'btn-primary')) : ''}
     ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับแก้ไข (ระบุเหตุผล)', 'btn-warn-soft') : ''}
     ${c.pull ? btn('pipPull', 'edit_note', 'ดึงกลับมาแก้ไข') : ''}
-    ${c.sign ? btn('pipSign', 'draw', 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
+    ${c.sign ? btn('pipSign', 'draw', pipSignable(r).indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : pipSignable(r).indexOf('sup2') > -1 ? 'ลงนาม (สิ้นสุดแผน)' : 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
+    ${c.approve ? btn('pipEvalApprove', 'approval', 'อนุมัติผลการประเมิน', 'btn-primary') + btn('pipEvalReturn', 'undo', 'ส่งกลับแก้ไขผล (ระบุเหตุผล)', 'btn-warn-soft') : ''}
+    ${c.reopen ? btn('pipReopen', 'edit', 'เปิดให้แก้ไขผลอีกครั้ง') : ''}
     ${c.forward ? btn('pipForward', 'forward_to_inbox', 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป', 'btn-primary') : ''}
     ${c.openEval ? btn('pipOpenOne', 'lock_open', 'เปิดการประเมินผล', 'btn-primary') : ''}
     ${c.closeEval ? btn('pipCloseEval', 'lock', 'ปิดการประเมินผล') : ''}
     ${c.evaluate ? btn('pipEval', 'grading', r.status === 'evaluated' ? 'แก้ไข' + PIP_EVAL_T : PIP_EVAL_T, r.status === 'evalOpen' ? 'btn-primary' : 'btn-light') : ''}
     ${c.recall ? btn('pipRecall', 'restart_alt', 'ดึงกลับเป็นร่าง') : ''}
-    ${btn('pipPrint', 'print', 'พิมพ์')}
+    ${c.print ? btn('pipPrint', 'print', 'พิมพ์') : `<span class="small muted" style="display:inline-flex;align-items:center;gap:4px"><span class="msr" style="font-size:18px">print_disabled</span>พิมพ์ได้หลัง ผบ.ที่สูงขึ้นไปอนุมัติผล</span>`}
     ${c.del ? `<button class="icon-btn danger" data-action="pipDel" data-id="${esc(r.id)}" title="ลบแผน"><span class="msr">delete</span></button>` : ''}
   </div>
   ${r.status === 'active' ? `<div class="req-note"><span class="msr">lock_clock</span><div><b>ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)</b> — ดำเนินการตามแผน และรอรอบ${PIP_EVAL_T} ซึ่งผู้ดูแลระบบจะเป็นผู้เปิด</div></div>` : ''}
-  ${r.status === 'evalOpen' ? `<div class="notice" style="background:#f3efff;color:#5b21b6;border-color:#ddd2fb"><span class="msr">grading</span><div>เปิดรอบ<b>${PIP_EVAL_T}</b>แล้ว — ผู้บังคับบัญชาโดยตรงบันทึกผล แล้วพิมพ์เอกสารเพื่อลงนามด้วยปากกา</div></div>` : ''}
+  ${r.status === 'evalOpen' ? `<div class="notice" style="background:#f3efff;color:#5b21b6;border-color:#ddd2fb"><span class="msr">grading</span><div>เปิดรอบ<b>${PIP_EVAL_T}</b>แล้ว — ผู้บังคับบัญชาโดยตรงบันทึกผล แล้วกด "บันทึก ลงนาม และส่งต่อ" ให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ (พิมพ์ได้หลังอนุมัติ)</div></div>` : ''}
+  ${r.status === 'evalOpen' && r.evalNote ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ผลการประเมินถูกส่งกลับให้แก้ไข</b> — ${esc(r.evalNote)}</div></div>` : ''}
+  ${r.status === 'evalReview' ? `<div class="notice" style="background:#fff7e6;border-color:#f6dfb5"><span class="msr">approval</span><div>ผู้บังคับบัญชาโดยตรงส่งผลการประเมินแล้ว (${esc(((r.evalSigns || {}).sup1 || {}).name || '')} ${(r.evalSigns || {}).sup1 ? fmtDate((r.evalSigns || {}).sup1.at, true) : ''}) — <b>รอผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ</b> จึงพิมพ์เอกสารได้</div></div>` : ''}
+  ${r.status === 'evaluated' && (r.evalSigns || {}).sup2 ? `<div class="req-note"><span class="msr">verified</span><div>ผลการประเมินได้รับอนุมัติโดย ${esc(r.evalSigns.sup2.name)} เมื่อ ${fmtDate(r.evalSigns.sup2.at, true)} — <b>พิมพ์เอกสารเพื่อลงนามด้วยปากกาได้แล้ว</b></div></div>` : ''}
+  ${r.status === 'signing' && r.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ผู้บังคับบัญชาที่สูงขึ้นไปส่งกลับ</b> — ${esc(r.note)}${(r.myRoles || []).indexOf('sup1') > -1 ? '<br><small>พิจารณา: กด "ลงนามและส่งต่อ" อีกครั้ง หรือ "ส่งกลับแก้ไข" ให้ผู้เข้ารับการพัฒนาพร้อมเหตุผล</small>' : ''}</div></div>` : ''}
   ${r.status === 'signing' && (r.signs || {}).emp && (r.signs || {}).sup1 ? `<div class="req-note"><span class="msr">forward_to_inbox</span><div>ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงลงนามแล้ว — รอผู้บังคับบัญชาโดยตรงกด <b>"ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป"</b></div></div>` : ''}
-  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาเป็นผู้กำหนดและแก้ไขเป้าหมาย KPI แล้วกด "ส่งลงนาม" (ผู้บังคับบัญชาแก้ไขเองไม่ได้ ใช้ "ส่งกลับแก้ไข" พร้อมเหตุผล)${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
+  ${r.status === 'draft' ? `<div class="req-note"><span class="msr">groups</span><div>สถานะ <b>กำหนดเป้าหมาย</b> — ผู้เข้ารับการพัฒนาเป็นผู้กำหนดและแก้ไขเป้าหมาย KPI แล้วกด "ลงนามและส่งต่อ" (ผู้บังคับบัญชาแก้ไขเองไม่ได้ ใช้ "ส่งกลับแก้ไข" พร้อมเหตุผล)${r.updatedBy ? ` · แก้ไขล่าสุดโดย @${esc(r.updatedBy)} ${esc(timeAgo(r.updatedAt))}` : ''}</div></div>` : ''}
   ${r.status === 'draft' && r.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(r.note)}${(r.myRoles || []).indexOf('emp') > -1 ? '<br><small>กด "กำหนดเป้าหมาย / แก้ไข" เพื่อแก้ตามเหตุผล แล้วส่งลงนามใหม่</small>' : ''}</div></div>` : ''}
   ${!r.hashOk ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">gpp_bad</span><div>เนื้อหาแผนไม่ตรงกับฉบับที่ลงนาม (ข้อมูลในชีตอาจถูกแก้ไขโดยตรง) กรุณาตรวจสอบ</div></div>` : ''}
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">trending_up</span>${esc(r.fullName)}</h3>${pipBadge(r)}</div><div class="card-b">
@@ -3438,7 +3544,7 @@ function pipSign(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   const roles = pipSignable(r);
   openModal({
-    title: 'ลงนามอิเล็กทรอนิกส์ แผน PIP', icon: 'draw', okText: 'ลงนาม', size: 'sm',
+    title: roles.indexOf('sup1') > -1 ? 'ลงนามและส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป' : 'ลงนามอิเล็กทรอนิกส์ แผน PIP', icon: 'draw', okText: roles.indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : 'ลงนาม', size: 'sm',
     body: `<div class="card" style="padding:14px 16px;margin-bottom:14px;background:var(--teal-50);border-color:#bfe6e6">
       <b style="font-size:16px">แผนพัฒนาการปฏิบัติงานของ ${esc(r.fullName)}</b>
       <div class="small" style="color:var(--text-2);margin-top:4px">${esc(pipPeriod(r))}<br>ลงนามในฐานะ: <b>${roles.map(k => PIP_ROLE[k]).join(', ')}</b><br>รหัสยืนยันเอกสาร ${esc(r.docHash || '-')}</div></div>
@@ -3449,7 +3555,7 @@ function pipSign(id) {
       const res = await api('signPip', S.token, r.id, $('#f_pipPw').value);
       S.pips = res.list; pipSetSummary();
       const cur = S.pips.find(x => x.id === r.id);
-      toast(res.done ? 'ลงนามเรียบร้อย — แผนนี้ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)' : cur && pipCanForward(cur) ? 'ลงนามเรียบร้อย — กด "ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป" ได้แล้ว' : 'ลงนามอิเล็กทรอนิกส์เรียบร้อย');
+      toast(res.done ? 'ลงนามเรียบร้อย — แผนนี้ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)' : res.forwarded ? 'ลงนามและส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว' : cur && pipCanForward(cur) ? 'ลงนามเรียบร้อย — กด "ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป" ได้แล้ว' : 'ลงนามอิเล็กทรอนิกส์เรียบร้อย');
       S.pv.mode = 'view'; S.pv.id = r.id; render();
     }
   });
@@ -3464,12 +3570,12 @@ async function pipPullBack(id) {
 function pipReturn(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   openModal({
-    title: 'ส่งกลับแก้ไขให้ผู้เข้ารับการพัฒนา', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn',
+    title: r.status === 'review' ? 'ส่งกลับให้ผู้บังคับบัญชาโดยตรงพิจารณา' : 'ส่งกลับแก้ไขให้ผู้เข้ารับการพัฒนา', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn',
     body: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#fff7e6;border-color:#f6dfb5"><b>${esc(r.fullName)}</b><div class="small muted">${esc(pipPeriod(r))}</div></div>
-      <p class="small" style="color:var(--text-2);margin-top:0">แผนจะกลับเป็นสถานะ "กำหนดเป้าหมาย" ให้<b>ผู้เข้ารับการพัฒนา</b>แก้ไขตามเหตุผลที่ระบุ แล้วส่งลงนามใหม่ · ลายมือชื่ออิเล็กทรอนิกส์ที่ลงไว้แล้วจะถูกยกเลิก · ระบบส่งอีเมลแจ้งผู้เข้ารับการพัฒนา (ถ้ามีอีเมล)</p>
+      <p class="small" style="color:var(--text-2);margin-top:0">${r.status === 'review' ? 'ส่งกลับตามลำดับขั้น: แผนจะกลับไปที่<b>ผู้บังคับบัญชาโดยตรง</b> (ลายมือชื่อของผู้บังคับบัญชาโดยตรงถูกยกเลิก) เพื่อพิจารณาลงนามใหม่ หรือส่งกลับให้ผู้เข้ารับการพัฒนาแก้ไข · ระบบส่งอีเมลแจ้งผู้บังคับบัญชาโดยตรง' : 'แผนจะกลับเป็นสถานะ "กำหนดเป้าหมาย" ให้<b>ผู้เข้ารับการพัฒนา</b>แก้ไขตามเหตุผลที่ระบุ แล้วส่งลงนามใหม่ · ลายมือชื่ออิเล็กทรอนิกส์ที่ลงไว้แล้วจะถูกยกเลิก · ระบบส่งอีเมลแจ้งผู้เข้ารับการพัฒนา (ถ้ามีอีเมล)'}</p>
       <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipNote', label: 'เหตุผล / สิ่งที่ต้องการให้แก้ไข', type: 'textarea', req: true, ph: 'เช่น เป้าหมายข้อ 2 ยังวัดผลไม่ได้ ขอให้ระบุตัวชี้วัดเป็นตัวเลข' }, '')}</form>`,
     validate: () => { if (String($('#f_pipNote').value).trim().length < 5) { toast('กรุณาระบุเหตุผลให้ชัดเจน', 'err'); return false; } },
-    onOk: async () => { S.pips = (await api('pipAction', S.token, r.id, 'return', $('#f_pipNote').value)).list; pipSetSummary(); toast('ส่งกลับให้ผู้เข้ารับการพัฒนาแก้ไขแล้ว'); render(); }
+    onOk: async () => { S.pips = (await api('pipAction', S.token, r.id, 'return', $('#f_pipNote').value)).list; pipSetSummary(); toast(r.status === 'review' ? 'ส่งกลับให้ผู้บังคับบัญชาโดยตรงแล้ว' : 'ส่งกลับให้ผู้เข้ารับการพัฒนาแก้ไขแล้ว'); render(); }
   });
 }
 async function pipDo(id, action) {
@@ -3477,6 +3583,7 @@ async function pipDo(id, action) {
   const Q = {
     submit: { tone: 'primary', icon: 'send', title: 'ส่งลงนาม?', message: 'เมื่อส่งแล้วจะแก้ไขเนื้อหาไม่ได้ จนกว่าจะดึงกลับเป็นร่าง', okText: 'ส่งลงนาม' },
     forward: { tone: 'primary', icon: 'forward_to_inbox', title: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป?', message: 'ผู้บังคับบัญชาที่สูงขึ้นไป (' + r.sup2Name + ') จะเห็นเป้าหมาย KPI และลงนามอิเล็กทรอนิกส์ ซึ่งถือเป็นที่สิ้นสุดของขั้นกำหนดแผน', okText: 'ส่งต่อ' },
+    reopenEval: { tone: 'warn', icon: 'edit', title: 'เปิดให้แก้ไขผลการประเมินอีกครั้ง?', message: 'สถานะกลับเป็น "เปิดประเมินผล" การอนุมัติ/ลายมือชื่อของขั้นประเมินผลจะถูกยกเลิก', okText: 'เปิดให้แก้ไข' },
     closeEval: { tone: 'warn', icon: 'lock', title: 'ปิดการประเมินผล?', message: 'แผนจะกลับเป็นสถานะ "ลงนามครบ รอรอบประเมิน" ผลที่บันทึกไว้ยังอยู่', okText: 'ปิดการประเมินผล' },
     recall: { tone: 'warn', icon: 'restart_alt', title: 'ดึงกลับเป็นร่าง?', message: 'ลายมือชื่ออิเล็กทรอนิกส์ทั้งหมดของแผนนี้จะถูกยกเลิก และต้องส่งลงนามใหม่' + (r.status === 'evaluated' || r.status === 'active' ? ' (ผลการประเมินที่บันทึกไว้ยังอยู่)' : ''), okText: 'ดึงกลับเป็นร่าง' },
     delete: { tone: 'danger', icon: 'delete_forever', title: 'ลบแผน PIP?', message: 'ลบแผนของ ' + r.fullName + ' — ไม่สามารถกู้คืนได้', okText: 'ลบแผน' }
@@ -3486,7 +3593,7 @@ async function pipDo(id, action) {
   try {
     S.pips = (await api('pipAction', S.token, id, action)).list; pipSetSummary();
     if (action === 'delete') S.pv = { mode: 'list', id: null, data: null, q: S.pv.q, st: S.pv.st };
-    toast({ submit: 'ส่งแผนให้ลงนามแล้ว', recall: 'ดึงกลับเป็นร่างแล้ว', forward: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว', closeEval: 'ปิดการประเมินผลแล้ว' }[action] || 'ลบแผนแล้ว');
+    toast({ reopenEval: 'เปิดให้แก้ไขผลการประเมินแล้ว', submit: 'ส่งแผนให้ลงนามแล้ว', recall: 'ดึงกลับเป็นร่างแล้ว', forward: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว', closeEval: 'ปิดการประเมินผลแล้ว' }[action] || 'ลบแผนแล้ว');
     render();
   } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
 }
@@ -3535,13 +3642,13 @@ function renderPipEval() {
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">fact_check</span>สรุปผลการประเมิน</h3></div><div class="card-b">
     ${seg('summary', d.summary)}
     <label class="field" style="margin-top:12px"><span>เหตุผล</span><textarea class="input" name="reason" rows="2" maxlength="500">${esc(d.reason)}</textarea></label>
-    <small class="hint">ถ้ายังไม่เลือกสรุปผล ระบบจะบันทึกไว้ก่อน (สถานะยังเป็น "เปิดประเมินผล")</small>
+    <small class="hint">"บันทึกร่าง" = เก็บไว้แก้ต่อ · "บันทึก ลงนาม และส่งต่อ" = ยืนยันด้วยรหัสผ่าน แล้วส่งให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ (พิมพ์เอกสารได้หลังอนุมัติ)</small>
   </div></div>
   </form>
   <div class="req-actions">
     <button class="btn btn-light" data-action="pipEvalCancel">ยกเลิก</button>
-    <button class="btn btn-light" data-action="pipEvalSave"><span class="msr">save</span>บันทึก</button>
-    <button class="btn btn-primary" data-action="pipEvalPrint"><span class="spinner"></span><span class="msr">print</span><span class="btn-label">บันทึกและพิมพ์</span></button>
+    <button class="btn btn-light" data-action="pipEvalSave"><span class="msr">save</span>บันทึกร่าง</button>
+    <button class="btn btn-primary" data-action="pipEvalPrint"><span class="spinner"></span><span class="msr">draw</span><span class="btn-label">บันทึก ลงนาม และส่งต่อ</span></button>
   </div>`;
 }
 function readPipEval() {
@@ -3551,20 +3658,49 @@ function readPipEval() {
   d.reason = $('[name=reason]', f).value;
   return d;
 }
-async function savePipEval(andPrint) {
-  const d = readPipEval();
-  if (d.summary && d.kpis.some(k => !k.eval) && !(await ask({ tone: 'warn', icon: 'help', title: 'ยังประเมินไม่ครบทุกเป้าหมาย', message: 'มีเป้าหมายที่ยังไม่ได้เลือก ผ่าน/ไม่ผ่าน ต้องการบันทึกต่อหรือไม่', okText: 'บันทึกต่อ', cancelText: 'กลับไปแก้ไข' }))) return;
-  if (!(await ask(ASK.save(true)))) return;
-  const id = S.pv.id, win = andPrint ? openPrintWindow() : null;
-  const btn = andPrint ? $('[data-action=pipEvalPrint]') : null;
-  if (btn) setBtnLoading(btn, true); else loader(true);
-  try {
-    S.pips = (await api('evaluatePip', S.token, id, d)).list; pipSetSummary();
-    toast('บันทึก' + PIP_EVAL_T + 'แล้ว');
-    S.pv = { mode: 'view', id, data: null, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0);
-    if (andPrint) await printPip(pipCur(), win, true);
-  } catch (e) { if (win) win.close(); toast(e.message, 'err'); }
-  finally { if (btn) setBtnLoading(btn, false); loader(false); }
+async function savePipEval(submit) {
+  const d = readPipEval(), id = S.pv.id;
+  if (submit && (!d.summary || d.kpis.some(k => !k.eval))) return toast('กรุณาประเมิน ผ่าน/ไม่ผ่าน ให้ครบทุกเป้าหมาย และเลือกสรุปผลก่อนส่ง', 'err');
+  const after = () => { pipSetSummary(); S.pv = { mode: 'view', id, data: null, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0); };
+  if (!submit) {
+    loader(true);
+    try { S.pips = (await api('evaluatePip', S.token, id, d)).list; toast('บันทึกร่าง' + PIP_EVAL_T + 'แล้ว'); after(); }
+    catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+    return;
+  }
+  if (isAdmin()) {
+    if (!(await ask({ tone: 'primary', icon: 'send', title: 'บันทึกและส่งให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ?', message: 'บันทึกในนามผู้ดูแลระบบ', okText: 'บันทึกและส่งต่อ' }))) return;
+    loader(true);
+    try { S.pips = (await api('evaluatePip', S.token, id, d, { submit: true })).list; toast('ส่งผลการประเมินให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติแล้ว'); after(); }
+    catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+    return;
+  }
+  const r = pipCur();
+  await pwConfirm({ title: 'บันทึก ลงนาม และส่งต่อผลการประเมิน', icon: 'draw', okText: 'ลงนามและส่งต่อ',
+    info: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#f3efff;border-color:#ddd2fb"><b>${esc(r.fullName)}</b><div class="small muted">สรุปผล: <b>${d.summary === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน'}</b> · ผ่าน ${d.kpis.filter(k => k.eval === 'pass').length}/${d.kpis.length} เป้าหมาย</div></div>`,
+    text: 'ข้าพเจ้ายืนยันผลลัพธ์การปฏิบัติงานและผลการประเมินนี้ และส่งให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ — การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า',
+    run: async pw => { S.pips = (await api('evaluatePip', S.token, id, d, { submit: true, password: pw })).list; toast('ลงนามและส่งผลการประเมินให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติแล้ว'); after(); } });
+}
+async function pipEvalApprove(id) {
+  const r = S.pips.find(x => x.id === id); if (!r) return;
+  const info = `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#f3efff;border-color:#ddd2fb"><b>${esc(r.fullName)}</b><div class="small muted">สรุปผล: <b>${r.summary === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน'}</b>${r.reason ? ' · ' + esc(r.reason) : ''}</div></div>`;
+  const ok2 = () => { pipSetSummary(); toast('อนุมัติผลการประเมินแล้ว — พิมพ์เอกสารเพื่อลงนามได้'); render(); };
+  if (isAdmin()) {
+    if (!(await ask({ tone: 'primary', icon: 'approval', title: 'อนุมัติผลการประเมิน (ในนามผู้ดูแลระบบ)?', message: r.fullName, okText: 'อนุมัติ' }))) return;
+    loader(true); try { S.pips = (await api('pipEvalDecision', S.token, id, 'approve', '')).list; ok2(); } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+    return;
+  }
+  await pwConfirm({ title: 'อนุมัติผลการประเมิน', icon: 'approval', okText: 'อนุมัติ', info,
+    text: 'ข้าพเจ้าได้พิจารณาผลลัพธ์การปฏิบัติงานและผลการประเมินแล้ว และอนุมัติ — การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า',
+    run: async pw => { S.pips = (await api('pipEvalDecision', S.token, id, 'approve', pw)).list; ok2(); } });
+}
+function pipEvalReturn(id) {
+  const r = S.pips.find(x => x.id === id); if (!r) return;
+  openModal({ title: 'ส่งผลการประเมินกลับให้ผู้บังคับบัญชาโดยตรงแก้ไข', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn',
+    body: `<p class="small" style="color:var(--text-2);margin-top:0">ผลการประเมินของ <b>${esc(r.fullName)}</b> จะกลับไปที่ผู้บังคับบัญชาโดยตรง (${esc(r.sup1Name)}) เพื่อแก้ไขแล้วส่งใหม่ · ระบบส่งอีเมลแจ้ง</p>
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'evNote', label: 'เหตุผล / สิ่งที่ต้องการให้แก้ไข', type: 'textarea', req: true }, '')}</form>`,
+    validate: () => { if (String($('#f_evNote').value).trim().length < 5) { toast('กรุณาระบุเหตุผลให้ชัดเจน', 'err'); return false; } },
+    onOk: async () => { S.pips = (await api('pipEvalDecision', S.token, id, 'return', $('#f_evNote').value)).list; pipSetSummary(); toast('ส่งผลการประเมินกลับให้ผู้บังคับบัญชาโดยตรงแล้ว'); render(); } });
 }
 function pipPreviewData() {
   const d = readPipForm(), cur = S.pv.id ? pipCur() : null;
@@ -3703,7 +3839,7 @@ function pipHtml(r) {
     const n = pipSignCount(r);
     let foot = '';
     if (r.preview) foot = 'ตัวอย่างก่อนบันทึก — ยังไม่ได้ลงนาม';
-    else if (n === 3) foot = 'ขั้นที่ 1 ลงนามอิเล็กทรอนิกส์ครบแล้วผ่านระบบ HRD Center · รหัสยืนยันเอกสาร ' + (r.docHash || '-') + ' · ขั้นที่ 2 (สรุปผลการประเมิน) ลงนามด้วยปากกา';
+    else if (n === 3) foot = 'ขั้นที่ 1 ลงนามอิเล็กทรอนิกส์ครบแล้วผ่านระบบ HRD Center · รหัสยืนยันเอกสาร ' + (r.docHash || '-') + (r.status === 'evaluated' && (r.evalSigns || {}).sup2 ? ' · ผลการประเมินอนุมัติในระบบ ' + pipStamp((r.evalSigns || {}).sup2.at) : '') + ' · ขั้นที่ 2 ลงนามด้วยปากกา';
     else foot = 'สถานะ: ' + (PIP_ST[r.status] || PIP_ST.draft)[0] + (r.status === 'signing' ? ' (ลงนามแล้ว ' + n + '/3)' : '') + ' — เอกสารยังไม่สมบูรณ์' + (r.docHash ? ' · รหัสยืนยันเอกสาร ' + r.docHash : '');
     h += '<div class="ft" style="left:23.4pt;top:576pt;width:802.8pt">' + fmEsc(foot) + '<span>พิมพ์เมื่อ ' + fmEsc(pipStamp(new Date().toISOString().slice(0, 10) + ' ' + new Date().toTimeString().slice(0, 5))) + '</span></div>';
     if (n < 3) h += '<div class="wm">' + (r.preview ? 'ตัวอย่าง' : 'ฉบับร่าง') + '</div>';
@@ -5268,6 +5404,13 @@ function bindEvents() {
       case 'pipSaveSubmit': return savePipAction(true);
       case 'pipSubmit': return pipDo(d.id, 'submit');
       case 'pipForward': return pipDo(d.id, 'forward');
+      case 'pipEmpSend': return pipEmpSend(d.id);
+      case 'pipEvalApprove': return pipEvalApprove(d.id);
+      case 'pipEvalReturn': return pipEvalReturn(d.id);
+      case 'pipReopen': return pipDo(d.id, 'reopenEval');
+      case 'switchUser': return switchToUserView();
+      case 'backAdmin': return backToAdmin();
+      case 'linkUser': return openLinkUser();
       case 'pipPull': return pipPullBack(d.id);
       case 'pipCloseEval': return pipDo(d.id, 'closeEval');
       case 'pipOpenEval': return openPipEvalModal();
@@ -5283,7 +5426,7 @@ function bindEvents() {
       case 'pipEvalCancel': return (async () => { if (!(await ask(ASK.cancel))) return; S.pv.mode = 'view'; S.pv.data = null; render(); })();
       case 'pipEvalSave': return savePipEval(false);
       case 'pipEvalPrint': return savePipEval(true);
-      case 'pipPrint': { const r0 = S.pips.find(x => x.id === d.id); if (!r0) return; const w = openPrintWindow(); return printPip(r0, w, false); }
+      case 'pipPrint': { const r0 = S.pips.find(x => x.id === d.id); if (!r0) return; if (!pipCanPrint(r0)) return toast('พิมพ์ได้หลังผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติผลการประเมิน', 'err'); const w = openPrintWindow(); return printPip(r0, w, false); }
       case 'pipBlank': { const w = openPrintWindow(); return printPip(null, w, false); }
       case 'reqCopy': { const r0 = S.requests.find(x => x.id === d.id); if (!r0) return; const nd = JSON.parse(JSON.stringify(r0.data)); nd.reqDate = todayStr(); S.req = { mode: 'edit', id: null, data: nd, signTouched: true, q: S.req.q }; render(); toast('คัดลอกข้อมูลแล้ว แก้ไขแล้วกดบันทึกเป็นแบบฟอร์มใหม่', 'info'); return; }
       case 'reqDel': { const r0 = S.requests.find(x => x.id === d.id); if (!r0) return; (async () => { if (!(await confirmBox('ลบแบบฟอร์ม "' + r0.subject + '" ?', 'ข้อมูลที่ลบแล้วจะไม่สามารถกู้คืนได้'))) return; loader(true); try { S.requests = await api('deleteRequest', S.token, d.id); toast('ลบแบบฟอร์มแล้ว'); render(); } catch (e) { toast(e.message, 'err'); } finally { loader(false); } })(); return; }
