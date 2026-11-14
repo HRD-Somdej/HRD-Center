@@ -226,7 +226,6 @@ textarea.input{height:auto;min-height:96px;padding:10px 14px;resize:vertical}
 .sb-toggle[aria-expanded="true"] .msr{transform:rotate(180deg)}
 .adm-tools{overflow:hidden;transition:max-height .25s ease;max-height:0}
 .adm-tools.open{max-height:800px}
-#switchBtn{color:var(--teal)}
 .nav-order-list{display:flex;flex-direction:column;gap:6px}
 .nav-order-list .no-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line-2);border-radius:10px;background:#fbfcfe}
 .nav-order-list .no-row .msr.ic{color:var(--teal)}.nav-order-list .no-row b{flex:1;font-weight:500}
@@ -595,8 +594,6 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .pip-sign .ok-t{color:var(--green)!important}
 .pip-tbl td{vertical-align:top}
 .btn-warn-soft{background:#fff4e5;color:#b45309;border:1px solid #f6d5a8}.btn-warn-soft:hover{background:#ffead0}
-.via-bar{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(90deg,#0b2545,#13315c);color:#fff;font-size:14px}
-.via-bar b{margin:0 3px}.via-bar .btn{margin-left:auto;background:#fff;color:var(--navy)}
 .ph-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 14px}
 .ph-chip{display:flex;flex-direction:column;padding:6px 12px;border-radius:10px;border:1px solid var(--line-2);background:#fbfcfe;font-size:12.5px}
 .ph-chip small{color:var(--muted);font-size:11.5px}
@@ -730,6 +727,9 @@ tr.u-sel td{background:#f0fbfb}
   .bar-row{grid-template-columns:110px 1fr 28px}
   .search{min-width:0}
 }
+.idle-warn{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:#fff7e6;border:1px solid #f6dfb5;color:#8a5a00;font-size:14px}
+.idle-warn .btn{margin-left:auto;background:#fff;border:1px solid #f6dfb5}
+@media (max-width:760px){.idle-warn{margin:10px 14px 0}}
 </style>
 </head>
 <body>
@@ -887,7 +887,6 @@ tr.u-sel td{background:#f0fbfb}
       </div>
       <div class="chip date"><span class="msr">calendar_today</span><span id="todayChip"></span></div>
       <button class="icon-btn" id="refreshBtn" title="รีเฟรชข้อมูล"><span class="msr">refresh</span></button>
-      <button class="icon-btn hidden" id="switchBtn" title="สลับไปหน้าผู้ใช้งาน"><span class="msr">swap_horiz</span></button>
       <div class="user-menu">
         <div class="user-trigger" id="userTrigger">
           <div class="avatar sm js-avatar">A</div>
@@ -903,7 +902,7 @@ tr.u-sel td{background:#f0fbfb}
         </div>
       </div>
     </header>
-    <div class="via-bar hidden" id="viaBar"><span class="msr">swap_horiz</span><span>คุณกำลังใช้งาน<b>หน้าผู้ใช้งาน</b> (สลับมาจากบัญชี Admin <b id="viaName"></b>)</span><button class="btn btn-sm" data-action="backAdmin"><span class="msr">admin_panel_settings</span>กลับหน้า Admin</button></div>
+    <div class="idle-warn hidden" id="idleWarn"><span class="msr">timer</span><span>ไม่มีการใช้งานนาน — ระบบจะออกจากระบบอัตโนมัติในอีก <b id="idleLeft">2</b> นาที</span><button class="btn btn-sm" type="button" id="idleStay">ใช้งานต่อ</button></div>
     <div class="content" id="content"></div>
   </main>
   <button id="chatFab" class="chat-fab hidden" title="แชทกับผู้ดูแลระบบ"><span class="msr fill">chat</span><em id="chatBadge" class="hidden">0</em></button>
@@ -974,7 +973,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.5.0'
+  VERSION: '4.6.0'
 };
 
 const PAGES = {
@@ -1500,7 +1499,7 @@ function canSee(page) {
   if (menuOf(page)) return true;
   const p = PAGES[page];
   if (!p) return false;
-  if (isAdmin()) return !p.userOnly && (!p.su || S.user.role === 'superadmin');
+  if (isAdmin()) return (!p.userOnly || !!S.me) && (!p.su || S.user.role === 'superadmin');
   if (page === 'pip' && !(S.pip && S.pip.count)) return false;
   return !p.admin && !p.su && (S.settings.modules || {})[p.mod] !== false;
 }
@@ -1549,12 +1548,22 @@ function match(q, ...fields) { q = q.trim().toLowerCase(); return !q || fields.s
 
 const IN_GAS = typeof google !== 'undefined' && !!google.script && !!google.script.run;
 const API_URL = String((window.HRD_CONFIG && window.HRD_CONFIG.API_URL) || '').trim();
-function api(fn, ...args) {
+const API_READ = /^(get|list|my|chatStatus|staffStatus|linkedUserInfo|logArchiveInfo)/;
+const API_TRANSIENT = /Failed to fetch|Load failed|NetworkError|network|server error occurred|ข้อผิดพลาดของเซิร์ฟเวอร์|BAD_RESPONSE|timed out|Service invoked too many times|Exceeded maximum execution/i;
+async function api(fn, ...args) {
+  try { return await apiOnce(fn, ...args); }
+  catch (e) {
+    if (!API_READ.test(fn) || !API_TRANSIENT.test(e.raw || '')) throw e;
+    await new Promise(r => setTimeout(r, 1200));
+    return apiOnce(fn, ...args);
+  }
+}
+function apiOnce(fn, ...args) {
   return new Promise((resolve, reject) => {
     const fail = err => {
       const msg = String((err && err.message) || err).replace(/^(Error|Exception|ScriptError|TypeError):\s{0,}/i, '');
       if (msg.indexOf('SESSION_EXPIRED') > -1) { onExpired(); return reject(new Error('เซสชันหมดอายุ')); }
-      reject(new Error(friendlyError(msg)));
+      const er = new Error(friendlyError(msg)); er.raw = msg; reject(er);
     };
     if (IN_GAS) { google.script.run.withSuccessHandler(resolve).withFailureHandler(fail)[fn](...args); return; }
     if (!/^https:[/][/]script[.]google[.]com[/].+[/]exec$/.test(API_URL)) return fail(new Error('API_NOT_SET'));
@@ -2048,8 +2057,45 @@ async function loadAll() {
   S.navOrder = d.navOrder || [];
   if (d.sysCategories && d.sysCategories.length) S.sysCats = d.sysCategories;
   S.pip = d.pip || { count: 0, todo: 0 };
+  S.me = d.me || null;
+}
+const IDLE_MS = 30 * 60 * 1000, IDLE_WARN_MS = 28 * 60 * 1000;
+const IDLE = { last: Date.now(), saved: 0, warned: false, timer: null };
+function idleTouch() {
+  const n = Date.now();
+  IDLE.last = n;
+  if (IDLE.warned) { IDLE.warned = false; const w = $('#idleWarn'); if (w) w.classList.add('hidden'); }
+  if (n - IDLE.saved > 10000) { IDLE.saved = n; store.set('hrd_last', String(n)); }
+}
+function idleCheck() {
+  if (!S.token || !S.user) return;
+  const gone = Date.now() - Math.max(IDLE.last, Number(store.get('hrd_last') || 0));
+  if (gone >= IDLE_MS) return idleLogout();
+  const w = $('#idleWarn');
+  if (gone >= IDLE_WARN_MS && w) {
+    IDLE.warned = true; w.classList.remove('hidden');
+    $('#idleLeft').textContent = Math.max(1, Math.ceil((IDLE_MS - gone) / 60000));
+  }
+}
+function idleLogout() {
+  const t = S.token, mode = S.user && S.user.kind === 'user' ? 'user' : 'admin';
+  stopChat(); clearTimeout(PEND.timer);
+  S.token = null; S.user = null; S.me = null;
+  store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_last');
+  const w = $('#idleWarn'); if (w) w.classList.add('hidden');
+  answerAsk(false); closeModal(true); loader(false);
+  showLogin(mode);
+  toast('ออกจากระบบอัตโนมัติ เนื่องจากไม่มีการใช้งานเกิน 30 นาที', 'info');
+  if (t) api('logout', t).catch(() => {});
+}
+function initIdle() {
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'].forEach(ev => document.addEventListener(ev, idleTouch, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) idleCheck(); });
+  clearInterval(IDLE.timer);
+  IDLE.timer = setInterval(idleCheck, 15000);
 }
 function enterApp() {
+  IDLE.last = Date.now(); IDLE.saved = 0; idleTouch();
   $('#loginView').classList.add('hidden');
   $('#appView').classList.remove('hidden');
   renderUser(); refreshCounts();
@@ -2062,9 +2108,7 @@ async function doLogout() {
   if (!(await ask(ASK.logout))) return;
   const t = S.token;
   stopChat();
-  const at = store.get('hrd_admin_token');
-  S.token = null; S.user = null; store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_admin_token');
-  if (at) api('logout', at).catch(() => {});
+  S.token = null; S.user = null; S.me = null; store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_admin_token'); store.del('hrd_last');
   showLogin('home'); toast('ออกจากระบบเรียบร้อย', 'info');
   if (t) api('logout', t).catch(() => {});
 }
@@ -2086,69 +2130,42 @@ function renderUser() {
   renderNav();
   $$('.admin-only').forEach(e => e.classList.toggle('hidden', !isAdmin()));
   $$('#nav a[data-page]').forEach(a => a.classList.toggle('hidden', !canSee(a.dataset.page)));
-  const via = !isAdmin() && !!store.get('hrd_admin_token');
-  const sb = $('#switchBtn');
-  if (sb) {
-    sb.classList.toggle('hidden', !isAdmin() && !via);
-    $('.msr', sb).textContent = isAdmin() ? 'swap_horiz' : 'admin_panel_settings';
-    sb.title = isAdmin() ? (u.linkedUserId ? 'สลับไปหน้าผู้ใช้งาน' : 'สลับไปหน้าผู้ใช้งาน (ผูกบัญชีผู้ใช้งานก่อน)') : 'กลับหน้า Admin';
-  }
   if (isAdmin()) {
     const inTools = ['activities', 'chat', 'users', 'menus', 'posters', 'settings', 'admins', 'logs'].indexOf(S.page) > -1;
     setAdmTools(inTools || store.get('hrd_admtools', true) === '1', false);
   }
-  $('#viaBar').classList.toggle('hidden', !via);
-  if (via) $('#viaName').textContent = '@' + (u.viaAdmin || '');
   $('#ddSwitch').innerHTML = isAdmin()
-    ? (u.linkedUserId ? `<button data-action="switchUser"><span class="msr">swap_horiz</span>สลับไปหน้าผู้ใช้งาน</button><button data-action="linkUser"><span class="msr">link</span>จัดการบัญชีผู้ใช้งานที่ผูกไว้</button>`
-      : `<button data-action="linkUser"><span class="msr">add_link</span>ผูกบัญชีผู้ใช้งานของฉัน</button>`)
-    : via ? `<button data-action="backAdmin"><span class="msr">admin_panel_settings</span>กลับไปหน้า Admin</button>` : '';
-}
-async function switchToUserView() {
-  closeDropdown();
-  if (!S.user.linkedUserId) return openLinkUser();
-  loader(true);
-  try {
-    const r = await api('switchToUser', S.token);
-    store.set('hrd_admin_token', S.token);
-    stopChat();
-    S.token = r.token; store.set('hrd_token', r.token); store.del('hrd_page');
-    await loadAll(); enterApp(); toast('สลับไปหน้าผู้ใช้งาน ' + S.user.fullName);
-  } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
-}
-async function backToAdmin() {
-  closeDropdown();
-  const at = store.get('hrd_admin_token'); if (!at) return;
-  loader(true);
-  const ut = S.token;
-  try {
-    stopChat();
-    S.token = at; store.set('hrd_token', at); store.del('hrd_admin_token'); store.del('hrd_page');
-    await loadAll(); enterApp(); toast('กลับสู่หน้า Admin แล้ว');
-    if (ut) api('logout', ut).catch(() => {});
-  } catch (e) { toast('เซสชัน Admin หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง', 'err'); onExpired(); } finally { loader(false); }
+    ? `<button data-action="linkUser"><span class="msr">${S.me ? 'badge' : 'add_link'}</span>${S.me ? 'บัญชีบุคลากรของฉัน' : 'ผูกบัญชีบุคลากรของฉัน'}</button>` : '';
 }
 async function openLinkUser() {
   closeDropdown();
   let info = { linked: null, guess: [] };
   loader(true); try { info = await api('linkedUserInfo', S.token); } catch (e) { } finally { loader(false); }
+  const L = info.linked;
   openModal({
-    title: 'ผูกบัญชีผู้ใช้งานกับบัญชี Admin', icon: 'link', okText: 'ผูกบัญชี', size: 'sm',
-    body: `${info.linked ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--green-50);border-color:#bfe6cc"><small class="muted">ผูกอยู่กับ</small><br><b>${esc(info.linked.name)}</b> <span class="muted">@${esc(info.linked.username)} · ${esc(info.linked.employeeId)}</span>
-        <div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn btn-primary btn-sm" data-action="switchUser"><span class="msr">swap_horiz</span>สลับไปหน้าผู้ใช้งาน</button><button type="button" class="btn btn-light btn-sm" id="unlinkBtn">ยกเลิกการผูก</button></div></div>` : ''}
-      <p class="small" style="color:var(--text-2);margin-top:0">ใส่ชื่อผู้ใช้งานและรหัสผ่านของ<b>บัญชีผู้ใช้งาน (บุคลากร) ของคุณเอง</b> เพื่อยืนยันว่าเป็นเจ้าของบัญชี — ผูกแล้วสลับไปหน้าผู้ใช้งานได้จากเมนูมุมขวาบนโดยไม่ต้องเข้าสู่ระบบใหม่</p>
-      ${info.guess && info.guess.length && !info.linked ? `<p class="small">บัญชีที่ชื่อตรงกับคุณ: ${info.guess.map(g => `<a class="link" data-guess="${esc(g.username)}">${esc(g.name)} (@${esc(g.username)})</a>`).join(', ')}</p>` : ''}
+    title: 'บัญชีบุคลากรของฉัน', icon: 'badge', okText: L ? 'เปลี่ยนบัญชีที่ผูก' : 'ผูกบัญชี', size: 'sm',
+    body: `${L ? `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--green-50);border-color:#bfe6cc"><small class="muted">ผูกอยู่กับบัญชีบุคลากร</small><br><b>${esc(L.name)}</b> <span class="muted">@${esc(L.username)} · ${esc(L.employeeId)}</span>
+        <div class="small" style="margin-top:6px;color:var(--text-2)">ใช้งานในนามตนเองได้ทันทีจากหน้า Admin: ลงนาม/ประเมินแผน PIP ในบทบาทของคุณ · QR Code ของฉัน · แบบฟอร์มขออนุมัติ (เติมข้อมูลของคุณให้) · แก้ไขข้อมูลส่วนตัว — การลงนามใช้<b>รหัสผ่าน Admin ของคุณ</b></div>
+        <div style="margin-top:8px"><button type="button" class="btn btn-light btn-sm" id="unlinkBtn"><span class="msr">link_off</span>ยกเลิกการผูก</button></div></div>` : ''}
+      <p class="small" style="color:var(--text-2);margin-top:0">${L ? 'เปลี่ยนเป็นบัญชีอื่น: ' : 'ผูกบัญชี Admin กับ<b>บัญชีบุคลากรของคุณเอง</b> เพื่อทำงานในนามตนเอง (เช่น ลงนาม PIP ในฐานะผู้บังคับบัญชา) โดยไม่ต้องสลับหน้า · '}ยืนยันความเป็นเจ้าของด้วยชื่อผู้ใช้งานและรหัสผ่านของบัญชีบุคลากรนั้น (ครั้งเดียว) · ถ้ายังไม่มีบัญชี ให้เพิ่มตัวเองที่เมนู "ผู้ใช้งาน" ก่อน</p>
+      ${info.guess && info.guess.length && !L ? `<p class="small">บัญชีที่ชื่อตรงกับคุณ: ${info.guess.map(g => `<a class="link" data-guess="${esc(g.username)}">${esc(g.name)} (@${esc(g.username)})</a>`).join(' · ')}</p>` : ''}
       <form id="mForm" onsubmit="return false" autocomplete="off">
         ${fieldHtml({ k: 'lkUser', label: 'ชื่อผู้ใช้งาน (บุคลากร)', req: true }, '')}
-        ${fieldHtml({ k: 'lkPw', label: 'รหัสผ่านของบัญชีผู้ใช้งาน', type: 'password', req: true }, '')}</form>`,
+        ${fieldHtml({ k: 'lkPw', label: 'รหัสผ่านของบัญชีบุคลากร', type: 'password', req: true }, '')}</form>`,
     onOpen: () => {
       $$('[data-guess]').forEach(a => a.addEventListener('click', () => { $('#f_lkUser').value = a.dataset.guess; $('#f_lkPw').focus(); }));
-      const ub = $('#unlinkBtn'); if (ub) ub.addEventListener('click', async () => { await api('unlinkAdminUser', S.token); S.user.linkedUserId = ''; closeModal(true); renderUser(); toast('ยกเลิกการผูกบัญชีแล้ว'); });
+      const ub = $('#unlinkBtn'); if (ub) ub.addEventListener('click', async () => {
+        if (!(await ask({ tone: 'warn', icon: 'link_off', title: 'ยกเลิกการผูกบัญชีบุคลากร?', message: 'จะใช้งานในนามตนเอง (ลงนาม PIP, QR Code ของฉัน) จากบัญชี Admin ไม่ได้ จนกว่าจะผูกใหม่', okText: 'ยกเลิกการผูก' }))) return;
+        try { await api('unlinkAdminUser', S.token); S.user.linkedUserId = ''; S.user.uid = ''; S.me = null; closeModal(true); renderUser(); render(); toast('ยกเลิกการผูกบัญชีแล้ว'); } catch (e) { toast(e.message, 'err'); }
+      });
     },
     onOk: async () => {
       const r = await api('linkAdminUser', S.token, $('#f_lkUser').value, $('#f_lkPw').value);
-      S.user.linkedUserId = r.linkedUserId; renderUser();
-      toast('ผูกบัญชี ' + r.name + ' แล้ว — กด "สลับไปหน้าผู้ใช้งาน" ที่เมนูมุมขวาบน');
+      S.user.linkedUserId = r.linkedUserId; S.user.uid = r.linkedUserId; S.me = r.me || null;
+      renderUser();
+      if (S.page === 'pip') { try { S.pips = await api('listPips', S.token); pipSetSummary(); } catch (e) { } }
+      render();
+      toast('ผูกบัญชี ' + r.name + ' แล้ว — ใช้งานในนามตนเองได้ทันที');
     }
   });
 }
@@ -2651,7 +2668,7 @@ S.requests = []; S.req = { mode: 'list', id: null, data: {}, signTouched: false,
 
 async function loadRequests() { S.requests = await api('listRequests', S.token); }
 function reqDefaults() {
-  const u = S.user || {};
+  const u = (isAdmin() && S.me) ? Object.assign({ kind: 'user' }, S.me) : S.user || {};
   let last = {};
   try { last = JSON.parse(store.get('hrd_fm_last', true) || '{}'); } catch (e) { last = {}; }
   const d = { urgency: 'normal', reqDate: todayStr(), phone: last.phone || '', to: last.to || REQ_TO[0], prefix: REQ_PREFIX.indexOf(u.prefixTh) > -1 ? u.prefixTh : (u.kind === 'user' && u.prefixTh ? '' : last.prefix || ''),
@@ -2903,8 +2920,9 @@ function pipSignable(r) {
   return (r.myRoles || []).filter(k => allow.indexOf(k) > -1 && !(r.signs || {})[k]);
 }
 function pipCanForward(r) { const sg = r.signs || {}; return r.status === 'signing' && !!sg.emp && !!sg.sup1 && (isAdmin() || (r.myRoles || []).indexOf('sup1') > -1); }
+function pipOwn(r, k) { return (r.myRoles || []).indexOf(k) > -1; }
 function pipTodo(r) {
-  if (isAdmin()) return false;
+  if (isAdmin() && !(r.myRoles || []).length) return false;
   const ph = pipCurPhase(r);
   if (ph && !pipPhaseInfo(r, ph).ok) return false;
   return pipSignable(r).length > 0 || (pipCanForward(r)) || (r.status === 'evalOpen' && (r.myRoles || []).indexOf('sup1') > -1) || (r.status === 'evalReview' && (r.myRoles || []).indexOf('sup2') > -1);
@@ -2938,7 +2956,7 @@ function pipCan(r) {
   };
 }
 function pipSetSummary() {
-  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review' || r.status === 'evalReview').length }; }
+  if (isAdmin()) { S.pip = { count: S.pips.length, todo: S.pips.filter(r => r.status === 'signing' || r.status === 'review' || r.status === 'evalReview').length, mine: S.pips.filter(pipTodo).length }; }
   else S.pip = { count: S.pips.length, todo: S.pips.filter(pipTodo).length, draft: S.pips.filter(r => r.status === 'draft' && (r.myRoles || []).indexOf('emp') > -1).length };
   refreshCounts();
 }
@@ -3159,7 +3177,7 @@ function renderPipEditor() {
     <button class="btn btn-light" data-action="pipCancel">ยกเลิก</button>
     ${A && isNew ? '' : `<button class="btn btn-light" data-action="pipPreview"><span class="msr">visibility</span>ดูตัวอย่าง</button>`}
     <button class="btn ${A && isNew ? 'btn-primary' : 'btn-light'}" data-action="pipSave"><span class="msr">save</span>${A && isNew ? 'บันทึก (ให้ผู้เกี่ยวข้องกำหนดเป้าหมาย)' : A ? 'บันทึก' : 'บันทึกร่าง'}</button>
-    ${A && isNew ? '' : `<button class="btn btn-primary" data-action="pipSaveSubmit"><span class="spinner"></span><span class="msr">${A ? 'send' : 'draw'}</span><span class="btn-label">${A ? 'บันทึกและส่งลงนาม' : 'บันทึก ลงนาม และส่งต่อ'}</span></button>`}
+    ${A && isNew ? '' : `<button class="btn btn-primary" data-action="pipSaveSubmit"><span class="spinner"></span><span class="msr">${A && !pipOwn(pipCur() || {}, 'emp') ? 'send' : 'draw'}</span><span class="btn-label">${A && !pipOwn(pipCur() || {}, 'emp') ? 'บันทึกและส่งลงนาม' : 'บันทึก ลงนาม และส่งต่อ'}</span></button>`}
   </div>`;
 }
 function readPipForm() {
@@ -3225,7 +3243,7 @@ function pwConfirm(o) {
     openModal({
       title: o.title, icon: o.icon || 'draw', okText: o.okText || 'ยืนยัน', size: 'sm',
       body: `${o.info || ''}<p class="small" style="color:var(--text-2)">${o.text || 'การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า'}</p>
-        <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'cfPw', label: 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+        <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'cfPw', label: isAdmin() ? 'รหัสผ่าน Admin ของคุณ' : 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
       onOpen: () => { const i = $('#f_cfPw'); if (i) { i.focus(); i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); } },
       onOk: async () => { await o.run($('#f_cfPw').value); done = true; res(true); },
       onCancel: () => { if (!done) res(false); }
@@ -3241,7 +3259,7 @@ async function pipEmpSend(id) {
 }
 async function savePipAction(submit) {
   if (!validatePip(submit)) return;
-  if (submit && !isAdmin()) {
+  if (submit && (!isAdmin() || (S.pv.id && pipOwn(pipCur() || {}, 'emp')))) {
     loader(true);
     try {
       const cur = S.pv.id ? pipCur() : null;
@@ -3478,8 +3496,8 @@ function renderPipView() {
   <div class="toolbar">
     <button class="btn btn-light" data-action="pipBack"><span class="msr">arrow_back</span>กลับ</button>
     <div class="grow"></div>
-    ${c.edit ? btn('pipEdit', A ? 'edit' : 'edit_note', A ? 'แก้ไข' : 'กำหนดเป้าหมาย / แก้ไข', !A && !(r.kpis || []).length ? 'btn-primary' : 'btn-light') : ''}
-    ${c.submit ? (A ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : btn('pipEmpSend', 'draw', 'ลงนามและส่งต่อ', 'btn-primary')) : ''}
+    ${c.edit ? btn('pipEdit', A && !pipOwn(r, 'emp') ? 'edit' : 'edit_note', A && !pipOwn(r, 'emp') ? 'แก้ไข' : 'กำหนดเป้าหมาย / แก้ไข', (!A || pipOwn(r, 'emp')) && !(r.kpis || []).length ? 'btn-primary' : 'btn-light') : ''}
+    ${c.submit ? (A && !pipOwn(r, 'emp') ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : btn('pipEmpSend', 'draw', 'ลงนามและส่งต่อ', 'btn-primary')) : ''}
     ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับแก้ไข (ระบุเหตุผล)', 'btn-warn-soft') : ''}
     ${c.pull ? btn('pipPull', 'edit_note', 'ดึงกลับมาแก้ไข') : ''}
     ${c.sign ? btn('pipSign', 'draw', pipSignable(r).indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : pipSignable(r).indexOf('sup2') > -1 ? 'ลงนาม (สิ้นสุดแผน)' : 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
@@ -3536,7 +3554,7 @@ function pipSign(id) {
       <b style="font-size:16px">แผนพัฒนาการปฏิบัติงานของ ${esc(r.fullName)}</b>
       <div class="small" style="color:var(--text-2);margin-top:4px">${esc(pipPeriod(r))}<br>ลงนามในฐานะ: <b>${roles.map(k => PIP_ROLE[k]).join(', ')}</b><br>รหัสยืนยันเอกสาร ${esc(r.docHash || '-')}</div></div>
       <p class="small" style="color:var(--text-2)">ข้าพเจ้าได้อ่านและรับทราบเป้าหมาย KPI และการดำเนินการตามแผนนี้แล้ว การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า${roles.indexOf('sup2') > -1 ? ' <b>(การลงนามของผู้บังคับบัญชาที่สูงขึ้นไปถือเป็นที่สิ้นสุดของขั้นกำหนดแผน)</b>' : ''}</p>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: isAdmin() ? 'รหัสผ่าน Admin ของคุณ' : 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pipPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
     onOk: async () => {
       const res = await api('signPip', S.token, r.id, $('#f_pipPw').value);
@@ -3683,7 +3701,7 @@ async function savePipEval(submit) {
     catch (e) { toast(e.message, 'err'); } finally { loader(false); }
     return;
   }
-  if (isAdmin()) {
+  if (isAdmin() && !pipOwn(pipCur() || {}, 'sup1')) {
     if (!(await ask({ tone: 'primary', icon: 'send', title: 'บันทึกและส่งให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ?', message: 'บันทึกในนามผู้ดูแลระบบ', okText: 'บันทึกและส่งต่อ' }))) return;
     loader(true);
     try { S.pips = (await api('evaluatePip', S.token, id, d, { submit: true })).list; toast('ส่งผลการประเมินให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติแล้ว'); after(); }
@@ -3700,7 +3718,7 @@ async function pipEvalApprove(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   const info = `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:#f3efff;border-color:#ddd2fb"><b>${esc(r.fullName)}</b><div class="small muted">สรุปผล: <b>${r.summary === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน'}</b>${r.reason ? ' · ' + esc(r.reason) : ''}</div></div>`;
   const ok2 = () => { pipSetSummary(); toast('อนุมัติผลการประเมินแล้ว — พิมพ์เอกสารเพื่อลงนามได้'); render(); };
-  if (isAdmin()) {
+  if (isAdmin() && !pipOwn(r, 'sup2')) {
     if (!(await ask({ tone: 'primary', icon: 'approval', title: 'อนุมัติผลการประเมิน (ในนามผู้ดูแลระบบ)?', message: r.fullName, okText: 'อนุมัติ' }))) return;
     loader(true); try { S.pips = (await api('pipEvalDecision', S.token, id, 'approve', '')).list; ok2(); } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
     return;
@@ -4468,14 +4486,14 @@ function renderMyQr() {
 const PEND = { timer: null, open: false, busy: false };
 function pendLoop() {
   clearTimeout(PEND.timer);
-  if (!S.user || isAdmin() || S.page !== 'checkin') return;
+  if (!S.user || (isAdmin() && !S.me) || S.page !== 'checkin') return;
   PEND.timer = setTimeout(async () => {
     if (!document.hidden) await checkPending();
     pendLoop();
   }, document.hidden ? 6000 : 3000);
 }
 async function checkPending() {
-  if (PEND.open || PEND.busy || !S.token || isAdmin()) return;
+  if (PEND.open || PEND.busy || !S.token || (isAdmin() && !S.me)) return;
   PEND.busy = true;
   try { const p = await api('myPending', S.token); if (p && !PEND.open) showPending(p); } catch (e) { } finally { PEND.busy = false; }
 }
@@ -4490,7 +4508,7 @@ function showPending(p) {
       <span class="msr" style="font-size:15px;vertical-align:-3px">location_on</span> ${esc(p.place)}<br>
       <span class="msr" style="font-size:15px;vertical-align:-3px">groups</span> จัดโดย ${esc(p.organizer)}<br>
       <span class="msr" style="font-size:15px;vertical-align:-3px">badge</span> เจ้าหน้าที่ผู้สแกน: ${esc(p.staff)}</div></div>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pdPw', label: 'ใส่รหัสผ่านเข้าใช้งาน เพื่อยืนยันการลงทะเบียน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pdPw', label: isAdmin() ? 'ใส่รหัสผ่าน Admin ของคุณ เพื่อยืนยันการลงทะเบียน' : 'ใส่รหัสผ่านเข้าใช้งาน เพื่อยืนยันการลงทะเบียน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pdPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
     onCancel: () => { PEND.open = false; api('declinePending', S.token, p.reqId).catch(() => {}); toast('ปฏิเสธคำขอแล้ว', 'info'); },
     onOk: async () => {
@@ -5190,8 +5208,8 @@ function renderLogs() {
 
 function openProfile() {
   closeDropdown();
-  if (!isAdmin()) {
-    const u = S.user;
+  if (!isAdmin() || S.me) {
+    const u = isAdmin() ? S.me : S.user;
     const fields = [
       { k: 'username', label: 'ชื่อผู้ใช้งาน', readonly: true, col: 2 },
       { k: '__pfx' },
@@ -5205,7 +5223,7 @@ function openProfile() {
     openModal({
       title: 'ข้อมูลส่วนตัว', icon: 'badge', confirmSave: ASK.save(true), confirmCancel: true, okText: 'บันทึกการแก้ไข',
       body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => f.k === '__pfx' ? prefixFieldsHtml(u.prefixTh || '', true) : fieldHtml(f, u[f.k] || '')).join('')}</form>
-             <p class="hint" style="margin-top:12px">ชื่อผู้ใช้งานและรหัสบุคลากรแก้ไขเองไม่ได้ หากไม่ถูกต้องกรุณาติดต่อผู้ดูแลระบบ</p>`,
+             <p class="hint" style="margin-top:12px">${isAdmin() ? 'ข้อมูลบุคลากรของคุณ (บัญชีที่ผูกไว้) ใช้ในแบบฟอร์ม PIP และแบบฟอร์มขออนุมัติ · ชื่อในบัญชี Admin ปรับตามให้อัตโนมัติ · รหัสบุคลากรแก้ไขได้ที่เมนู "ผู้ใช้งาน"' : 'ชื่อผู้ใช้งานและรหัสบุคลากรแก้ไขเองไม่ได้ หากไม่ถูกต้องกรุณาติดต่อผู้ดูแลระบบ'}</p>`,
       validate: () => {
         const d = readPrefix(null, collect($('#mForm')));
         const pe = prefixCheck(d, true); if (pe) { toast(pe, 'err'); return false; }
@@ -5217,7 +5235,9 @@ function openProfile() {
         if (!$('#mForm').reportValidity()) return false;
       },
       onOk: async () => {
-        S.user = await api('updateMyProfile', S.token, readPrefix(null, collect($('#mForm'))));
+        const d = readPrefix(null, collect($('#mForm')));
+        if (isAdmin()) { const r = await api('updateMySelf', S.token, d); S.user = Object.assign(S.user, r.user); S.me = r.me; }
+        else S.user = await api('updateMyProfile', S.token, d);
         renderUser(); toast('บันทึกข้อมูลส่วนตัวแล้ว');
         if (S.page === 'dashboard') render();
       }
@@ -5342,7 +5362,7 @@ function bindEvents() {
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sbBackdrop').addEventListener('click', closeSidebar);
   $('#userTrigger').addEventListener('click', () => $('#userDropdown').classList.toggle('hidden'));
-  $('#switchBtn').addEventListener('click', () => { if (isAdmin()) return switchToUserView(); return backToAdmin(); });
+  $('#idleStay').addEventListener('click', () => { idleTouch(); if (S.token) api('chatStatus', S.token, '').catch(() => {}); });
   $('#refreshBtn').addEventListener('click', async () => {
     loader(true);
     try { await loadAll(); const def = pageDef(S.page); if (def && def.load) await def.load(); renderUser(); refreshCounts(); render(); toast('อัปเดตข้อมูลล่าสุดแล้ว', 'info'); }
@@ -5495,8 +5515,6 @@ function bindEvents() {
       case 'pipEvalApprove': return pipEvalApprove(d.id);
       case 'pipEvalReturn': return pipEvalReturn(d.id);
       case 'pipReopen': return pipDo(d.id, 'reopenEval');
-      case 'switchUser': return switchToUserView();
-      case 'backAdmin': return backToAdmin();
       case 'linkUser': return openLinkUser();
       case 'pipPull': return pipPullBack(d.id);
       case 'pipCloseEval': return pipDo(d.id, 'closeEval');
@@ -5709,7 +5727,15 @@ function init() {
   $('#todayChip').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   loadLogo();
   initPosterShow();
+  initIdle();
   const t = store.get('hrd_token');
+  const lastAct = Number(store.get('hrd_last') || 0);
+  if (t && lastAct && Date.now() - lastAct >= IDLE_MS) {
+    store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_last');
+    api('logout', t).catch(() => {});
+    showLogin('home'); toast('ออกจากระบบอัตโนมัติ เนื่องจากไม่มีการใช้งานเกิน 30 นาที', 'info');
+    return;
+  }
   if (!t) return showLogin('home');
   S.token = t; loader(true);
   loadAll().then(() => { enterApp(); firstLoginChecks(); })
