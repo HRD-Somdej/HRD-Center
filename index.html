@@ -973,7 +973,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.6.0'
+  VERSION: '4.6.1'
 };
 
 const PAGES = {
@@ -2170,12 +2170,12 @@ async function openLinkUser() {
   });
 }
 function refreshCounts() {
-  $('#cntSystems').textContent = S.systems.length;
-  $('#cntDocs').textContent = S.documents.length;
-  $('#cntAnn').textContent = S.announcements.filter(a => annState(a) === 'live').length;
-  const pend = S.counts.pendingUsers || 0;
-  $('#cntPending').textContent = pend;
-  $('#cntPending').classList.toggle('hidden', !pend || !isAdmin());
+  const setN = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; return el; };
+  setN('cntSystems', (S.systems || []).length);
+  setN('cntDocs', (S.documents || []).length);
+  setN('cntAnn', (S.announcements || []).filter(a => annState(a) === 'live').length);
+  const pend = (S.counts || {}).pendingUsers || 0;
+  const cpd = setN('cntPending', pend); if (cpd) cpd.classList.toggle('hidden', !pend || !isAdmin());
   const pt = ((S.pip && S.pip.todo) || 0) + (!isAdmin() && S.pip ? S.pip.draft || 0 : 0), cp = $('#cntPip');
   if (cp) { cp.textContent = pt; cp.classList.toggle('hidden', !pt); cp.title = isAdmin() ? 'แผนที่อยู่ระหว่างรอลงนาม' : 'แผนที่รอคุณลงนาม'; }
   const na = $('#nav a[data-page=pip]'); if (na && S.user) na.classList.toggle('hidden', !canSee('pip'));
@@ -4532,13 +4532,14 @@ function renderNavTools() { if (isAdmin() && ['activities', 'chat', 'users', 'me
 function renderNav() {
   const box = $('#customNav'); if (!box) return;
   const A = isAdmin();
-  box.innerHTML = S.menus.filter(m => A || (m.status === 'active' && m.audience !== 'admin')).map(m => {
+  $$('a[data-key^="m:"]', box).forEach(el => el.remove());
+  box.insertAdjacentHTML('beforeend', S.menus.filter(m => A || (m.status === 'active' && m.audience !== 'admin')).map(m => {
     const dim = m.status !== 'active' ? ' dim' : '';
     const lock = A && m.audience === 'admin' ? '<span class="msr ext">lock</span>' : A && m.audience === 'list' ? '<span class="msr ext" title="เฉพาะบุคลากรที่กำหนด">group</span>' : '';
     return m.type === 'link'
       ? `<a class="${dim}" data-key="m:${esc(m.id)}" data-link="${esc(m.url)}" title="เปิดลิงก์ในแท็บใหม่"><span class="msr">${esc(m.icon || 'link')}</span>${esc(m.name)}${lock || '<span class="msr ext">open_in_new</span>'}</a>`
       : `<a class="${dim}" data-key="m:${esc(m.id)}" data-page="m:${esc(m.id)}"><span class="msr">${esc(m.icon || 'folder_shared')}</span>${esc(m.name)}${lock}</a>`;
-  }).join('');
+  }).join(''));
   applyNavOrder();
   $$('#nav a[data-page]').forEach(a => a.classList.toggle('active', a.dataset.page === S.page));
 }
