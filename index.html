@@ -100,6 +100,7 @@ textarea.input{height:auto;min-height:96px;padding:10px 14px;resize:vertical}
 .poster-layer{position:absolute;inset:0;z-index:2;pointer-events:none}
 .poster-slide{position:absolute;inset:0;opacity:0;transition:opacity .8s ease;display:flex;align-items:center;justify-content:center;padding:40px 44px 100px;overflow:hidden}
 .poster-slide.on{opacity:1;pointer-events:auto}
+.poster-slide.lowres .ps-img{filter:blur(1.5px)}
 .poster-slide .ps-bg{position:absolute;inset:-40px;background-size:cover;background-position:center;filter:blur(28px) brightness(.55) saturate(1.1);transform:scale(1.08)}
 .poster-slide .ps-img{position:relative;display:block;width:auto;height:auto;max-width:100%;max-height:100%;border-radius:14px;box-shadow:0 22px 50px -12px rgba(0,0,0,.6)}
 .poster-slide a.ps-link{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;cursor:pointer}
@@ -577,6 +578,11 @@ body.chat-open #toasts{right:420px;bottom:24px}
 .btn-warn-soft{background:#fff4e5;color:#b45309;border:1px solid #f6d5a8}.btn-warn-soft:hover{background:#ffead0}
 .via-bar{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(90deg,#0b2545,#13315c);color:#fff;font-size:14px}
 .via-bar b{margin:0 3px}.via-bar .btn{margin-left:auto;background:#fff;color:var(--navy)}
+.ph-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 14px}
+.ph-chip{display:flex;flex-direction:column;padding:6px 12px;border-radius:10px;border:1px solid var(--line-2);background:#fbfcfe;font-size:12.5px}
+.ph-chip small{color:var(--muted);font-size:11.5px}
+.ph-chip.open{background:#ecfdf3;border-color:#bbf7d0}.ph-chip.open b{color:#166534}
+.ph-chip.soon{background:#fff7e6;border-color:#f6dfb5}.ph-chip.closed{background:#f4f5f7;opacity:.75}
 .pip-pst{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--muted);margin-top:3px}
 .pip-pst .msr{font-size:15px}.pip-pst.ok{color:#15803d}.pip-pst.wait{color:#b45309;font-weight:500}
 .b-purple{background:#f3efff;color:#6d28d9}
@@ -991,7 +997,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.2.0'
+  VERSION: '4.3.0'
 };
 
 const PAGES = {
@@ -1834,9 +1840,9 @@ function openForm(entity, rec) {
       const form = $('#mForm');
       const data = collect(form);
       let file = pickedFile();
-      if (file && entity === 'Posters' && !(file.size < 700000 && /[.]jpe?g$/i.test(file.name))) {
+      if (file && entity === 'Posters' && !(file.size < 450000 && /[.]jpe?g$/i.test(file.name))) {
         $('#mOk .btn-label').textContent = 'กำลังย่อรูป...';
-        try { const bl = await resizeImage(file, 1800, 0.86); file = new File([bl], file.name.replace(/[.][^.]+$/, '') + '.jpg', { type: 'image/jpeg' }); } catch (e) { }
+        try { const bl = await resizeImage(file, 1500, 0.82); file = new File([bl], file.name.replace(/[.][^.]+$/, '') + '.jpg', { type: 'image/jpeg' }); } catch (e) { }
       }
       if (file) {
         $('#mOk .btn-label').textContent = 'กำลังอัปโหลดไฟล์...';
@@ -2920,6 +2926,29 @@ async function printReq(d, win, auto) {
 const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evalReview: ['รอ ผบ.ที่สูงขึ้นไปอนุมัติผล', 'b-amber', 'approval'], evaluated: ['อนุมัติผลแล้ว', 'b-green', 'task_alt'] };
 function pipCanPrint(r) { return !r || (r.status !== 'evalOpen' && r.status !== 'evalReview'); }
 const PIP_EVAL_T = 'ผลลัพธ์การปฏิบัติงานและประเมินผล';
+const PIP_UNIT_DEFAULT = 'รพ.สมเด็จพระบรมราชเทวี ณ ศรีราชา';
+function pipPosOf(u) { return String(u.adminPosition || '').trim() || [String(u.academicPosition || '').trim(), posLevel(u)].filter(Boolean).join(' '); }
+const PIP_PH = [['goal', 'กำหนดเป้าหมาย KPI', 'ผู้เข้ารับการพัฒนา'], ['sign1', 'ลงนาม ผบ.โดยตรง', 'ผู้บังคับบัญชาโดยตรง'], ['sign2', 'ลงนาม ผบ.ที่สูงขึ้นไป', 'ผู้บังคับบัญชาที่สูงขึ้นไป'], ['eval1', 'ประเมินผล ผบ.โดยตรง', 'ผู้บังคับบัญชาโดยตรง'], ['approve2', 'อนุมัติผล ผบ.ที่สูงขึ้นไป', 'ผู้บังคับบัญชาที่สูงขึ้นไป']];
+S.pipPer = {};
+function pipPerOf(fy, rnd) { return S.pipPer[fy + '-' + rnd] || {}; }
+function pipPhaseInfo(r, ph) {
+  const p = pipPerOf(pipFY(r), r.round === '2' ? '2' : '1')[ph];
+  if (!p || (!p.s && !p.e)) return { ok: true, set: false };
+  const t = todayStr();
+  const rng = (p.s ? fmtDate(p.s) : 'ไม่กำหนด') + ' – ' + (p.e ? fmtDate(p.e) : 'ไม่กำหนด');
+  if (p.s && t < p.s) return { ok: false, set: true, st: 'soon', rng };
+  if (p.e && t > p.e) return { ok: false, set: true, st: 'closed', rng };
+  return { ok: true, set: true, st: 'open', rng };
+}
+function pipPhaseOk(r, ph) { return isAdmin() || pipPhaseInfo(r, ph).ok; }
+function pipCurPhase(r) { return { draft: 'goal', signing: 'sign1', review: 'sign2', evalOpen: 'eval1', evalReview: 'approve2' }[r.status] || ''; }
+function pipPhaseChips(fy, rnd) {
+  const per = pipPerOf(fy, rnd); if (!Object.keys(per).length) return '';
+  const t = todayStr();
+  return `<div class="ph-chips">${PIP_PH.map(x => { const p = per[x[0]]; if (!p) return `<span class="ph-chip"><b>${x[1]}</b><small>เปิดตลอด</small></span>`;
+    const st = p.s && t < p.s ? 'soon' : p.e && t > p.e ? 'closed' : 'open';
+    return `<span class="ph-chip ${st}"><b>${x[1]}</b><small>${p.s ? thDateShort(p.s) : '…'} – ${p.e ? thDateShort(p.e) : '…'} · ${st === 'open' ? 'เปิดอยู่' : st === 'soon' ? 'ยังไม่เปิด' : 'ปิดแล้ว'}</small></span>`; }).join('')}</div>`;
+}
 function pipSignable(r) {
   const allow = r.status === 'signing' ? ['emp', 'sup1'] : r.status === 'review' ? ['sup2'] : [];
   return (r.myRoles || []).filter(k => allow.indexOf(k) > -1 && !(r.signs || {})[k]);
@@ -2927,6 +2956,8 @@ function pipSignable(r) {
 function pipCanForward(r) { const sg = r.signs || {}; return r.status === 'signing' && !!sg.emp && !!sg.sup1 && (isAdmin() || (r.myRoles || []).indexOf('sup1') > -1); }
 function pipTodo(r) {
   if (isAdmin()) return false;
+  const ph = pipCurPhase(r);
+  if (ph && !pipPhaseInfo(r, ph).ok) return false;
   return pipSignable(r).length > 0 || (pipCanForward(r)) || (r.status === 'evalOpen' && (r.myRoles || []).indexOf('sup1') > -1) || (r.status === 'evalReview' && (r.myRoles || []).indexOf('sup2') > -1);
 }
 const PIP_ROLE = { emp: 'ผู้เข้ารับการพัฒนา', sup1: 'ผู้บังคับบัญชาโดยตรง', sup2: 'ผู้บังคับบัญชาที่สูงขึ้นไป' };
@@ -2938,18 +2969,20 @@ function pipCan(r) {
   const A = isAdmin(), roles = r ? r.myRoles || [] : [], sup1 = roles.indexOf('sup1') > -1;
   const ed = A || roles.indexOf('emp') > -1;
   const st = r ? r.status : 'draft';
+  const G = ph => !r || pipPhaseOk(r, ph);
+  const sg = r ? pipSignable(r) : [];
   return {
-    edit: st === 'draft' && ed,
-    submit: st === 'draft' && ed && !!(r && (r.kpis || []).length),
-    sign: !!r && pipSignable(r).length > 0,
+    edit: st === 'draft' && ed && G('goal'),
+    submit: st === 'draft' && ed && !!(r && (r.kpis || []).length) && G('goal'),
+    sign: sg.length > 0 && (sg.indexOf('sup1') < 0 || G('sign1')) && (sg.indexOf('sup2') < 0 || G('sign2')),
     forward: !!r && pipCanForward(r),
-    ret: (st === 'signing' && sup1) || (st === 'review' && roles.indexOf('sup2') > -1),
+    ret: (st === 'signing' && sup1 && G('sign1')) || (st === 'review' && roles.indexOf('sup2') > -1 && G('sign2')),
     pull: st === 'signing' && roles.indexOf('emp') > -1 && !sup1,
     recall: A && st !== 'draft',
     openEval: A && st === 'active',
     closeEval: A && st === 'evalOpen',
-    evaluate: st === 'evalOpen' && (A || sup1),
-    approve: st === 'evalReview' && (A || roles.indexOf('sup2') > -1),
+    evaluate: st === 'evalOpen' && (A || sup1) && G('eval1'),
+    approve: st === 'evalReview' && (A || roles.indexOf('sup2') > -1) && G('approve2'),
     reopen: A && (st === 'evalReview' || st === 'evaluated'),
     print: pipCanPrint(r),
     del: A
@@ -2961,7 +2994,8 @@ function pipSetSummary() {
   refreshCounts();
 }
 async function loadPips() {
-  S.pips = await api('listPips', S.token);
+  const [pl, per] = await Promise.all([api('listPips', S.token), api('getPipPeriods', S.token).catch(() => ({ periods: {} }))]);
+  S.pips = pl; S.pipPer = (per && per.periods) || {};
   if (isAdmin()) { try { S.users = await api('listUsers', S.token); } catch (e) { } }
   pipSetSummary();
   if (S.pv.id && !pipCur() && S.pv.mode !== 'edit') S.pv = { mode: 'list', id: null, data: null, q: S.pv.q, st: S.pv.st };
@@ -3067,6 +3101,7 @@ function renderPipList() {
     const done = rows.filter(r => r.status === 'evaluated').length;
     return `<div class="card req-sec"><div class="card-h"><h3><span class="pip-rnd r${k}">${k}</span>แผน PIP รอบที่ ${k}</h3>
       <span class="muted small">${rows.length} คน${rows.length ? ` · ประเมินแล้ว ${done} · กำลังดำเนินการ ${rows.length - done}` : ''}</span></div>
+      ${S.pf.fy !== 'all' ? pipPhaseChips(S.pf.fy, k) : ''}
       ${rows.length ? (S.pf.view === 'track' ? trackHtml(rows) : tableHtml(rows)) : `<div class="card-b muted small">ไม่มีแผนรอบที่ ${k}${S.pf.fy !== 'all' ? ' ในปีงบประมาณ ' + S.pf.fy : ''}${S.pv.q || S.pv.st !== 'all' ? ' ตามตัวกรองนี้' : ''}</div>`}</div>`;
   }).join('');
   return `
@@ -3080,6 +3115,7 @@ function renderPipList() {
     <div class="seg">${[['list', 'รายการ'], ['track', 'ติดตามการดำเนินการ']].map(o => `<label><input type="radio" name="pipView" value="${o[0]}" ${S.pf.view === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>
     <div class="grow"></div>
     <button class="btn btn-light" data-action="pipBlank"><span class="msr">print</span>พิมพ์แบบฟอร์มเปล่า</button>
+    ${A ? `<button class="btn btn-light" data-action="pipPeriods"><span class="msr">event_upcoming</span>ช่วงเวลาดำเนินการ</button>` : ''}
     ${A ? `<button class="btn btn-light" data-action="pipOpenEval"><span class="msr">lock_open</span>เปิดการประเมินผล${inFy.filter(r => r.status === 'active').length ? ` <em class="count">${inFy.filter(r => r.status === 'active').length}</em>` : ''}</button><button class="btn btn-light" data-action="pipImport"><span class="msr">upload_file</span>นำเข้าจากตาราง</button><button class="btn btn-primary" data-action="pipNew"><span class="msr">add</span>เพิ่มแผน PIP</button>` : ''}
   </div>
   ${A || S.pips.some(r => (r.myRoles || []).some(k => k !== 'emp')) ? `<div class="toolbar">
@@ -3089,7 +3125,7 @@ function renderPipList() {
   ${S.pips.length ? sections : `<div class="card">${emptyState('trending_up', 'ยังไม่มีแผนพัฒนาการปฏิบัติงาน', A ? 'เพิ่มแผน PIP ทีละคน หรือนำเข้าหลายคนจากตาราง' : 'เมื่อมีแผน PIP ที่เกี่ยวข้องกับคุณ รายการจะแสดงที่นี่', A ? { label: 'เพิ่มแผน PIP', attr: 'data-action="pipNew"' } : null)}</div>`}`;
 }
 function pipBlankData() {
-  return { round: '1', r1Start: '', r1End: '', r2Start: '', r2End: '', unit: '', position: '', department: '', sup1Position: '', sup2Position: '',
+  return { round: '1', r1Start: '', r1End: '', r2Start: '', r2End: '', unit: PIP_UNIT_DEFAULT, position: '', department: '', sup1Position: '', sup2Position: '',
     employeeId: '', sup1EmployeeId: '', sup2EmployeeId: '', kpis: [{ goal: '', actions: ['', '', ''] }] };
 }
 function pipNew() { S.pv = { mode: 'edit', id: null, data: pipBlankData(), q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0); }
@@ -3198,7 +3234,7 @@ function onPipInput(e) {
     if (u) {
       const pk = t.name === 'employeeId' ? 'position' : t.name.replace('EmployeeId', 'Position');
       const set = (k, v) => { const el = $('#pipForm [name=' + k + ']'); if (el) { el.value = v || ''; d[k] = el.value; } };
-      set(pk, t.name === 'employeeId' ? posLevel(u) : u.adminPosition || posLevel(u));
+      set(pk, pipPosOf(u));
       if (t.name === 'employeeId') set('department', u.department);
     }
   }
@@ -3411,7 +3447,7 @@ function pipTemplate() {
   const u = (S.users || []).filter(x => x.status === 'active');
   const ex = (i, f) => u[i] ? u[i][f] : '';
   downloadCsv('แบบฟอร์มเพิ่มแผน_PIP.csv', [PIMP_FIELDS.map(f => f[1]),
-    [ex(0, 'employeeId') || '1111111', ex(0, 'fullName') || 'นางมาลี สุขใจ', ex(1, 'employeeId') || '2222222', ex(2, 'employeeId') || '3333333', '1', '16/11/2569', 'หอผู้ป่วยอายุรกรรมชาย 1']]);
+    [ex(0, 'employeeId') || '1111111', ex(0, 'fullName') || 'นางมาลี สุขใจ', ex(1, 'employeeId') || '2222222', ex(2, 'employeeId') || '3333333', '1', '16/11/2569', '']]);
 }
 function renderPipImp() {
   const box = $('#pimpBox'); if (!box || !S.pimp) return;
@@ -3436,7 +3472,7 @@ function renderPipImp() {
       <div class="imp-or">หรือ คัดลอกจาก Excel แล้ววางที่นี่ (รวมแถวหัวตาราง)</div>
       <textarea class="input" id="pimpPaste" style="min-height:100px;font-size:13px" placeholder="${PIMP_FIELDS.map(f => f[1]).join('&#9;')}"></textarea>
       <div style="text-align:right;margin-top:10px"><button type="button" class="btn btn-light" data-pimp="paste"><span class="msr">fact_check</span>ตรวจสอบข้อมูลที่วาง</button></div>
-      <p class="hint">ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งานที่เปิดใช้งานแล้ว (ถ้ายังไม่มี ให้นำเข้าผู้ใช้งานที่เมนู "ผู้ใช้งาน" ก่อน) · ถ้ารหัสขึ้นต้นด้วย 0 ระบบเติม 0 ให้อัตโนมัติ</p>`;
+      <p class="hint">หน่วยงานเว้นว่าง = ${PIP_UNIT_DEFAULT} · ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งานที่เปิดใช้งานแล้ว (ถ้ายังไม่มี ให้นำเข้าผู้ใช้งานที่เมนู "ผู้ใช้งาน" ก่อน) · ถ้ารหัสขึ้นต้นด้วย 0 ระบบเติม 0 ให้อัตโนมัติ</p>`;
   } else if (st === 'preview') {
     const rows = S.pimp.rows, good = rows.filter(r => r.ok).length, bad = rows.length - good;
     const nm = (r, k) => r.who[k] ? `<b style="font-weight:500">${esc(r.who[k].fullName)}</b><br><small class="muted mono">${esc(r.data[k])}</small>` : `<span class="mono">${esc(r.data[k] || '-')}</span>`;
@@ -3483,7 +3519,7 @@ function pipSignBox(r, k) {
   return `<div class="pip-sign${s ? ' ok' : ''}">
     <span class="msr${s ? ' fill' : ''}">${s ? 'verified' : (r.status === 'signing' && k !== 'sup2') || (r.status === 'review' && k === 'sup2') ? 'hourglass_top' : 'radio_button_unchecked'}</span>
     <div><small>${PIP_ROLE[k]}${mine ? ' (คุณ)' : ''}</small><b>${esc(name)}</b><small>${esc(pos || '')}</small>
-    <small class="${s ? 'ok-t' : ''}">${s ? 'ลงนามอิเล็กทรอนิกส์ ' + fmtDate(s.at, true) : pipPersonSt(r, k).replace(/<[^>]+>/g, '')}</small></div></div>`;
+    <small class="${s ? 'ok-t' : ''}">${s ? 'ลงนามอิเล็กทรอนิกส์ ' + fmtDate(s.at, true) : pipPersonSt(r, k).replace(/<span class="msr">[^<]*<[/]span>/g, '').replace(/<[^>]+>/g, '')}</small></div></div>`;
 }
 function renderPipView() {
   const r = pipCur(), c = pipCan(r), A = isAdmin();
@@ -3508,6 +3544,8 @@ function renderPipView() {
     ${c.print ? btn('pipPrint', 'print', 'พิมพ์') : `<span class="small muted" style="display:inline-flex;align-items:center;gap:4px"><span class="msr" style="font-size:18px">print_disabled</span>พิมพ์ได้หลัง ผบ.ที่สูงขึ้นไปอนุมัติผล</span>`}
     ${c.del ? `<button class="icon-btn danger" data-action="pipDel" data-id="${esc(r.id)}" title="ลบแผน"><span class="msr">delete</span></button>` : ''}
   </div>
+  ${(() => { const ph = pipCurPhase(r); if (!ph) return ''; const inf = pipPhaseInfo(r, ph); if (!inf.set) return ''; const lb = PIP_PH.find(x => x[0] === ph);
+    return `<div class="notice" style="${inf.ok ? 'background:#ecfdf3;color:#166534;border-color:#bbf7d0' : 'background:var(--red-50);color:var(--red);border-color:#f6c8ce'}"><span class="msr">${inf.ok ? 'event_available' : 'event_busy'}</span><div>ช่วงเวลา<b>${lb[1]}</b> (${lb[2]}): ${inf.rng} — ${inf.st === 'open' ? 'เปิดอยู่' : inf.st === 'soon' ? '<b>ยังไม่ถึงช่วงเวลา</b> ปุ่มดำเนินการจะแสดงเมื่อเปิด' : '<b>ปิดแล้ว</b> กรุณาติดต่องานพัฒนาบุคลากร'}${isAdmin() && !inf.ok ? ' (ผู้ดูแลระบบดำเนินการแทนได้)' : ''}</div></div>`; })()}
   ${r.status === 'active' ? `<div class="req-note"><span class="msr">lock_clock</span><div><b>ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)</b> — ดำเนินการตามแผน และรอรอบ${PIP_EVAL_T} ซึ่งผู้ดูแลระบบจะเป็นผู้เปิด</div></div>` : ''}
   ${r.status === 'evalOpen' ? `<div class="notice" style="background:#f3efff;color:#5b21b6;border-color:#ddd2fb"><span class="msr">grading</span><div>เปิดรอบ<b>${PIP_EVAL_T}</b>แล้ว — ผู้บังคับบัญชาโดยตรงบันทึกผล แล้วกด "บันทึก ลงนาม และส่งต่อ" ให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ (พิมพ์ได้หลังอนุมัติ)</div></div>` : ''}
   ${r.status === 'evalOpen' && r.evalNote ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ผลการประเมินถูกส่งกลับให้แก้ไข</b> — ${esc(r.evalNote)}</div></div>` : ''}
@@ -3523,7 +3561,7 @@ function renderPipView() {
       <div><small>รหัสบุคลากร</small><b>${esc(r.employeeId)}</b></div>
       <div><small>ตำแหน่ง</small><b>${esc(r.position || '-')}</b></div>
       <div><small>ฝ่าย</small><b>${esc(r.department || '-')}</b></div>
-      <div><small>หน่วยงาน</small><b>${esc(r.unit || '-')}</b></div>
+      <div><small>หน่วยงาน</small><b>${esc(r.unit || PIP_UNIT_DEFAULT)}</b></div>
       <div><small>แผน PIP</small><b>รอบที่ ${k}</b></div>
       <div><small>ระยะเวลา</small><b>${esc(thRange(r['r' + k + 'Start'], r['r' + k + 'End']) || '-')}</b></div>
     </div>
@@ -3596,6 +3634,34 @@ async function pipDo(id, action) {
     toast({ reopenEval: 'เปิดให้แก้ไขผลการประเมินแล้ว', submit: 'ส่งแผนให้ลงนามแล้ว', recall: 'ดึงกลับเป็นร่างแล้ว', forward: 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว', closeEval: 'ปิดการประเมินผลแล้ว' }[action] || 'ลบแผนแล้ว');
     render();
   } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+function openPipPeriods() {
+  const fy0 = S.pf.fy !== 'all' ? S.pf.fy : String(fiscalYearBE());
+  const fys = Array.from(new Set([fiscalYearBE() - 1, fiscalYearBE(), fiscalYearBE() + 1].map(String).concat(S.pips.map(r => String(pipFY(r))).filter(x => x !== '0')))).sort();
+  let fy = fy0, rnd = S.pf.rnd === '2' ? '2' : '1';
+  const rows = () => { const per = pipPerOf(fy, rnd); return PIP_PH.map(x => `<tr><td><b>${x[1]}</b><br><small class="muted">${x[2]}</small></td>
+      <td><input type="date" class="input pp-in" data-ph="${x[0]}" data-k="s" value="${esc((per[x[0]] || {}).s || '')}"></td>
+      <td><input type="date" class="input pp-in" data-ph="${x[0]}" data-k="e" value="${esc((per[x[0]] || {}).e || '')}"></td></tr>`).join(''); };
+  const paint = () => { $('#ppRows').innerHTML = rows(); };
+  openModal({
+    title: 'ช่วงเวลาดำเนินการจัดทำแผน PIP', icon: 'event_upcoming', size: 'lg', okText: 'บันทึกช่วงเวลา',
+    body: `<p class="small" style="color:var(--text-2);margin-top:0">กำหนดวันเปิด–ปิดของแต่ละขั้นตอน แยกตามปีงบประมาณและรอบ · นอกช่วงเวลา ผู้ใช้งานจะดำเนินการขั้นนั้นไม่ได้ (ผู้ดูแลระบบดำเนินการแทนได้) · เว้นว่าง = เปิดตลอด</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <label class="field" style="min-width:180px"><span>ปีงบประมาณ</span><select class="input" id="ppFy">${fys.map(y => `<option value="${y}"${y === fy ? ' selected' : ''}>ปีงบประมาณ ${y}</option>`).join('')}</select></label>
+        <div class="field"><span>รอบ</span><div class="seg">${['1', '2'].map(k => `<label><input type="radio" name="ppRnd" value="${k}" ${rnd === k ? 'checked' : ''}><span>รอบที่ ${k}</span></label>`).join('')}</div></div>
+      </div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>ขั้นตอน</th><th style="width:190px">วันที่เปิด</th><th style="width:190px">วันที่ปิด</th></tr></thead><tbody id="ppRows">${rows()}</tbody></table></div>`,
+    onOpen: () => {
+      $('#ppFy').addEventListener('change', e => { fy = e.target.value; paint(); });
+      $$('input[name=ppRnd]').forEach(i => i.addEventListener('change', e => { rnd = e.target.value; paint(); }));
+    },
+    onOk: async () => {
+      const data = {};
+      $$('.pp-in').forEach(i => { (data[i.dataset.ph] = data[i.dataset.ph] || {})[i.dataset.k] = i.value; });
+      const res = await api('savePipPeriods', S.token, fy, rnd, data);
+      S.pipPer = res.periods || {}; toast('บันทึกช่วงเวลาปีงบประมาณ ' + fy + ' รอบที่ ' + rnd + ' แล้ว'); render();
+    }
+  });
 }
 function openPipEvalModal(oneId) {
   const today = todayStr();
@@ -3778,7 +3844,7 @@ function pipHtml(r) {
   const R1 = [52.3, 67.6], R2 = [78.9, 94.3], R3 = [105.5, 120.9];
   h += pipT(43.2, R1[0], R1[1], 14, 1, 'ชื่อ - สกุล') + pipT(226.2, R1[0], R1[1], 14, 1, 'รหัสบุคลากร') + pipT(334.2, R1[0], R1[1], 14, 1, 'ตำแหน่ง') + pipT(478.3, R1[0], R1[1], 14, 1, 'ฝ่าย') + pipT(625.3, R1[0], R1[1], 14, 1, 'หน่วยงาน');
   [[83.8, 223.2], [277.9, 334.0], [369.9, 475.0], [497.2, 622.3], [666.5, 799.3]].forEach(s => { h += pipDots(s[0], s[1], 64.6); });
-  h += V(83.8, 223.2, R1[0], R1[1], r.fullName) + V(277.9, 332, R1[0], R1[1], r.employeeId) + V(369.9, 475.0, R1[0], R1[1], r.position) + V(497.2, 622.3, R1[0], R1[1], r.department) + V(666.5, 799.3, R1[0], R1[1], r.unit);
+  h += V(83.8, 223.2, R1[0], R1[1], r.fullName) + V(277.9, 332, R1[0], R1[1], r.employeeId) + V(369.9, 475.0, R1[0], R1[1], r.position) + V(497.2, 622.3, R1[0], R1[1], r.department) + V(666.5, 799.3, R1[0], R1[1], r.unit || (blank ? '' : PIP_UNIT_DEFAULT));
   h += pipT(43.2, R2[0], R2[1], 14, 1, 'ผู้บังคับบัญชาโดยตรง') + pipT(265.2, R2[0], R2[1], 14, 1, 'ตำแหน่ง') + pipT(406.3, R2[0], R2[1], 14, 1, 'ผู้บังคับบัญชาที่สูงขึ้นไป') + pipT(622.3, R2[0], R2[1], 14, 1, 'ตำแหน่ง');
   [[128.5, 262.2], [301.0, 403.2], [500.2, 619.3], [657.9, 799.3]].forEach(s => { h += pipDots(s[0], s[1], 91.2); });
   h += V(128.5, 262.2, R2[0], R2[1], r.sup1Name) + V(301.0, 403.2, R2[0], R2[1], r.sup1Position) + V(500.2, 619.3, R2[0], R2[1], r.sup2Name) + V(657.9, 799.3, R2[0], R2[1], r.sup2Position);
@@ -5414,6 +5480,7 @@ function bindEvents() {
       case 'pipPull': return pipPullBack(d.id);
       case 'pipCloseEval': return pipDo(d.id, 'closeEval');
       case 'pipOpenEval': return openPipEvalModal();
+      case 'pipPeriods': return openPipPeriods();
       case 'pipOpenOne': return openPipEvalModal(d.id);
       case 'userSelAll': { const ids = userListFiltered().map(u => u.id); const all = ids.every(i => S.userSel.has(i)); ids.forEach(i => all ? S.userSel.delete(i) : S.userSel.add(i)); return render(); }
       case 'userSelClear': S.userSel.clear(); return render();
@@ -5570,13 +5637,37 @@ function psAdd(p, url) {
   psPaint();
   if (PS.list.length === 1) psSchedule();
 }
+function psCacheGet(p) { try { const v = localStorage.getItem('hrd_pimg_' + p.id); if (v && v.indexOf(p.v + '|') === 0) return v.slice(p.v.length + 1); } catch (e) { } return ''; }
+function psCachePut(p, url) {
+  try {
+    Object.keys(localStorage).filter(k => k.indexOf('hrd_pimg_') === 0 && !PS.list.some(x => 'hrd_pimg_' + x.id === k)).forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('hrd_pimg_' + p.id, p.v + '|' + url);
+  } catch (e) { }
+}
+function psUpgrade(p, url) {
+  const i = PS.list.indexOf(p); if (i < 0) return;
+  const el = $$('#posterLayer .poster-slide')[i]; if (!el) return;
+  const img = el.querySelector('.ps-img'), bg = el.querySelector('.ps-bg');
+  const pre = new Image();
+  pre.onload = () => { if (img) img.src = url; if (bg) bg.style.backgroundImage = "url('" + url + "')"; el.classList.remove('lowres'); };
+  pre.src = url;
+}
 async function loadLoginPosters() {
   if (PS.loaded) return; PS.loaded = true;
   let list = [];
   try { list = await api('getLoginPosters'); } catch (e) { return; }
-  for (const p of list || []) {
-    try { const url = await api('getPosterImage', p.id); if (url) psAdd(p, url); } catch (e) { }
-  }
+  const need = [];
+  (list || []).forEach(p => {
+    const cached = psCacheGet(p);
+    if (cached) { psAdd(p, cached); return; }
+    if (p.thumb) { psAdd(p, p.thumb); $$('#posterLayer .poster-slide').slice(-1).forEach(el => el.classList.add('lowres')); }
+    need.push(p);
+  });
+  await Promise.all(need.map(p => api('getPosterImage', p.id).then(url => {
+    if (!url) return;
+    if (PS.list.indexOf(p) < 0) psAdd(p, url); else psUpgrade(p, url);
+    psCachePut(p, url);
+  }).catch(() => { })));
 }
 function initPosterShow() {
   const art = $('.login-art'); if (!art) return;
