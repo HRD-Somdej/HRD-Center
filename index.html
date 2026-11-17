@@ -973,7 +973,7 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.6.1'
+  VERSION: '4.7.0'
 };
 
 const PAGES = {
@@ -2991,6 +2991,26 @@ function pipFY(r) {
   const m = /^([0-9]{4})-([0-9]{2})/.exec(iso); if (!m) return 0;
   return (Number(m[2]) >= 10 ? Number(m[1]) + 1 : Number(m[1])) + 543;
 }
+function pipRoundDates(fy, round) {
+  let y = Number(String(fy == null ? '' : fy).replace(/[^0-9]/g, ''));
+  if (!y) return null;
+  if (y < 100) y += 2500;
+  if (y > 2400) y -= 543;
+  if (y < 2000 || y > 2200) return null;
+  return String(round) === '2' ? { start: y + '-04-01', end: y + '-09-30' } : { start: (y - 1) + '-10-01', end: y + '-03-31' };
+}
+function pipFyBE(v) { const rd = pipRoundDates(v, '2'); return rd ? Number(rd.end.slice(0, 4)) + 543 : 0; }
+function pipEvalOpened(r) { return ['evalOpen', 'evalReview', 'evaluated'].indexOf(r.status) > -1; }
+function pipEvalStages(r) {
+  const es = r.evalSigns || {}, st = r.status, done1 = !!es.sup1 && st !== 'evalOpen';
+  const drafted = (r.kpis || []).some(k => k.eval || k.result);
+  return [
+    { t: 'เปิดประเมินผล', done: true, at: r.evalOpenAt },
+    { t: 'ผบ.โดยตรงบันทึกผลและลงนาม', done: done1, at: es.sup1 && es.sup1.at, sub: st === 'evalOpen' ? (r.evalNote ? 'ถูกส่งกลับแก้ไข' : drafted ? 'บันทึกร่างแล้ว' : 'รอบันทึกผล') : '' },
+    { t: 'ผบ.ที่สูงขึ้นไปอนุมัติผล', done: st === 'evaluated', at: es.sup2 && es.sup2.at, sub: st === 'evalReview' ? 'รออนุมัติ' : '' },
+    { t: 'สรุปผลการประเมิน', done: st === 'evaluated' && !!r.summary, at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : '' }
+  ];
+}
 function pipStages(r) {
   const k = r.round === '2' ? '2' : '1', sg = r.signs || {}, st = r.status;
   const end = r['r' + k + 'End'] || '';
@@ -3004,8 +3024,8 @@ function pipStages(r) {
     { t: PIP_EVAL_T, done: st === 'evaluated', at: r.evaluatedAt, sub: r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : st === 'evalOpen' ? 'เปิดประเมินแล้ว' : st === 'evalReview' ? 'รอ ผบ.ที่สูงขึ้นไปอนุมัติ' : st === 'active' && end ? 'ครบแผน ' + thDateShort(end) : '' }
   ];
 }
-function pipTrackLine(r) {
-  const s = pipStages(r);
+function pipTrackLine(r, stages) {
+  const s = stages || pipStages(r);
   const cur = s.findIndex(x => !x.done);
   return `<div class="trk">${s.map((x, i) => {
     const seg = i ? `<i class="trk-seg ${x.done ? 'ok' : ''}"></i>` : '';
@@ -3063,13 +3083,19 @@ function renderPipList() {
       <div class="trk-who"><span class="mono">${esc(r.employeeId)}</span><a class="doc-link" data-action="pipView" data-id="${esc(r.id)}">${esc(r.fullName)}</a>
         <small class="muted">${esc(r.department || '')}</small></div>
       ${pipTrackLine(r)}</div>`).join('')}</div>`;
+  const evTrackHtml = rows => `<div class="trk-list">${rows.map(r => `<div class="trk-row${todo(r) ? ' pip-todo' : ''}">
+      <div class="trk-who"><span class="mono">${esc(r.employeeId)}</span><a class="doc-link" data-action="pipView" data-id="${esc(r.id)}">${esc(r.fullName)}</a>
+        <small class="muted">ผบ.โดยตรง: ${esc(r.sup1Name || '-')}</small></div>
+      ${pipTrackLine(r, pipEvalStages(r))}</div>`).join('')}</div>`;
   const sections = rounds.map(k => {
-    const rows = list.filter(r => (r.round === '2' ? '2' : '1') === k);
+    const EV = S.pf.view === 'evtrack';
+    const rows = list.filter(r => (r.round === '2' ? '2' : '1') === k && (!EV || pipEvalOpened(r)));
     const done = rows.filter(r => r.status === 'evaluated').length;
+    const passN = rows.filter(r => r.status === 'evaluated' && r.summary === 'pass').length, failN = rows.filter(r => r.status === 'evaluated' && r.summary === 'fail').length;
     return `<div class="card req-sec"><div class="card-h"><h3><span class="pip-rnd r${k}">${k}</span>แผน PIP รอบที่ ${k}</h3>
-      <span class="muted small">${rows.length} คน${rows.length ? ` · ประเมินแล้ว ${done} · กำลังดำเนินการ ${rows.length - done}` : ''}</span></div>
+      <span class="muted small">${EV ? `เปิดประเมินแล้ว ${rows.length} คน${rows.length ? ` · อนุมัติผลแล้ว ${done} (ผ่าน ${passN} · ไม่ผ่าน ${failN}) · รอดำเนินการ ${rows.length - done}` : ''}` : `${rows.length} คน${rows.length ? ` · ประเมินแล้ว ${done} · กำลังดำเนินการ ${rows.length - done}` : ''}`}</span></div>
       ${S.pf.fy !== 'all' ? pipPhaseChips(S.pf.fy, k) : ''}
-      ${rows.length ? (S.pf.view === 'track' ? trackHtml(rows) : tableHtml(rows)) : `<div class="card-b muted small">ไม่มีแผนรอบที่ ${k}${S.pf.fy !== 'all' ? ' ในปีงบประมาณ ' + S.pf.fy : ''}${S.pv.q || S.pv.st !== 'all' ? ' ตามตัวกรองนี้' : ''}</div>`}</div>`;
+      ${rows.length ? (S.pf.view === 'track' ? trackHtml(rows) : EV ? evTrackHtml(rows) : tableHtml(rows)) : EV ? `<div class="card-b muted small">ยังไม่มีแผนรอบที่ ${k} ที่เปิดประเมินผล${S.pf.fy !== 'all' ? ' ในปีงบประมาณ ' + S.pf.fy : ''}</div>` : `<div class="card-b muted small">ไม่มีแผนรอบที่ ${k}${S.pf.fy !== 'all' ? ' ในปีงบประมาณ ' + S.pf.fy : ''}${S.pv.q || S.pv.st !== 'all' ? ' ตามตัวกรองนี้' : ''}</div>`}</div>`;
   }).join('');
   return `
   ${!A && S.pip.todo ? `<div class="notice" style="background:#fff7e6"><span class="msr">draw</span><div>มีแผน PIP <b>${S.pip.todo} รายการ</b> รอการดำเนินการจากคุณ (ลงนาม / ส่งต่อ / บันทึกผลลัพธ์และประเมินผล)</div></div>` : ''}
@@ -3079,20 +3105,126 @@ function renderPipList() {
       <option value="all"${S.pf.fy === 'all' ? ' selected' : ''}>ทุกปีงบประมาณ</option>
       ${fys.map(y => `<option value="${y}"${String(y) === S.pf.fy ? ' selected' : ''}>ปีงบประมาณ ${y}</option>`).join('')}</select></label>
     <div class="seg">${[['all', 'ทุกรอบ'], ['1', 'รอบที่ 1'], ['2', 'รอบที่ 2']].map(o => `<label><input type="radio" name="pipRnd" value="${o[0]}" ${S.pf.rnd === o[0] ? 'checked' : ''}><span>${o[1]}${o[0] === 'all' ? '' : ' (' + rc(o[0]) + ')'}</span></label>`).join('')}</div>
-    <div class="seg">${[['list', 'รายการ'], ['track', 'ติดตามการดำเนินการ']].map(o => `<label><input type="radio" name="pipView" value="${o[0]}" ${S.pf.view === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>
+    <div class="seg">${[['list', 'รายการ'], ['track', 'ติดตามการดำเนินการ'], ['evtrack', 'ติดตามการประเมินผล']].map(o => `<label><input type="radio" name="pipView" value="${o[0]}" ${S.pf.view === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>
     <div class="grow"></div>
     <button class="btn btn-light" data-action="pipBlank"><span class="msr">print</span>พิมพ์แบบฟอร์มเปล่า</button>
+    ${A || S.pips.some(r => (r.myRoles || []).some(k => k !== 'emp')) ? `<button class="btn btn-light" data-action="pipExport"><span class="msr">download</span>Export สรุปผล</button>` : ''}
     ${A ? `<button class="btn btn-light" data-action="pipPeriods"><span class="msr">event_upcoming</span>ช่วงเวลาดำเนินการ</button>` : ''}
     ${A ? `<button class="btn btn-light" data-action="pipOpenEval"><span class="msr">lock_open</span>เปิดการประเมินผล${inFy.filter(r => r.status === 'active').length ? ` <em class="count">${inFy.filter(r => r.status === 'active').length}</em>` : ''}</button><button class="btn btn-light" data-action="pipImport"><span class="msr">upload_file</span>นำเข้าจากตาราง</button><button class="btn btn-primary" data-action="pipNew"><span class="msr">add</span>เพิ่มแผน PIP</button>` : ''}
   </div>
   ${A || S.pips.some(r => (r.myRoles || []).some(k => k !== 'emp')) ? `<div class="toolbar">
     <div class="search"><span class="msr">search</span><input id="pipQ" placeholder="ค้นหารหัสบุคลากร ชื่อ ฝ่าย ผู้บังคับบัญชา..." value="${esc(S.pv.q)}"></div>
   </div>` : ''}
-  ${S.pf.view === 'track' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนากำหนด KPI → <b>บันทึก ลงนาม และส่งต่อ</b> → ผบ.โดยตรง<b>ลงนามและส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · ส่งกลับแก้ไขเป็นลำดับขั้นพร้อมเหตุผล · <b>ขั้นที่ 2</b> Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} ลงนามและส่งต่อ → ผบ.ที่สูงขึ้นไป<b>อนุมัติ</b> → <b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
+  ${S.pf.view === 'track' || S.pf.view === 'evtrack' ? `<div class="trk-legend"><span><i class="trk-seg ok"></i>ดำเนินการแล้ว</span><span><i class="trk-seg"></i>ยังไม่ดำเนินการ</span><span><b class="trk-dot now"></b>ขั้นตอนปัจจุบัน</span></div>` : `<div class="req-note"><span class="msr">info</span><div><b>ขั้นที่ 0</b> Admin เพิ่มแผน (ทีละคน หรือนำเข้าจากตาราง) · <b>ขั้นที่ 1</b> ผู้เข้ารับการพัฒนากำหนด KPI → <b>บันทึก ลงนาม และส่งต่อ</b> → ผบ.โดยตรง<b>ลงนามและส่งต่อ</b> → ผบ.ที่สูงขึ้นไปลงนาม (สิ้นสุดแผน) · ส่งกลับแก้ไขเป็นลำดับขั้นพร้อมเหตุผล · <b>ขั้นที่ 2</b> Admin <b>เปิดการประเมินผล</b> → ผบ.โดยตรงบันทึก${PIP_EVAL_T} ลงนามและส่งต่อ → ผบ.ที่สูงขึ้นไป<b>อนุมัติ</b> → <b>พิมพ์เอกสารเพื่อลงนามด้วยปากกา</b></div></div>`}
   ${S.pips.length ? sections : `<div class="card">${emptyState('trending_up', 'ยังไม่มีแผนพัฒนาการปฏิบัติงาน', A ? 'เพิ่มแผน PIP ทีละคน หรือนำเข้าหลายคนจากตาราง' : 'เมื่อมีแผน PIP ที่เกี่ยวข้องกับคุณ รายการจะแสดงที่นี่', A ? { label: 'เพิ่มแผน PIP', attr: 'data-action="pipNew"' } : null)}</div>`}`;
 }
+const XNS = 'http:' + '/'.repeat(2), XD = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?' + '>';
+function xEsc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ''); }
+function xCol(i) { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+let CRC_T = null;
+function crc32(b) {
+  if (!CRC_T) { CRC_T = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC_T[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
+    const head = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0));
+    parts.push(new Uint8Array(head), name, data);
+    central.push(new Uint8Array([].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(0), u16(0x21), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(off))), name);
+    off += head.length + name.length + data.length;
+  });
+  const csize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([].concat(u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length), u32(csize), u32(off), u16(0)));
+  return new Blob(parts.concat(central, [end]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function xlsxBlob(sheets) {
+  const M = XNS + 'schemas.openxmlformats.org/', SS = M + 'spreadsheetml/2006/main', RR = M + 'officeDocument/2006/relationships', PR = M + 'package/2006/relationships';
+  const sheetXml = sh => {
+    const cols = (sh.widths || []).map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
+    const rows = sh.rows.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => {
+      if (v == null || v === '') return '';
+      const st = (sh.styles && sh.styles[ri]) || 0, ref = xCol(ci) + (ri + 1);
+      return typeof v === 'number' && isFinite(v) ? `<c r="${ref}" s="${st}"><v>${v}</v></c>` : `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${xEsc(v)}</t></is></c>`;
+    }).join('')}</row>`).join('');
+    const merges = (sh.merges || []).length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map(m => `<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '';
+    const frz = sh.freeze ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${sh.freeze}" topLeftCell="A${sh.freeze + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` : '';
+    return `${XD}<worksheet xmlns="${SS}" xmlns:r="${RR}">${frz}${cols ? '<cols>' + cols + '</cols>' : ''}<sheetData>${rows}</sheetData>${merges}</worksheet>`;
+  };
+  const styles = `${XD}<styleSheet xmlns="${SS}">
+<fonts count="3"><font><sz val="11"/><name val="Tahoma"/></font><font><b/><sz val="11"/><name val="Tahoma"/></font><font><b/><sz val="14"/><color rgb="FF1F4E79"/><name val="Tahoma"/></font></fonts>
+<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDEEAF6"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/></cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const files = [
+    { name: '[Content_Types].xml', data: `${XD}<Types xmlns="${M}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+    { name: '_rels/.rels', data: `${XD}<Relationships xmlns="${PR}"><Relationship Id="rId1" Type="${RR}/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: 'xl/workbook.xml', data: `${XD}<workbook xmlns="${SS}" xmlns:r="${RR}"><sheets>${sheets.map((s, i) => `<sheet name="${xEsc(String(s.name).slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `${XD}<Relationships xmlns="${PR}">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${RR}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${RR}/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'xl/styles.xml', data: styles }
+  ].concat(sheets.map((s, i) => ({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', data: sheetXml(s) })));
+  return zipStore(files);
+}
+function saveBlobAs(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+function pipExport() {
+  const fy = S.pf.fy, rnd = S.pf.rnd;
+  const rows = S.pips.filter(r => (fy === 'all' || String(pipFY(r)) === String(fy)) && (rnd === 'all' || (r.round === '2' ? '2' : '1') === rnd)
+    && match(S.pv.q, r.fullName, r.employeeId, r.department, r.unit, r.sup1Name, r.sup2Name))
+    .sort((a, b) => (pipFY(a) - pipFY(b)) || String(a.round).localeCompare(String(b.round)) || String(a.department || '').localeCompare(String(b.department || ''), 'th') || String(a.fullName).localeCompare(String(b.fullName), 'th'));
+  if (!rows.length) return toast('ไม่มีข้อมูลแผน PIP ตามตัวกรองที่เลือก', 'err');
+  const stName = r => (PIP_ST[r.status] || [r.status])[0];
+  const sumT = r => r.status === 'evaluated' ? (r.summary === 'pass' ? 'ผ่าน' : r.summary === 'fail' ? 'ไม่ผ่าน' : '-') : r.summary ? (r.summary === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน') + ' (ยังไม่อนุมัติ)' : '';
+  const dt = v => v ? thDateShort(String(v).slice(0, 10)) : '';
+  const scope = (fy === 'all' ? 'ทุกปีงบประมาณ' : 'ปีงบประมาณ ' + fy) + ' · ' + (rnd === 'all' ? 'ทุกรอบ' : 'รอบที่ ' + rnd) + (S.pv.q ? ' · ค้นหา "' + S.pv.q + '"' : '');
+  const asOf = 'ข้อมูล ณ ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+  const cnt = (list, f) => list.filter(f).length;
+  const statRow = (label, list) => {
+    const ev = cnt(list, r => r.status === 'evaluated'), ps = cnt(list, r => r.status === 'evaluated' && r.summary === 'pass');
+    return [label, list.length, cnt(list, r => r.status === 'draft'), cnt(list, r => r.status === 'signing' || r.status === 'review'), cnt(list, r => r.status === 'active'),
+      cnt(list, r => r.status === 'evalOpen'), cnt(list, r => r.status === 'evalReview'), ev, ps, cnt(list, r => r.status === 'evaluated' && r.summary === 'fail'), ev ? Math.round(ps * 1000 / ev) / 10 : ''];
+  };
+  const H1 = ['', 'จำนวนแผน', 'กำหนดเป้าหมาย', 'รอลงนาม', 'ลงนามครบ (รอประเมิน)', 'กำลังประเมินผล', 'รออนุมัติผล', 'อนุมัติผลแล้ว', 'ผ่าน', 'ไม่ผ่าน', 'ร้อยละผ่าน'];
+  const s1 = [['สรุปผลการดำเนินการแผนพัฒนาการปฏิบัติงาน (PIP)'], [scope + ' · ' + asOf], [], ['ภาพรวมตามรอบ'], ['รอบ'].concat(H1.slice(1))];
+  const st1 = { 0: 1, 3: 4, 4: 2 };
+  const rk = Array.from(new Set(rows.map(r => (pipFY(r) || '-') + '|' + (r.round === '2' ? '2' : '1'))));
+  rk.forEach(k => { const [y, n] = k.split('|'); s1.push(statRow('ปีงบ ' + y + ' รอบที่ ' + n, rows.filter(r => (pipFY(r) || '-') + '|' + (r.round === '2' ? '2' : '1') === k))); st1[s1.length - 1] = 3; });
+  if (rk.length > 1) { s1.push(statRow('รวมทั้งหมด', rows)); st1[s1.length - 1] = 4; }
+  s1.push([]); s1.push(['แยกตามฝ่าย']); st1[s1.length - 1] = 4; s1.push(['ฝ่าย'].concat(H1.slice(1))); st1[s1.length - 1] = 2;
+  Array.from(new Set(rows.map(r => r.department || '(ไม่ระบุฝ่าย)'))).sort((a, b) => a.localeCompare(b, 'th'))
+    .forEach(dp => { s1.push(statRow(dp, rows.filter(r => (r.department || '(ไม่ระบุฝ่าย)') === dp))); st1[s1.length - 1] = 3; });
+  const head = ['ลำดับ', 'ปีงบประมาณ', 'รอบที่', 'รหัสบุคลากร', 'ชื่อ-สกุล', 'ตำแหน่ง', 'ฝ่าย', 'หน่วยงาน', 'ระยะเวลาแผน', 'ผู้บังคับบัญชาโดยตรง', 'ผู้บังคับบัญชาที่สูงขึ้นไป', 'สถานะ', 'จำนวนเป้าหมาย'];
+  [1, 2, 3].forEach(i => head.push('เป้าหมายที่ ' + i, 'การดำเนินการ (เป้าหมายที่ ' + i + ')', 'ผลลัพธ์การปฏิบัติงาน (เป้าหมายที่ ' + i + ')', 'ผลประเมิน (เป้าหมายที่ ' + i + ')'));
+  head.push('สรุปผลการประเมิน', 'เหตุผล', 'ลงนามครบ (ขั้นกำหนดแผน)', 'เปิดประเมินผล', 'ผบ.โดยตรงส่งผล', 'อนุมัติผล');
+  const s2 = [head];
+  rows.forEach((r, i) => {
+    const k = r.round === '2' ? '2' : '1', es = r.evalSigns || {}, sg = r.signs || {};
+    const line = [i + 1, pipFY(r) || '', Number(k), r.employeeId, r.fullName, r.position || '', r.department || '', r.unit || PIP_UNIT_DEFAULT,
+      thRange(r['r' + k + 'Start'], r['r' + k + 'End']) || '', r.sup1Name || '', r.sup2Name || '', stName(r), r.kpiHidden ? '' : (r.kpis || []).length];
+    [0, 1, 2].forEach(j => { const kp = r.kpiHidden ? null : (r.kpis || [])[j];
+      line.push(kp ? kp.goal || '' : '', kp ? (kp.actions || []).filter(Boolean).map((a, n) => (n + 1) + '. ' + a).join('\n') : '', kp ? kp.result || '' : '', kp ? (kp.eval === 'pass' ? 'ผ่าน' : kp.eval === 'fail' ? 'ไม่ผ่าน' : '') : ''); });
+    line.push(sumT(r), r.reason || '', dt(sg.sup2 && sg.sup2.at), dt(r.evalOpenAt), dt(es.sup1 && es.sup1.at), dt(es.sup2 && es.sup2.at));
+    s2.push(line);
+  });
+  const st2 = { 0: 2 }; for (let i = 1; i < s2.length; i++) st2[i] = 3;
+  const w2 = [6, 10, 7, 12, 24, 22, 22, 22, 22, 22, 22, 18, 10].concat([].concat(...[1, 2, 3].map(() => [34, 40, 34, 10]))).concat([16, 30, 14, 14, 14, 14]);
+  const blob = xlsxBlob([
+    { name: 'สรุปภาพรวม', rows: s1, styles: st1, widths: [34, 11, 14, 11, 18, 14, 12, 14, 9, 9, 11], merges: ['A1:K1', 'A2:K2'] },
+    { name: 'รายละเอียดรายบุคคล', rows: s2, styles: st2, widths: w2, freeze: 1 }
+  ]);
+  const fn = 'สรุปผล_PIP_' + (fy === 'all' ? 'ทุกปีงบ' : 'ปีงบ' + fy) + (rnd === 'all' ? '' : '_รอบ' + rnd) + '.xlsx';
+  saveBlobAs(blob, fn);
+  toast('ดาวน์โหลด ' + fn + ' แล้ว (' + rows.length + ' แผน)');
+}
 function pipBlankData() {
-  return { round: '1', r1Start: '', r1End: '', r2Start: '', r2End: '', unit: PIP_UNIT_DEFAULT, position: '', department: '', sup1Position: '', sup2Position: '',
+  return { round: S.pf.rnd === '2' ? '2' : '1', fy: /^[0-9]{4}$/.test(String(S.pf.fy)) ? String(S.pf.fy) : String(fiscalYearBE()), r1Start: '', r1End: '', r2Start: '', r2End: '', unit: PIP_UNIT_DEFAULT, position: '', department: '', sup1Position: '', sup2Position: '',
     employeeId: '', sup1EmployeeId: '', sup2EmployeeId: '', kpis: [{ goal: '', actions: ['', '', ''] }] };
 }
 function pipNew() { S.pv = { mode: 'edit', id: null, data: pipBlankData(), q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0); }
@@ -3100,6 +3232,7 @@ function pipEdit(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
   const d = JSON.parse(JSON.stringify(r));
   if (!d.kpis || !d.kpis.length) d.kpis = [{ goal: '', actions: ['', '', ''] }];
+  d.fy = String(pipFY(r) || fiscalYearBE());
   S.pv = { mode: 'edit', id, data: d, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0);
 }
 function pipUserById(id) { return /^[0-9]{7}$/.test(String(id || '')) ? (S.users || []).find(u => String(u.employeeId) === String(id)) : null; }
@@ -3123,11 +3256,17 @@ function pipKpiHtml(k, i, n) {
     <div class="pip-kpi-b">
       <label class="field"><span>เป้าหมาย KPI ที่ต้องพัฒนา (ผลงาน / สมรรถนะ / พฤติกรรม) <span class="req">*</span></span>
         <textarea class="input" name="goal" rows="3" maxlength="500" placeholder="เช่น ลดความผิดพลาดในการบันทึกข้อมูลผู้ป่วยให้ไม่เกิน 1 ครั้ง/เดือน">${esc(k.goal || '')}</textarea></label>
-      <div class="field"><span>การดำเนินการเพื่อให้บรรลุเป้าหมาย (สูงสุด 3 ข้อ) <span class="req">*</span></span>
-        ${[0, 1, 2].map(j => `<div class="pip-act"><em>${j + 1}.</em><input class="input" name="act${j}" maxlength="250" value="${esc((k.actions || [])[j] || '')}" placeholder="${j ? '' : 'เช่น เข้ารับการสอนงาน (Coaching) จากหัวหน้างานสัปดาห์ละ 1 ครั้ง'}"></div>`).join('')}
+      <div class="field"><span>การดำเนินการเพื่อให้บรรลุเป้าหมาย (กรอกให้ครบทั้ง 3 ข้อ) <span class="req">*</span></span>
+        ${[0, 1, 2].map(j => `<div class="pip-act"><em>${j + 1}.</em><input class="input" name="act${j}" maxlength="250" value="${esc((k.actions || [])[j] || '')}" placeholder="${j ? 'การดำเนินการข้อที่ ' + (j + 1) : 'เช่น เข้ารับการสอนงาน (Coaching) จากหัวหน้างานสัปดาห์ละ 1 ครั้ง'}"></div>`).join('')}
       </div>
     </div></div>`;
 }
+function pipFyOpts(sel) {
+  const c = fiscalYearBE(), ys = [c - 1, c, c + 1, c + 2];
+  if (sel && ys.indexOf(Number(sel)) < 0) ys.push(Number(sel));
+  return ys.sort((a, b) => a - b).map(y => `<option value="${y}"${String(y) === String(sel) ? ' selected' : ''}>ปีงบประมาณ ${y}</option>`).join('');
+}
+function pipPeriodTxt(fy, rk) { const rd = pipRoundDates(fy, rk); return rd ? 'รอบที่ ' + rk + ' · ' + thRange(rd.start, rd.end) : '-'; }
 function renderPipEditor() {
   const d = S.pv.data, A = isAdmin();
   const cur = S.pv.id ? pipCur() : null;
@@ -3146,9 +3285,10 @@ function renderPipEditor() {
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">date_range</span>รอบและระยะเวลาแผน PIP</h3><span class="muted small">ระยะเวลาดำเนินการ 6 เดือน</span></div><div class="card-b">
     <div class="seg" style="margin-bottom:12px">${[['1', 'แผน PIP รอบที่ 1'], ['2', 'แผน PIP รอบที่ 2']].map(o => `<label><input type="radio" name="round" value="${o[0]}" ${rk === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>
     <div class="req-grid">
-      ${pipIn('r' + rk + 'Start', 'วันที่เริ่ม (รอบที่ ' + rk + ')', { type: 'date', req: true })}
-      ${pipIn('r' + rk + 'End', 'ถึง (ระบบเติมให้ +6 เดือน)', { type: 'date' })}
+      <label class="field"><span>ปีงบประมาณ <span class="req">*</span></span><select class="input" name="fy">${pipFyOpts(d.fy)}</select></label>
+      <div class="field"><span>ระยะเวลาแผน (กำหนดอัตโนมัติ)</span><div class="input" id="pipPeriodTxt" style="background:var(--bg-2,#f4f6fa);display:flex;align-items:center">${esc(pipPeriodTxt(d.fy, rk))}</div></div>
     </div>
+    <small class="hint">รอบที่ 1 = 1 ต.ค. – 31 มี.ค. · รอบที่ 2 = 1 เม.ย. – 30 ก.ย. ของปีงบประมาณ</small>
     ${isNew ? `<label class="check" style="margin-top:12px"><input type="checkbox" name="notify" ${d.notify === false ? '' : 'checked'}> ส่งอีเมลแจ้งผู้เกี่ยวข้องให้เข้ามาร่วมกำหนดเป้าหมาย (เฉพาะผู้ที่มีอีเมลในระบบ)</label>` : ''}
   </div></div>`
   : `<div class="card req-sec"><div class="card-h"><h3><span class="msr">trending_up</span>${esc(cur.fullName)}</h3><span class="muted small">${esc(pipPeriod(cur))}</span></div><div class="card-b">
@@ -3166,7 +3306,7 @@ function renderPipEditor() {
   return `
   ${cur && cur.note ? `<div class="notice" style="background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">undo</span><div><b>ถูกส่งกลับให้แก้ไข</b> — ${esc(cur.note)}</div></div>` : ''}
   <div class="req-note"><span class="msr">info</span><div>${A
-    ? (isNew ? 'Admin เพิ่มผู้เกี่ยวข้อง รอบ และวันที่เริ่ม → กด <b>"บันทึก"</b> แล้ว <b>ผู้เข้ารับการพัฒนาจะกำหนดเป้าหมาย KPI</b> จากบัญชีของตนเอง (ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งาน) · เพิ่มหลายคนพร้อมกันใช้ปุ่ม "นำเข้าจากตาราง"' : 'แก้ไขข้อมูลแผน (สถานะกำหนดเป้าหมาย)')
+    ? (isNew ? 'Admin เพิ่มผู้เกี่ยวข้อง รอบ และปีงบประมาณ (ระบบกำหนดวันที่ให้อัตโนมัติ) → กด <b>"บันทึก"</b> แล้ว <b>ผู้เข้ารับการพัฒนาจะกำหนดเป้าหมาย KPI</b> จากบัญชีของตนเอง (ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งาน) · เพิ่มหลายคนพร้อมกันใช้ปุ่ม "นำเข้าจากตาราง"' : 'แก้ไขข้อมูลแผน (สถานะกำหนดเป้าหมาย)')
     : 'กำหนด<b>เป้าหมาย KPI และการดำเนินการ</b> — <b>"บันทึกร่าง"</b> = เก็บไว้แก้ต่อ · <b>"บันทึก ลงนาม และส่งต่อ"</b> = ยืนยันด้วยรหัสผ่าน แล้วส่งให้ผู้บังคับบัญชาโดยตรงพิจารณาทันที'}
     ${cur && cur.updatedBy ? `<br><small>แก้ไขล่าสุดโดย @${esc(cur.updatedBy)} · ${esc(timeAgo(cur.updatedAt))}</small>` : ''}</div></div>
   <form id="pipForm" onsubmit="return false" autocomplete="off">${people}
@@ -3176,7 +3316,7 @@ function renderPipEditor() {
   <div class="req-actions">
     <button class="btn btn-light" data-action="pipCancel">ยกเลิก</button>
     ${A && isNew ? '' : `<button class="btn btn-light" data-action="pipPreview"><span class="msr">visibility</span>ดูตัวอย่าง</button>`}
-    <button class="btn ${A && isNew ? 'btn-primary' : 'btn-light'}" data-action="pipSave"><span class="msr">save</span>${A && isNew ? 'บันทึก (ให้ผู้เกี่ยวข้องกำหนดเป้าหมาย)' : A ? 'บันทึก' : 'บันทึกร่าง'}</button>
+    <button class="btn ${A && isNew ? 'btn-primary' : 'btn-light'}" data-action="pipSave"><span class="msr">save</span>${A && isNew ? 'บันทึก (ให้ผู้เกี่ยวข้องกำหนดเป้าหมาย)' : 'บันทึกร่าง'}</button>
     ${A && isNew ? '' : `<button class="btn btn-primary" data-action="pipSaveSubmit"><span class="spinner"></span><span class="msr">${A && !pipOwn(pipCur() || {}, 'emp') ? 'send' : 'draw'}</span><span class="btn-label">${A && !pipOwn(pipCur() || {}, 'emp') ? 'บันทึกและส่งลงนาม' : 'บันทึก ลงนาม และส่งต่อ'}</span></button>`}
   </div>`;
 }
@@ -3188,6 +3328,7 @@ function readPipForm() {
     if (el.type === 'checkbox') { d[el.name] = el.checked; return; }
     d[el.name] = el.value;
   });
+  if (isAdmin()) { const rk = d.round === '2' ? '2' : '1', rd = pipRoundDates(d.fy, rk); if (rd) { d['r' + rk + 'Start'] = rd.start; d['r' + rk + 'End'] = rd.end; } }
   if ($('.pip-kpi', f)) d.kpis = $$('.pip-kpi', f).map(b => ({ goal: $('[name=goal]', b).value, actions: [0, 1, 2].map(j => $('[name=act' + j + ']', b).value) }));
   return d;
 }
@@ -3206,6 +3347,7 @@ function onPipInput(e) {
     }
   }
   if (t.name === 'round' && e.type === 'change') { render(); return; }
+  if (t.name === 'fy') { const p = $('#pipPeriodTxt'); if (p) p.textContent = pipPeriodTxt(d.fy, d.round === '2' ? '2' : '1'); }
   if (/^r[12]Start$/.test(t.name) && t.value && e.type === 'change') {
     const ek = t.name.replace('Start', 'End'), el = $('#pipForm [name=' + ek + ']');
     if (el) { el.value = addMonths(t.value, 6); d[ek] = el.value; }
@@ -3222,8 +3364,7 @@ function validatePip(forSubmit) {
     const ids = [d.employeeId, d.sup1EmployeeId, d.sup2EmployeeId].filter(Boolean);
     if (new Set(ids).size !== ids.length) miss.push('ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาต้องเป็นคนละคน');
     const k = d.round === '2' ? '2' : '1';
-    if (!d['r' + k + 'Start']) bad('r' + k + 'Start', 'วันที่เริ่ม');
-    if (d['r' + k + 'End'] && d['r' + k + 'End'] < d['r' + k + 'Start']) bad('r' + k + 'End', 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม');
+    if (!pipRoundDates(d.fy, k)) bad('fy', 'ปีงบประมาณ');
   }
   if (forSubmit) {
     const ks = (d.kpis || []).filter(x => x.goal.trim() || x.actions.some(a => a.trim()));
@@ -3231,7 +3372,9 @@ function validatePip(forSubmit) {
     $$('#pipForm .pip-kpi').forEach((b, i) => {
       const x = d.kpis[i]; if (!x.goal.trim() && !x.actions.some(a => a.trim())) return;
       if (!x.goal.trim()) { $('[name=goal]', b).classList.add('req-field-err'); miss.push('เป้าหมายที่ ' + (i + 1)); }
-      if (!x.actions.some(a => a.trim())) { $('[name=act0]', b).classList.add('req-field-err'); miss.push('การดำเนินการของเป้าหมายที่ ' + (i + 1)); }
+      const emptyActs = [0, 1, 2].filter(j => !String(x.actions[j] || '').trim());
+      emptyActs.forEach(j => $('[name=act' + j + ']', b).classList.add('req-field-err'));
+      if (emptyActs.length) miss.push('การดำเนินการของเป้าหมายที่ ' + (i + 1) + ' ข้อ ' + emptyActs.map(j => j + 1).join(', '));
     });
   }
   if (miss.length) { toast('กรุณาตรวจสอบ: ' + miss.join(', '), 'err'); const f = $('#pipForm .req-field-err'); if (f) f.focus(); return false; }
@@ -3297,9 +3440,11 @@ const PIMP_FIELDS = [
   ['sup1EmployeeId', 'รหัสผู้บังคับบัญชาโดยตรง', ['รหัสผู้บังคับบัญชาโดยตรง', 'รหัสบุคลากรผู้บังคับบัญชาโดยตรง', 'ผู้บังคับบัญชาโดยตรง'], 1],
   ['sup2EmployeeId', 'รหัสผู้บังคับบัญชาที่สูงขึ้นไป', ['รหัสผู้บังคับบัญชาที่สูงขึ้นไป', 'รหัสบุคลากรผู้บังคับบัญชาที่สูงขึ้นไป', 'ผู้บังคับบัญชาที่สูงขึ้นไป'], 1],
   ['round', 'รอบที่ (1 หรือ 2)', ['รอบที่1หรือ2', 'รอบที่', 'รอบ', 'round'], 1],
-  ['startDate', 'วันที่เริ่ม (วว/ดด/ปปปป พ.ศ.)', ['วันที่เริ่มวว/ดด/ปปปปพศ', 'วันที่เริ่ม', 'วันเริ่ม', 'เริ่ม', 'startdate'], 1],
+  ['fy', 'ปีงบประมาณ (พ.ศ.)', ['ปีงบประมาณพศ', 'ปีงบประมาณ', 'ปีงบ', 'fy', 'fiscalyear'], 1],
+  ['startDate', 'วันที่เริ่ม (แม่แบบเดิม)', ['วันที่เริ่มวว/ดด/ปปปปพศ', 'วันที่เริ่ม', 'วันเริ่ม', 'startdate'], 0],
   ['unit', 'หน่วยงาน (ไม่บังคับ)', ['หน่วยงานไม่บังคับ', 'หน่วยงาน', 'unit'], 0]
 ];
+function PIMP_SHOW() { return PIMP_FIELDS.filter(f => f[0] !== 'startDate'); }
 function pipParseDate(v) {
   v = String(v == null ? '' : v).trim();
   if (!v) return '';
@@ -3333,7 +3478,7 @@ function pipMapRows(table) {
       if (i < 0) i = head.findIndex((h, j) => h && al.some(a => h.indexOf(a) === 0) && Object.values(cur).indexOf(j) < 0);
       if (i > -1) cur[f[0]] = i;
     });
-    if (['employeeId', 'sup1EmployeeId', 'sup2EmployeeId', 'startDate'].every(k => cur[k] != null)) { hi = t; idx = cur; }
+    if (['employeeId', 'sup1EmployeeId', 'sup2EmployeeId'].every(k => cur[k] != null) && (cur.fy != null || cur.startDate != null)) { hi = t; idx = cur; }
   }
   if (hi < 0) return { err: 'ไม่พบแถวหัวตาราง — ต้องมีคอลัมน์ ' + PIMP_FIELDS.filter(f => f[3]).map(f => '"' + f[1] + '"').join(', ') + ' (ดาวน์โหลดไฟล์ตัวอย่างได้)' };
   const id7 = v => String(v == null ? '' : v).replace(/[.]0+$/, '').replace(/\s/g, '');
@@ -3346,8 +3491,9 @@ function pipMapRows(table) {
     if (/^[0-9]{1,6}$/.test(o.sup2EmployeeId)) o.sup2EmployeeId = o.sup2EmployeeId.padStart(7, '0');
     o.roundRaw = o.round; o.round = String(o.round).replace(/[^12]/g, '').slice(0, 1);
     o.startRaw = o.startDate; o.startDate = pipParseDate(o.startDate);
+    o.fyRaw = o.fy; o.fy = pipFyBE(String(o.fy).replace(/[.]0+$/, '')) || (o.startDate ? pipFY({ round: '1', r1Start: o.startDate }) : 0);
     return o;
-  }).filter(o => o.employeeId || o.sup1EmployeeId || o.sup2EmployeeId || o.startRaw) };
+  }).filter(o => o.employeeId || o.sup1EmployeeId || o.sup2EmployeeId || o.fyRaw || o.startRaw) };
 }
 function pipCheckRows(rows) {
   const open = {}; S.pips.forEach(r => { if (r.status !== 'evaluated') open[r.employeeId + '|' + r.round] = true; });
@@ -3366,14 +3512,15 @@ function pipCheckRows(rows) {
     const ids = [d.employeeId, d.sup1EmployeeId, d.sup2EmployeeId].filter(x => /^[0-9]{7}$/.test(x));
     if (new Set(ids).size !== ids.length) err.push('ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาต้องเป็นคนละคน');
     if (d.round !== '1' && d.round !== '2') err.push('รอบที่ต้องเป็น 1 หรือ 2');
-    if (!d.startDate) err.push(d.startRaw ? 'อ่านวันที่เริ่มไม่ได้ (' + d.startRaw + ')' : 'ไม่มีวันที่เริ่ม');
+    if (!d.fy) err.push(d.fyRaw ? 'ปีงบประมาณไม่ถูกต้อง (' + d.fyRaw + ')' : 'ไม่มีปีงบประมาณ');
     const key = d.employeeId + '|' + d.round;
     if (!err.length && open[key]) err.push('มีแผนรอบที่ ' + d.round + ' ของบุคลากรนี้อยู่แล้ว');
     else if (!err.length && seen[key]) err.push('ซ้ำกับแถวที่ ' + seen[key]);
     if (!seen[key]) seen[key] = d.row;
     if (d.empName && who.employeeId && strip(d.empName) && strip(who.employeeId.fullName).indexOf(strip(d.empName)) < 0 && strip(d.empName).indexOf(strip(who.employeeId.firstNameTh || '-')) < 0)
       warn.push('ชื่อในไฟล์ "' + d.empName + '" ไม่ตรงกับในระบบ');
-    return { data: d, who, ok: !err.length, err, warn, end: d.startDate ? addMonths(d.startDate, 6) : '' };
+    const rd = d.fy && (d.round === '1' || d.round === '2') ? pipRoundDates(d.fy, d.round) : null;
+    return { data: d, who, ok: !err.length, err, warn, rd };
   });
 }
 function openPipImport() {
@@ -3384,7 +3531,7 @@ function openPipImport() {
     onOk: async () => {
       const good = S.pimp.rows.filter(r => r.ok);
       if (!good.length) { toast('ไม่มีแถวที่ถูกต้องสำหรับนำเข้า', 'err'); return false; }
-      const r = await api('importPips', S.token, good.map(x => ({ row: x.data.row, employeeId: x.data.employeeId, sup1EmployeeId: x.data.sup1EmployeeId, sup2EmployeeId: x.data.sup2EmployeeId, round: x.data.round, startDate: x.data.startDate, unit: x.data.unit })), { notify: S.pimp.notify });
+      const r = await api('importPips', S.token, good.map(x => ({ row: x.data.row, employeeId: x.data.employeeId, sup1EmployeeId: x.data.sup1EmployeeId, sup2EmployeeId: x.data.sup2EmployeeId, round: x.data.round, fy: x.data.fy, startDate: x.data.startDate, unit: x.data.unit })), { notify: S.pimp.notify });
       S.pips = r.list; pipSetSummary(); S.pimp.result = r.results; S.pimp.step = 'result';
       renderPipImp(); if (S.page === 'pip') { const keep = modalCfg; render(); modalCfg = keep; }
       const n = r.results.filter(x => x.ok).length;
@@ -3413,8 +3560,8 @@ async function pipImpFile(file) {
 function pipTemplate() {
   const u = (S.users || []).filter(x => x.status === 'active');
   const ex = (i, f) => u[i] ? u[i][f] : '';
-  downloadCsv('แบบฟอร์มเพิ่มแผน_PIP.csv', [PIMP_FIELDS.map(f => f[1]),
-    [ex(0, 'employeeId') || '1111111', ex(0, 'fullName') || 'นางมาลี สุขใจ', ex(1, 'employeeId') || '2222222', ex(2, 'employeeId') || '3333333', '1', '16/11/2569', '']]);
+  downloadCsv('แบบฟอร์มเพิ่มแผน_PIP.csv', [PIMP_SHOW().map(f => f[1]),
+    [ex(0, 'employeeId') || '1111111', ex(0, 'fullName') || 'นางมาลี สุขใจ', ex(1, 'employeeId') || '2222222', ex(2, 'employeeId') || '3333333', '1', String(fiscalYearBE()), '']]);
 }
 function renderPipImp() {
   const box = $('#pimpBox'); if (!box || !S.pimp) return;
@@ -3424,20 +3571,20 @@ function renderPipImp() {
     box.innerHTML = `
       <div class="imp-steps">
         <div><b>1</b><span>ดาวน์โหลดไฟล์ตัวอย่าง แล้วกรอก 1 แถว = 1 แผน</span></div>
-        <div><b>2</b><span>ใส่รหัสบุคลากร 7 หลักของทั้ง 3 ท่าน · รอบที่ 1/2 · วันที่เริ่ม (วันสิ้นสุด = +6 เดือน อัตโนมัติ)</span></div>
+        <div><b>2</b><span>ใส่รหัสบุคลากร 7 หลักของทั้ง 3 ท่าน · รอบที่ 1/2 · ปีงบประมาณ (ระบบกำหนดวันที่ให้อัตโนมัติ)</span></div>
         <div><b>3</b><span>เลือกไฟล์หรือวางข้อมูล ระบบตรวจและแสดงชื่อให้ก่อนนำเข้าจริง</span></div>
       </div>
-      <div class="pimp-tpl"><table class="tbl"><thead><tr>${PIMP_FIELDS.map(f => `<th>${esc(f[1])}${f[3] ? ' <span class="req">*</span>' : ''}</th>`).join('')}</tr></thead>
-        <tbody><tr><td class="mono">1111111</td><td class="muted">นางมาลี สุขใจ</td><td class="mono">2222222</td><td class="mono">3333333</td><td>1</td><td>16/11/2569</td><td class="muted">หอผู้ป่วยอายุรกรรมชาย 1</td></tr></tbody></table></div>
+      <div class="pimp-tpl"><table class="tbl"><thead><tr>${PIMP_SHOW().map(f => `<th>${esc(f[1])}${f[3] ? ' <span class="req">*</span>' : ''}</th>`).join('')}</tr></thead>
+        <tbody><tr><td class="mono">1111111</td><td class="muted">นางมาลี สุขใจ</td><td class="mono">2222222</td><td class="mono">3333333</td><td>1</td><td>${fiscalYearBE()}</td><td class="muted">หอผู้ป่วยอายุรกรรมชาย 1</td></tr></tbody></table></div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:12px 0 14px">
-        <small class="muted">วันที่ใช้ได้: 16/11/2569 · 16/11/2026 · 2026-11-16 · 16 พ.ย. 2569 หรือรูปแบบวันที่ของ Excel</small>
+        <small class="muted">รอบที่ 1 = 1 ต.ค. – 31 มี.ค. · รอบที่ 2 = 1 เม.ย. – 30 ก.ย. ของปีงบประมาณ (ใส่ พ.ศ. เช่น ${fiscalYearBE()})</small>
         <button type="button" class="btn btn-light" data-pimp="template"><span class="msr">download</span>ดาวน์โหลดไฟล์ตัวอย่าง (CSV)</button>
       </div>
       <input type="file" id="pimpFile" accept=".xlsx,.csv,.txt,.tsv" style="position:absolute;opacity:0;width:1px;height:1px">
       <label for="pimpFile" class="file-box pimp-drop"><span class="msr" style="background:var(--green-50);color:var(--green)">table_view</span>
         <div><b>คลิกเพื่อเลือกไฟล์ Excel (.xlsx) หรือ CSV</b><small>หรือลากไฟล์มาวาง · ใช้แผ่นงานแรก · ไม่เกิน 300 แผนต่อครั้ง</small></div></label>
       <div class="imp-or">หรือ คัดลอกจาก Excel แล้ววางที่นี่ (รวมแถวหัวตาราง)</div>
-      <textarea class="input" id="pimpPaste" style="min-height:100px;font-size:13px" placeholder="${PIMP_FIELDS.map(f => f[1]).join('&#9;')}"></textarea>
+      <textarea class="input" id="pimpPaste" style="min-height:100px;font-size:13px" placeholder="${PIMP_SHOW().map(f => f[1]).join('&#9;')}"></textarea>
       <div style="text-align:right;margin-top:10px"><button type="button" class="btn btn-light" data-pimp="paste"><span class="msr">fact_check</span>ตรวจสอบข้อมูลที่วาง</button></div>
       <p class="hint">หน่วยงานเว้นว่าง = ${PIP_UNIT_DEFAULT} · ทั้ง 3 ท่านต้องมีบัญชีผู้ใช้งานที่เปิดใช้งานแล้ว (ถ้ายังไม่มี ให้นำเข้าผู้ใช้งานที่เมนู "ผู้ใช้งาน" ก่อน) · ถ้ารหัสขึ้นต้นด้วย 0 ระบบเติม 0 ให้อัตโนมัติ</p>`;
   } else if (st === 'preview') {
@@ -3455,7 +3602,7 @@ function renderPipImp() {
       <tbody>${rows.map(r => `<tr class="${r.ok ? '' : 'bad'}">
         <td class="muted">${r.data.row}</td><td>${nm(r, 'employeeId')}${r.who.employeeId ? `<br><small class="muted">${esc(r.who.employeeId.department || '')}</small>` : ''}</td>
         <td>${nm(r, 'sup1EmployeeId')}</td><td>${nm(r, 'sup2EmployeeId')}</td>
-        <td class="small">รอบที่ ${esc(r.data.round || r.data.roundRaw || '-')}<br>${r.data.startDate ? esc(thRange(r.data.startDate, r.end)) : esc(r.data.startRaw || '-')}</td>
+        <td class="small">รอบที่ ${esc(r.data.round || r.data.roundRaw || '-')}<br>${r.rd ? 'ปีงบ ' + esc(r.data.fy) + ' · ' + esc(thRange(r.rd.start, r.rd.end)) : esc(r.data.fyRaw || r.data.startRaw || '-')}</td>
         <td>${r.ok ? '<span class="badge b-green">ถูกต้อง</span>' : `<span class="imp-err">${esc(r.err.join(' · '))}</span>`}${r.warn.length ? `<br><small style="color:var(--amber)">⚠ ${esc(r.warn.join(' · '))}</small>` : ''}</td></tr>`).join('')}</tbody></table></div>
       <div style="margin-top:12px">${notify}</div>`;
   } else {
@@ -3533,6 +3680,8 @@ function renderPipView() {
       <div><small>ระยะเวลา</small><b>${esc(thRange(r['r' + k + 'Start'], r['r' + k + 'End']) || '-')}</b></div>
     </div>
   </div></div>
+  <div class="card req-sec"><div class="card-h"><h3><span class="msr">timeline</span>ติดตามการดำเนินการ</h3></div><div class="card-b">${pipTrackLine(r)}</div></div>
+  ${pipEvalOpened(r) ? `<div class="card req-sec"><div class="card-h"><h3><span class="msr">grading</span>ติดตามการประเมินผล</h3>${r.summary && r.status === 'evaluated' ? (r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : '<span class="badge b-red">ไม่ผ่าน</span>') : ''}</div><div class="card-b">${pipTrackLine(r, pipEvalStages(r))}</div></div>` : ''}
   ${r.kpiHidden ? `<div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI</h3></div><div class="card-b"><div class="empty" style="padding:26px 10px"><span class="msr" style="font-size:40px;color:var(--muted)">lock</span><p style="margin:8px 0 0">ผู้เข้ารับการพัฒนาและผู้บังคับบัญชาโดยตรงกำลังดำเนินการ — คุณจะเห็นเป้าหมาย KPI เมื่อผู้บังคับบัญชาโดยตรงกด <b>"ส่งต่อ"</b></p></div></div></div>` : `<div class="card req-sec"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมาย KPI และผลการปฏิบัติงาน</h3></div>
     <div class="table-wrap"><table class="tbl pip-tbl"><thead><tr><th style="width:26%">เป้าหมาย KPI ที่ต้องพัฒนา</th><th style="width:30%">การดำเนินการเพื่อให้บรรลุเป้าหมาย</th><th>ผลลัพธ์การปฏิบัติงาน<br><small class="muted">(ประเมินโดยผู้บังคับบัญชา)</small></th><th style="width:100px">การประเมิน</th></tr></thead>
     <tbody>${(r.kpis || []).map((x, i) => `<tr><td><b>${i + 1}.</b> ${esc(x.goal)}</td>
@@ -3659,6 +3808,17 @@ function pipEvalStart(id) {
   S.pv = { mode: 'eval', id, data: { kpis: (r.kpis || []).map(k => ({ result: k.result || '', eval: k.eval || '' })), summary: r.summary || '', reason: r.reason || '' }, q: S.pv.q, st: S.pv.st };
   render(); window.scrollTo(0, 0);
 }
+function pipAutoSummary(kpis) {
+  if (!kpis || !kpis.length) return '';
+  if (kpis.some(k => k.eval === 'fail')) return 'fail';
+  return kpis.every(k => k.eval === 'pass') ? 'pass' : '';
+}
+function pipSumHtml(d) {
+  const v = pipAutoSummary(d.kpis);
+  return v === 'pass' ? '<span class="badge b-green" style="font-size:15px;padding:6px 14px"><span class="msr">check_circle</span> ผ่าน</span>'
+    : v === 'fail' ? '<span class="badge b-red" style="font-size:15px;padding:6px 14px"><span class="msr">cancel</span> ไม่ผ่าน</span>'
+    : '<span class="muted small">ประเมินให้ครบทุกเป้าหมาย ระบบจะสรุปผลให้อัตโนมัติ</span>';
+}
 function renderPipEval() {
   const r = pipCur(), d = S.pv.data;
   const seg = (name, val) => `<div class="seg">${[['pass', 'ผ่าน'], ['fail', 'ไม่ผ่าน']].map(o => `<label><input type="radio" name="${name}" value="${o[0]}" ${val === o[0] ? 'checked' : ''}><span>${o[1]}</span></label>`).join('')}</div>`;
@@ -3669,12 +3829,13 @@ function renderPipEval() {
   ${(r.kpis || []).map((k, i) => `<div class="card req-sec pip-ev" data-ev="${i}"><div class="card-h"><h3><span class="msr">flag</span>เป้าหมายที่ ${i + 1}</h3></div><div class="card-b">
     <p style="margin:0 0 6px;font-weight:500">${esc(k.goal)}</p>
     <div class="small" style="color:var(--text-2);margin-bottom:12px">${(k.actions || []).map((a, j) => a ? `<div>${j + 1}. ${esc(a)}</div>` : '').join('')}</div>
-    <label class="field"><span>ผลลัพธ์การปฏิบัติงาน (ประเมินโดยผู้บังคับบัญชา)</span><textarea class="input" name="result" rows="3" maxlength="700">${esc(d.kpis[i].result)}</textarea></label>
-    <div class="field" style="margin-top:10px"><span>การประเมิน</span>${seg('eval' + i, d.kpis[i].eval)}</div>
+    <label class="field"><span>ผลลัพธ์การปฏิบัติงาน (ประเมินโดยผู้บังคับบัญชา) <span class="req">*</span></span><textarea class="input" name="result" rows="3" maxlength="700">${esc(d.kpis[i].result)}</textarea></label>
+    <div class="field" style="margin-top:10px"><span>การประเมิน <span class="req">*</span></span>${seg('eval' + i, d.kpis[i].eval)}</div>
   </div></div>`).join('')}
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">fact_check</span>สรุปผลการประเมิน</h3></div><div class="card-b">
-    ${seg('summary', d.summary)}
-    <label class="field" style="margin-top:12px"><span>เหตุผล</span><textarea class="input" name="reason" rows="2" maxlength="500">${esc(d.reason)}</textarea></label>
+    <div id="pipSumBox">${pipSumHtml(d)}</div>
+    <small class="hint">ระบบสรุปให้อัตโนมัติ: มี "ไม่ผ่าน" อย่างน้อย 1 เป้าหมาย = <b>ไม่ผ่าน</b> · ผ่านครบทุกเป้าหมาย = <b>ผ่าน</b></small>
+    <label class="field" style="margin-top:12px"><span>เหตุผล <span class="req">*</span></span><textarea class="input" name="reason" rows="2" maxlength="500">${esc(d.reason)}</textarea></label>
     <small class="hint">"บันทึกร่าง" = เก็บไว้แก้ต่อ · "บันทึก ลงนาม และส่งต่อ" = ยืนยันด้วยรหัสผ่าน แล้วส่งให้ผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติ (พิมพ์เอกสารได้หลังอนุมัติ)</small>
   </div></div>
   </form>
@@ -3687,13 +3848,24 @@ function renderPipEval() {
 function readPipEval() {
   const f = $('#pipEvalForm'), d = S.pv.data; if (!f) return d;
   $$('.pip-ev', f).forEach(b => { const i = Number(b.dataset.ev); d.kpis[i].result = $('[name=result]', b).value; const c = $('input[name=eval' + i + ']:checked', b); d.kpis[i].eval = c ? c.value : ''; });
-  const s = $('input[name=summary]:checked', f); d.summary = s ? s.value : '';
+  d.summary = pipAutoSummary(d.kpis);
   d.reason = $('[name=reason]', f).value;
+  const sb = $('#pipSumBox'); if (sb) sb.innerHTML = pipSumHtml(d);
   return d;
 }
 async function savePipEval(submit) {
   const d = readPipEval(), id = S.pv.id;
-  if (submit && (!d.summary || d.kpis.some(k => !k.eval))) return toast('กรุณาประเมิน ผ่าน/ไม่ผ่าน ให้ครบทุกเป้าหมาย และเลือกสรุปผลก่อนส่ง', 'err');
+  if (submit) {
+    $$('#pipEvalForm .req-field-err').forEach(el => el.classList.remove('req-field-err'));
+    const miss = [];
+    $$('#pipEvalForm .pip-ev').forEach(b => {
+      const i = Number(b.dataset.ev), k = d.kpis[i];
+      if (!String(k.result || '').trim()) { $('[name=result]', b).classList.add('req-field-err'); miss.push('ผลลัพธ์ของเป้าหมายที่ ' + (i + 1)); }
+      if (!k.eval) { const sg = $('.seg', b); if (sg) sg.classList.add('req-field-err'); miss.push('ผ่าน/ไม่ผ่าน ของเป้าหมายที่ ' + (i + 1)); }
+    });
+    if (!String(d.reason || '').trim()) { $('#pipEvalForm [name=reason]').classList.add('req-field-err'); miss.push('เหตุผลประกอบสรุปผล'); }
+    if (miss.length) { toast('กรุณากรอกให้ครบทุกช่อง: ' + miss.join(', '), 'err'); const fe = $('#pipEvalForm .req-field-err'); if (fe && fe.scrollIntoView) fe.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+  }
   const after = () => { pipSetSummary(); S.pv = { mode: 'view', id, data: null, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0); };
   if (!submit) {
     loader(true);
@@ -5501,6 +5673,7 @@ function bindEvents() {
       case 'logArchives': return openLogArchives();
       case 'pipNew': return pipNew();
       case 'pipImport': return openPipImport();
+      case 'pipExport': return pipExport();
       case 'pipView': S.pv.mode = 'view'; S.pv.id = d.id; render(); window.scrollTo(0, 0); return;
       case 'pipBack': S.pv.mode = 'list'; S.pv.id = null; return render();
       case 'pipEdit': return pipEdit(d.id);
@@ -5615,6 +5788,7 @@ function bindEvents() {
   $('#content').addEventListener('input', e => {
     if (e.target.closest && e.target.closest('#reqForm')) { onReqInput(e); return; }
     if (e.target.closest && e.target.closest('#pipForm')) { onPipInput(e); return; }
+    if (e.target.closest && e.target.closest('#pipEvalForm')) { e.target.classList.remove('req-field-err'); const sg = e.target.closest('.seg'); if (sg) sg.classList.remove('req-field-err'); readPipEval(); return; }
     if (e.target.id === 'pipQ') { S.pv.q = e.target.value; const pos = e.target.selectionStart; render(); const i = $('#pipQ'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } return; }
     if (e.target.id === 'reqQ') { S.req.q = e.target.value; const pos = e.target.selectionStart; render(); const i = $('#reqQ'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } return; }
     if (e.target.id === 'chatQ') { CH.q = e.target.value; const l = $('#chatList'); if (l) l.innerHTML = chatListHtml(); return; }
