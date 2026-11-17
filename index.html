@@ -731,6 +731,16 @@ tr.u-sel td{background:#f0fbfb}
 .idle-warn .btn{margin-left:auto;background:#fff;border:1px solid #f6dfb5}
 @media (max-width:760px){.idle-warn{margin:10px 14px 0}}
 </style>
+<style>
+/* build 2569-11-17.1–17.2 — เข้าสู่ระบบด้วย SOMDEJ HR Connect */
+.hrc-sso{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#8e4b9d;color:#fff;border-radius:12px;padding:12px 16px;font-weight:600;text-decoration:none;border:none;cursor:pointer;font:inherit;font-weight:600}
+.hrc-sso:hover{filter:brightness(1.07)}.hrc-sso.disabled{opacity:.55;pointer-events:none}
+.hrc-sso .hrc-plus{background:#fff;color:#c8202e;border-radius:6px;width:22px;height:22px;display:inline-grid;place-items:center;font-weight:900}
+.or-sep{display:flex;align-items:center;gap:10px;color:var(--text-3,#8a94a6);font-size:13px;margin:14px 0}.or-sep:before,.or-sep:after{content:"";flex:1;height:1px;background:var(--line,#e3e8ef)}
+.alt-links{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin-top:14px;font-size:13px}.alt-links a{color:var(--text-2,#475569);text-decoration:underline;cursor:pointer}
+.hrc-help{text-align:center;margin:10px 0 0}
+.role-badge{display:inline-flex;align-items:center;gap:3px;margin-top:4px}
+</style>
 </head>
 <body>
 
@@ -780,15 +790,26 @@ tr.u-sel td{background:#f0fbfb}
         <div class="lh-icon" id="lhIcon"><svg class="cross" viewBox="0 0 36 36" aria-hidden="true"><path fill="#e50213" d="M13.5 3h9v10.5H33v9H22.5V33h-9V22.5H3v-9h10.5z"></path></svg></div></div>
 
       <div class="pane" id="paneHome">
-        <div class="login-head"><h2>ยินดีต้อนรับ</h2><p>HRD Center · ศูนย์รวมระบบงานพัฒนาบุคลากร</p></div>
-        <div class="choice-list">
-          <button type="button" class="choice" data-pane="user" style="--c:#0e7c86;--c-soft:#e3f5f5">
-            <span class="ch-ic"><span class="msr">badge</span></span>
-            <span class="ch-txt"><b>เข้าสู่ระบบผู้ใช้งาน</b><small>สำหรับบุคลากร</small></span><span class="msr ch-go">chevron_right</span></button>
-          <button type="button" class="choice" data-pane="admin" style="--c:#0b2545;--c-soft:#e6ecf5">
-            <span class="ch-ic"><span class="msr">admin_panel_settings</span></span>
-            <span class="ch-txt"><b>เข้าสู่ระบบ Admin</b><small>สำหรับผู้ดูแลระบบ</small></span><span class="msr ch-go">chevron_right</span></button>
-        </div>
+        <div class="login-head"><h2>เข้าสู่ระบบ</h2><p>ใช้<b>รหัสบุคลากร</b>และ<b>รหัสผ่านเดียวกับ SOMDEJ HR Connect</b></p></div>
+        <div id="hrcError" class="alert hidden"><span class="msr">error</span><div id="hrcErrorText"></div></div>
+        <form id="hrcForm" autocomplete="on" novalidate action="javascript:void(0)" onsubmit="return false">
+          <label class="field"><span>รหัสบุคลากร</span>
+            <div class="input-icon"><span class="msr">badge</span>
+              <input class="input" id="hrcEmp" name="username" inputmode="numeric" autocomplete="username" maxlength="12" placeholder="กรอกรหัสบุคลากร (ตัวเลข)" spellcheck="false"></div>
+          </label>
+          <label class="field"><span>รหัสผ่าน HR Connect</span>
+            <div class="input-icon"><span class="msr">lock</span>
+              <input class="input" id="hrcPass" name="password" type="password" autocomplete="current-password" placeholder="รหัสผ่านเดียวกับ HR Connect">
+              <button type="button" class="icon-btn toggle-pw" data-target="hrcPass" title="แสดง/ซ่อนรหัสผ่าน"><span class="msr">visibility</span></button></div>
+          </label>
+          <div class="row-between"><label class="check"><input type="checkbox" id="hrcRemember"> จดจำรหัสบุคลากร</label></div>
+          <button class="btn btn-primary btn-block" id="hrcBtn" type="button"><span class="spinner"></span><span class="btn-label">เข้าสู่ระบบ</span><span class="msr">arrow_forward</span></button>
+          <div id="hrcStatus" class="hint" style="text-align:center;min-height:18px"></div>
+        </form>
+        <div class="or-sep">หรือ</div>
+        <a class="hrc-sso disabled" id="hrcSsoBtn" href="#"><span class="hrc-plus">+</span>เข้าสู่ระบบด้วย SOMDEJ HR Connect</a>
+        <p class="hint hrc-help">ลืมรหัสผ่าน / ยังไม่เคยตั้งรหัสผ่าน → <a class="link" id="hrcWebLink" href="https://hr-somdej.github.io/hr-connect/" target="_blank" rel="noopener">เปิด SOMDEJ HR Connect</a></p>
+        <div class="alt-links"><a data-pane="user" id="legacyLink" class="hidden">เข้าด้วยชื่อผู้ใช้เดิม (ช่วงเปลี่ยนผ่าน)</a><a data-pane="admin">ผู้ดูแลระบบสำรอง</a></div>
       </div>
 
       <form id="loginForm" class="pane hidden" autocomplete="on" novalidate action="javascript:void(0)" onsubmit="return false">
@@ -809,7 +830,7 @@ tr.u-sel td{background:#f0fbfb}
         </label>
         <div class="row-between">
           <label class="check"><input type="checkbox" id="lgRemember"> จดจำชื่อผู้ใช้</label>
-          <a href="#" class="link" id="forgotLink">ลืมรหัสผ่าน?</a>
+          <a href="#" class="link hidden" id="forgotLink">ลืมรหัสผ่าน?</a>
         </div>
         <button class="btn btn-primary btn-block" id="lgBtn" type="button"><span class="spinner"></span><span class="btn-label">เข้าสู่ระบบ</span><span class="msr">arrow_forward</span></button>
         <div id="loginStatus" class="hint" style="text-align:center;min-height:18px"></div>
@@ -835,7 +856,7 @@ tr.u-sel td{background:#f0fbfb}
         </div>
       </form>
 
-      <div class="login-note"><span class="msr fill">shield_lock</span><span>การเข้าใช้งานทุกครั้งจะถูกบันทึกเพื่อความปลอดภัย · v<span class="js-version"></span></span></div>
+      <div class="login-note"><span class="msr fill">shield_lock</span><span>การเข้าใช้งานทุกครั้งจะถูกบันทึกเพื่อความปลอดภัย · <span class="js-version"></span></span></div>
     </div>
   </div>
 </section>
@@ -857,6 +878,7 @@ tr.u-sel td{background:#f0fbfb}
       <a data-page="checkin"><span class="msr">qr_code_2</span>QR Code ของฉัน</a>
       <a data-page="pip"><span class="msr">trending_up</span>แผนพัฒนาการปฏิบัติงาน (PIP)<em class="count warn hidden" id="cntPip">0</em></a>
       <div id="customNav"></div>
+      <a data-page="staffscan" class="hidden"><span class="msr">qr_code_scanner</span>สแกนลงทะเบียนกิจกรรม</a>
       <a class="nav-add admin-only" data-navadd="1"><span class="msr">add</span>เพิ่มเมนูหลัก</a>
       <button type="button" class="sb-label sb-toggle admin-only" id="admToggle" aria-expanded="false"><span>การจัดการระบบ</span><span class="msr" id="admChev">expand_more</span></button>
       <div class="adm-tools" id="admTools">
@@ -866,7 +888,7 @@ tr.u-sel td{background:#f0fbfb}
       <a data-page="menus"><span class="msr">menu_open</span>จัดการเมนูหลัก</a>
       <a data-page="posters"><span class="msr">gallery_thumbnail</span>โปสเตอร์หน้าเข้าสู่ระบบ</a>
       <a data-page="settings"><span class="msr">tune</span>ตั้งค่าการแสดงผล</a>
-      <a data-page="admins"><span class="msr">manage_accounts</span>ผู้ดูแลระบบ</a>
+      <a data-page="admins"><span class="msr">manage_accounts</span>บัญชีผู้ดูแลสำรอง</a>
       <a data-page="logs"><span class="msr">history</span>บันทึกการใช้งาน</a>
       </div>
     </nav>
@@ -896,7 +918,8 @@ tr.u-sel td{background:#f0fbfb}
         <div class="dropdown hidden" id="userDropdown">
           <div class="dd-head"><b class="js-name">-</b><small class="js-username">-</small></div>
           <button data-action="profile"><span class="msr">badge</span>ข้อมูลส่วนตัว</button>
-          <button data-action="password"><span class="msr">key</span>เปลี่ยนรหัสผ่าน</button>
+          <button data-action="password" id="ddPw"><span class="msr">key</span>เปลี่ยนรหัสผ่าน</button>
+          <button data-action="hrcPw" id="ddPwHrc" class="hidden"><span class="msr">key</span>เปลี่ยนรหัสผ่านที่ HR Connect</button>
           <div id="ddSwitch"></div>
           <button data-action="logout" class="danger"><span class="msr">logout</span>ออกจากระบบ</button>
         </div>
@@ -973,8 +996,13 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.7.0'
+  VERSION: '4.8.1',
+  BUILD: '2569-11-17.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
+const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
+/** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
+const GOTO_ALIAS = { home: 'dashboard', dashboard: 'dashboard', pip: 'pip', myqr: 'checkin', qr: 'checkin', checkin: 'checkin', forms: 'forms', training: 'forms',
+  documents: 'documents', docs: 'documents', announcements: 'announcements', news: 'announcements', systems: 'systems', scan: 'staffscan', chat: 'chat' };
 
 const PAGES = {
   dashboard:     { title: 'หน้าแรก',             render: renderDashboard, mod: 'dashboard' },
@@ -984,13 +1012,14 @@ const PAGES = {
   forms:         { title: 'แบบฟอร์มขออนุมัติไปอบรม/ประชุม (FM-HRD-008)', render: renderForms, load: loadRequests, mod: 'forms' },
   checkin:       { title: 'QR Code ของฉัน', render: renderMyQr, load: loadMyQrPage, mod: 'checkin', userOnly: true },
   pip:           { title: 'แผนพัฒนาการปฏิบัติงาน (PIP)', render: renderPip, load: loadPips, mod: 'pip' },
+  staffscan:     { title: 'สแกนลงทะเบียนกิจกรรม', render: renderStaffScan, load: loadStaffActs, staff: true },
   activities:    { title: 'โครงการ/กิจกรรม', render: renderActivities, load: loadActivities, admin: true },
   chat:          { title: 'ข้อความจากผู้ใช้งาน',   render: renderChatAdmin, load: loadChatThreads, admin: true },
   users:         { title: 'ผู้ใช้งาน',            render: renderUsers, load: loadUsers, admin: true },
   menus:         { title: 'จัดการเมนูหลัก',       render: renderMenusAdmin, admin: true },
   posters:       { title: 'โปสเตอร์หน้าเข้าสู่ระบบ', render: renderPostersAdmin, admin: true },
   settings:      { title: 'ตั้งค่าการแสดงผลสำหรับผู้ใช้งาน', render: renderSettings, admin: true },
-  admins:        { title: 'ผู้ดูแลระบบ',          render: renderAdmins, load: loadAdmins, admin: true, su: true },
+  admins:        { title: 'บัญชีผู้ดูแลสำรอง (บัญชีภายใน)', render: renderAdmins, load: loadAdmins, admin: true, su: true },
   logs:          { title: 'บันทึกการใช้งาน',      render: renderLogs, load: loadLogs, admin: true }
 };
 
@@ -1220,6 +1249,14 @@ const S = {
 let expiredShown = false;
 let loginMode = 'admin';
 const isAdmin = () => !!S.user && S.user.kind !== 'user';
+const isStaff = () => !!S.user && (S.user.perm || []).indexOf('checkin') > -1;
+const viaHrc = () => !!S.user && S.user.src === 'hrc';
+/** ป้ายช่องรหัสผ่านสำหรับยืนยันการลงนาม/ลงทะเบียน */
+function pwLabel(pre, post) {
+  const w = viaHrc() ? 'รหัสผ่าน HR Connect ของคุณ' : isAdmin() && !S.user.src ? 'รหัสผ่าน Admin ของคุณ' : 'รหัสผ่านเข้าใช้งาน';
+  return (pre || '') + w + (post || '');
+}
+const ROLE_LBL = { user: ['ผู้ใช้งาน', 'b-gray'], checkin: ['เจ้าหน้าที่ลงทะเบียนกิจกรรม', 'b-blue'], admin: ['ผู้ดูแลระบบ', 'b-green'], superadmin: ['ผู้ดูแลระบบหลัก', 'b-gold'] };
 
 const CH = { ver: '', unread: 0, open: false, msgs: [], timer: null, fast: null, busy: false,
   threads: [], cur: null, curUser: null, curMsgs: [], q: '', draftU: '', draftA: '', att: { U: null, A: null } };
@@ -1499,6 +1536,7 @@ function canSee(page) {
   if (menuOf(page)) return true;
   const p = PAGES[page];
   if (!p) return false;
+  if (p.staff) return !isAdmin() && isStaff();
   if (isAdmin()) return (!p.userOnly || !!S.me) && (!p.su || S.user.role === 'superadmin');
   if (page === 'pip' && !(S.pip && S.pip.count)) return false;
   return !p.admin && !p.su && (S.settings.modules || {})[p.mod] !== false;
@@ -1951,7 +1989,7 @@ function setLoginMode(m) {
   const chip = $('#modeChip');
   chip.textContent = m === 'admin' ? 'Admin' : 'ผู้ใช้งาน';
   chip.classList.toggle('user', m === 'user');
-  $('#loginSub').textContent = m === 'admin' ? 'สำหรับผู้ดูแลระบบ' : 'สำหรับบุคลากร';
+  $('#loginSub').textContent = m === 'admin' ? 'บัญชีผู้ดูแลสำรอง (ใช้เมื่อ HR Connect ใช้งานไม่ได้)' : 'ชื่อผู้ใช้เดิมของ HRD Center (ช่วงเปลี่ยนผ่าน)';
   $('#lgUserLabel').textContent = m === 'admin' ? 'ชื่อผู้ใช้' : 'ชื่อผู้ใช้งาน';
   $('#lgUser').placeholder = m === 'admin' ? 'กรอกชื่อผู้ใช้' : 'เช่น somchai.j';
 }
@@ -1961,6 +1999,11 @@ function showPane(name) {
   const map = { home: '#paneHome', login: '#loginForm', forgot: '#forgotForm' };
   Object.keys(map).forEach(k => $(map[k]).classList.toggle('hidden', k !== name));
   $('#loginError').classList.add('hidden');
+  if (name === 'home') {
+    const re = store.get('hrd_emp', true);
+    if (re && !$('#hrcEmp').value) { $('#hrcEmp').value = re; $('#hrcRemember').checked = true; }
+    $('#hrcError').classList.add('hidden');
+  }
   if (name === 'login') {
     const r = store.get('hrd_user_' + loginMode, true);
     $('#lgUser').value = S.prefillUser || r || ''; S.prefillUser = ''; $('#lgRemember').checked = !!r; $('#lgPass').value = '';
@@ -2009,6 +2052,73 @@ async function onLogin(e) {
   } finally { setBtnLoading(btn, false); loginStatus(''); }
 }
 function loginStatus(t) { const el = $('#loginStatus'); if (el) el.textContent = t; }
+
+/* ===================== เข้าสู่ระบบด้วย SOMDEJ HR Connect (build 2569-11-17.1) ===================== */
+function hrcError(msg) { const b = $('#hrcError'); $('#hrcErrorText').textContent = msg; b.classList.remove('hidden'); shake($('#authCard')); }
+function hrcStatus(t) { const el = $('#hrcStatus'); if (el) el.textContent = t; }
+/** หลังเข้าสู่ระบบสำเร็จ (ทุกวิธี) */
+async function finishLogin(r, statusFn) {
+  S.token = r.token; S.user = r.user; expiredShown = false;
+  store.set('hrd_token', r.token);
+  if (statusFn) statusFn('ยืนยันตัวตนสำเร็จ กำลังโหลดข้อมูลระบบ...');
+  await loadAll();
+  enterApp();
+  if (!firstLoginChecks()) toast('ยินดีต้อนรับ ' + S.user.fullName);
+}
+async function onHrcLogin(e) {
+  if (e) e.preventDefault();
+  $('#hrcError').classList.add('hidden');
+  const emp = $('#hrcEmp').value.replace(/\D/g, ''), pw = $('#hrcPass').value;
+  if (!emp || !pw) return hrcError('กรุณากรอกรหัสบุคลากรและรหัสผ่าน');
+  const btn = $('#hrcBtn'); if (btn.disabled) return;
+  setBtnLoading(btn, true); hrcStatus('กำลังตรวจสอบกับ SOMDEJ HR Connect...');
+  let r;
+  try {
+    r = await Promise.race([api('loginHrc', emp, pw),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('เซิร์ฟเวอร์ไม่ตอบสนองภายใน 40 วินาที — กรุณาลองใหม่')), 40000))]);
+  } catch (err) { setBtnLoading(btn, false); hrcStatus(''); return hrcError(err.message); }
+  $('#hrcPass').value = '';
+  if ($('#hrcRemember').checked) store.set('hrd_emp', emp, true); else store.del('hrd_emp', true);
+  try { await finishLogin(r, hrcStatus); }
+  catch (err) { console.error(err); showLogin('home'); hrcError('ยืนยันตัวตนสำเร็จ แต่โหลดข้อมูลระบบไม่สำเร็จ: ' + err.message); }
+  finally { setBtnLoading(btn, false); hrcStatus(''); }
+}
+/** อ่าน ?hrc_ticket= และ ?page= จากลิงก์ แล้วลบออกจากแถบที่อยู่ทันที */
+function readUrlParams() {
+  const q = location.search;
+  const t = q.match(/[?&]hrc_ticket=([a-f0-9]+)/i), p = q.match(/[?&]page=([a-z]+)/i);
+  if (p) { const k = GOTO_ALIAS[p[1].toLowerCase()]; if (k) store.set('hrd_goto', k); }
+  if (t || p) {
+    const rest = q.replace(/^\?/, '').split('&').filter(x => x && !/^(hrc_ticket|page)=/i.test(x)).join('&');
+    try { history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch (e) { }
+  }
+  return t ? t[1] : '';
+}
+function takeGoto() { const g = store.get('hrd_goto'); if (g) store.del('hrd_goto'); return g || ''; }
+function siteBase() { return location.origin + location.pathname; }
+async function loadLoginConfig() {
+  try {
+    const c = await api('getLoginConfig', siteBase());
+    S.loginCfg = c;
+    const b = $('#hrcSsoBtn');
+    if (c.hrcReady && c.ssoUrl) { b.href = c.ssoUrl; b.classList.remove('disabled'); }
+    else { b.classList.add('disabled'); b.title = 'ยังไม่ได้ตั้งค่าการเชื่อม HR Connect'; }
+    if (c.hrcWeb) $('#hrcWebLink').href = c.hrcWeb;
+    const lg = $('#legacyLink');
+    lg.classList.toggle('hidden', !c.legacy);
+    if (c.legacy && c.legacyUntil) lg.textContent = 'เข้าด้วยชื่อผู้ใช้เดิม (ได้ถึง ' + fmtDate(c.legacyUntil) + ')';
+    if (c.build && c.build !== APP_INFO.BUILD) {
+      $$('.js-version').forEach(e => e.textContent = 'หน้าเว็บ build ' + APP_INFO.BUILD + ' · หลังบ้าน build ' + c.build + ' (ไม่ตรงกัน)');
+    }
+  } catch (e) { /* เข้าด้วยรหัสผ่านยังใช้ได้ */ }
+}
+/** แลกบัตรผ่านจากเมนู HR Connect */
+async function redeemTicket(ticket) {
+  showLogin('home'); loader(true); hrcStatus('กำลังเข้าสู่ระบบจาก HR Connect...');
+  try { const r = await api('loginHrcTicket', ticket); await finishLogin(r); }
+  catch (e) { showLogin('home'); hrcError(e.message + ' — กรุณาเข้าสู่ระบบอีกครั้ง'); }
+  finally { loader(false); hrcStatus(''); }
+}
 
 const EN_TITLE = /^(mr|mrs|ms|miss|mister|dr|prof)([.]|\s|$)/i;
 const TH_PREFIX = ['นาย', 'นาง', 'นางสาว', 'นายแพทย์', 'แพทย์หญิง', 'ทันตแพทย์', 'ทันตแพทย์หญิง', 'พว.'];
@@ -2100,7 +2210,9 @@ function enterApp() {
   $('#appView').classList.remove('hidden');
   renderUser(); refreshCounts();
   const saved = store.get('hrd_page');
-  go(canSee(saved) ? saved : firstPage());
+  const want = takeGoto();
+  go(want && canSee(want) ? want : canSee(saved) ? saved : firstPage());
+  if (want && !canSee(want)) setTimeout(() => toast('ท่านยังไม่มีสิทธิ์เปิดหน้านี้ หรือเมนูนี้ปิดอยู่', 'info'), 400);
   startChat();
 }
 async function doLogout() {
@@ -2113,7 +2225,7 @@ async function doLogout() {
   if (t) api('logout', t).catch(() => {});
 }
 function onExpired() {
-  const mode = S.user && S.user.kind === 'user' ? 'user' : 'admin';
+  const mode = S.user && S.user.kind !== 'user' && !S.user.src ? 'admin' : S.user && S.user.src === 'legacy' ? 'user' : 'home';
   stopChat();
   S.token = null; store.del('hrd_token');
   answerAsk(false); closeModal(true); loader(false);
@@ -2125,7 +2237,7 @@ function renderUser() {
   const u = S.user;
   $$('.js-name').forEach(e => e.textContent = u.fullName || u.username);
   $$('.js-username').forEach(e => e.textContent = '@' + u.username + (u.position ? ' · ' + u.position : ''));
-  $$('.js-role').forEach(e => e.textContent = !isAdmin() ? (u.position || 'ผู้ใช้งาน') : u.role === 'superadmin' ? 'ผู้ดูแลระบบหลัก' : 'ผู้ดูแลระบบ');
+  $$('.js-role').forEach(e => e.textContent = !isAdmin() ? (isStaff() ? 'เจ้าหน้าที่ลงทะเบียนกิจกรรม' : (u.position || 'ผู้ใช้งาน')) : (u.role === 'superadmin' ? 'ผู้ดูแลระบบหลัก' : 'ผู้ดูแลระบบ') + (u.src ? '' : ' (บัญชีสำรอง)'));
   $$('.js-avatar').forEach(e => e.textContent = initial(u.fullName || u.username));
   renderNav();
   $$('.admin-only').forEach(e => e.classList.toggle('hidden', !isAdmin()));
@@ -2134,7 +2246,9 @@ function renderUser() {
     const inTools = ['activities', 'chat', 'users', 'menus', 'posters', 'settings', 'admins', 'logs'].indexOf(S.page) > -1;
     setAdmTools(inTools || store.get('hrd_admtools', true) === '1', false);
   }
-  $('#ddSwitch').innerHTML = isAdmin()
+  $('#ddPw').classList.toggle('hidden', viaHrc());
+  $('#ddPwHrc').classList.toggle('hidden', !viaHrc());
+  $('#ddSwitch').innerHTML = isAdmin() && !S.user.src
     ? `<button data-action="linkUser"><span class="msr">${S.me ? 'badge' : 'add_link'}</span>${S.me ? 'บัญชีบุคลากรของฉัน' : 'ผูกบัญชีบุคลากรของฉัน'}</button>` : '';
 }
 async function openLinkUser() {
@@ -2191,7 +2305,7 @@ async function go(page) {
     $('#content').innerHTML = `<div class="card">${emptyState('visibility_off', 'ยังไม่มีเมนูที่เปิดให้ใช้งาน', 'ผู้ดูแลระบบยังไม่ได้เปิดให้ผู้ใช้งานเห็นข้อมูล กรุณาติดต่อผู้ดูแลระบบ')}</div>`;
     return;
   }
-  if (page !== 'activities' && S.station) { clearTimeout(S.stTimer); S.station = null; }
+  if (page !== 'activities' && page !== 'staffscan' && S.station) { clearTimeout(S.stTimer); S.station = null; }
   S.page = page; store.set('hrd_page', page);
   $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.page === page));
   renderNavTools();
@@ -3386,7 +3500,7 @@ function pwConfirm(o) {
     openModal({
       title: o.title, icon: o.icon || 'draw', okText: o.okText || 'ยืนยัน', size: 'sm',
       body: `${o.info || ''}<p class="small" style="color:var(--text-2)">${o.text || 'การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า'}</p>
-        <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'cfPw', label: isAdmin() ? 'รหัสผ่าน Admin ของคุณ' : 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+        <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'cfPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
       onOpen: () => { const i = $('#f_cfPw'); if (i) { i.focus(); i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); } },
       onOk: async () => { await o.run($('#f_cfPw').value); done = true; res(true); },
       onCancel: () => { if (!done) res(false); }
@@ -3703,7 +3817,7 @@ function pipSign(id) {
       <b style="font-size:16px">แผนพัฒนาการปฏิบัติงานของ ${esc(r.fullName)}</b>
       <div class="small" style="color:var(--text-2);margin-top:4px">${esc(pipPeriod(r))}<br>ลงนามในฐานะ: <b>${roles.map(k => PIP_ROLE[k]).join(', ')}</b><br>รหัสยืนยันเอกสาร ${esc(r.docHash || '-')}</div></div>
       <p class="small" style="color:var(--text-2)">ข้าพเจ้าได้อ่านและรับทราบเป้าหมาย KPI และการดำเนินการตามแผนนี้แล้ว การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า${roles.indexOf('sup2') > -1 ? ' <b>(การลงนามของผู้บังคับบัญชาที่สูงขึ้นไปถือเป็นที่สิ้นสุดของขั้นกำหนดแผน)</b>' : ''}</p>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: isAdmin() ? 'รหัสผ่าน Admin ของคุณ' : 'รหัสผ่านเข้าใช้งาน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pipPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
     onOk: async () => {
       const res = await api('signPip', S.token, r.id, $('#f_pipPw').value);
@@ -4522,6 +4636,20 @@ async function startScanInline() {
     msg(lib ? '<b>' + esc(e.message) + '</b>' : '<b>เปิดกล้องไม่ได้</b> (' + esc((e && e.name) || 'error') + ')' + ((e && e.name) === 'NotAllowedError' ? '<br>กรุณากดอนุญาตการใช้กล้องที่แถบที่อยู่ของเบราว์เซอร์ แล้วลองใหม่' : '') + '<br>หรือใช้เครื่องอ่าน QR แบบ USB / พิมพ์รหัสบุคลากร 7 หลักแทน');
   }
 }
+/* ---------- เจ้าหน้าที่ลงทะเบียนกิจกรรม (สิทธิ์ checkin): สแกน QR อย่างเดียว ---------- */
+async function loadStaffActs() { const r = await api('listActivities', S.token); S.acts = r.list; }
+function renderStaffScan() {
+  if (S.station) return renderStation();
+  const list = (S.acts || []).filter(a => a.status !== 'closed');
+  const open = list.filter(a => a.state === 'open'), other = list.filter(a => a.state !== 'open');
+  const row = a => `<div class="card" style="padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <div class="grow" style="min-width:200px"><b>${esc(a.name)}</b><div class="small muted">${esc(actDate(a.date))} · ${esc(a.place || '-')} · จัดโดย ${esc(a.organizer || '-')}</div>
+      <div style="margin-top:4px">${actBadge(a)}</div></div>
+      <button class="btn btn-primary" data-action="stOpen" data-id="${esc(a.id)}" ${a.state === 'open' ? '' : 'disabled'}><span class="msr">qr_code_scanner</span>เปิดหน้าสแกน</button></div>`;
+  return `<div class="notice" style="margin-bottom:12px"><span class="msr">info</span><div>เลือกกิจกรรมที่เปิดลงทะเบียนอยู่ แล้วสแกน QR Code ของบุคลากร · บุคลากรยืนยันการเข้าร่วมบนมือถือของตนเอง</div></div>
+    ${open.length ? open.map(row).join('') : `<div class="card">${emptyState('event_busy', 'ยังไม่มีกิจกรรมที่เปิดลงทะเบียน', 'ติดต่อผู้ดูแลระบบให้เปิดลงทะเบียนกิจกรรม')}</div>`}
+    ${other.length ? '<h3 style="margin:18px 0 8px;font-size:15px">กิจกรรมอื่น (ยังไม่เปิด/ปิดลงทะเบียนแล้ว)</h3>' + other.slice(0, 20).map(row).join('') : ''}`;
+}
 function renderActivities() { return S.station ? renderStation() : S.actView && S.att ? renderAttendance() : renderActList(); }
 const ST_LBL = {
   found: ['b-blue', 'สแกนแล้ว — รอกดส่งคำขอ'], pending: ['b-amber', 'รอบุคลากรยืนยัน'], done: ['b-green', 'ลงทะเบียนสำเร็จ'],
@@ -4536,6 +4664,7 @@ function openStation(id) {
 }
 function closeStation() {
   clearTimeout(S.stTimer); S.stTimer = null;
+  if (!isAdmin()) { S.station = null; loader(true); loadStaffActs().then(render).catch(e => toast(e.message, 'err')).finally(() => loader(false)); return; }
   const id = S.station && S.station.a.id; S.station = null;
   if (id) { S.actView = id; loader(true); Promise.all([loadAttendance(id), api('listActivities', S.token).then(r => { S.acts = r.list; })]).then(render).catch(e => toast(e.message, 'err')).finally(() => loader(false)); }
   else render();
@@ -4680,7 +4809,7 @@ function showPending(p) {
       <span class="msr" style="font-size:15px;vertical-align:-3px">location_on</span> ${esc(p.place)}<br>
       <span class="msr" style="font-size:15px;vertical-align:-3px">groups</span> จัดโดย ${esc(p.organizer)}<br>
       <span class="msr" style="font-size:15px;vertical-align:-3px">badge</span> เจ้าหน้าที่ผู้สแกน: ${esc(p.staff)}</div></div>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pdPw', label: isAdmin() ? 'ใส่รหัสผ่าน Admin ของคุณ เพื่อยืนยันการลงทะเบียน' : 'ใส่รหัสผ่านเข้าใช้งาน เพื่อยืนยันการลงทะเบียน', type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pdPw', label: pwLabel('ใส่', ' เพื่อยืนยันการลงทะเบียน'), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pdPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
     onCancel: () => { PEND.open = false; api('declinePending', S.token, p.reqId).catch(() => {}); toast('ปฏิเสธคำขอแล้ว', 'info'); },
     onOk: async () => {
@@ -5075,7 +5204,7 @@ function renderImp() {
       <div class="imp-or">หรือ คัดลอกจาก Excel แล้ววางที่นี่ (รวมแถวหัวตาราง)</div>
       <textarea class="input" id="impPaste" style="min-height:110px;font-size:13px" placeholder="${IMP_FIELDS.map(f => f[1]).join('&#9;')}"></textarea>
       <div style="text-align:right;margin-top:10px"><button type="button" class="btn btn-light" data-imp="paste"><span class="msr">fact_check</span>ตรวจสอบข้อมูลที่วาง</button></div>
-      <p class="hint" style="margin-top:10px">รหัสผ่านครั้งแรกของแต่ละคนคือ <b>รหัสบุคลากร 7 หลักของตนเอง</b> และต้องเปลี่ยนเมื่อเข้าใช้งานครั้งแรก · ชื่อผู้ใช้สร้างอัตโนมัติ (ชื่ออังกฤษ.ตัวแรกของนามสกุล) · ถ้ารหัสบุคลากรขึ้นต้นด้วย 0 ให้จัดรูปแบบคอลัมน์เป็น "ข้อความ" ใน Excel</p>`;
+      <p class="hint" style="margin-top:10px">บุคลากรเข้าสู่ระบบด้วย<b>รหัสบุคลากร + รหัสผ่าน SOMDEJ HR Connect</b> · ชื่อผู้ใช้สร้างอัตโนมัติ (ชื่ออังกฤษ.ตัวแรกของนามสกุล) · ถ้ารหัสบุคลากรขึ้นต้นด้วย 0 ให้จัดรูปแบบคอลัมน์เป็น "ข้อความ" ใน Excel</p>`;
   } else if (st === 'preview') {
     const rows = S.imp.rows, good = rows.filter(r => r.ok).length, bad = rows.length - good;
     const list = S.imp.onlyBad ? rows.filter(r => !r.ok) : rows;
@@ -5103,7 +5232,7 @@ function renderImp() {
       <div style="text-align:center;padding:6px 0 14px">
         <div class="done-ic" style="margin:0 auto 10px"><span class="msr fill">task_alt</span></div>
         <h3 style="font-size:19px">นำเข้าสำเร็จ ${ok.length} คน${fail.length ? ` · ไม่สำเร็จ ${fail.length} คน` : ''}</h3>
-        <p class="muted">สถานะ: ${S.imp.status === 'active' ? 'ใช้งานได้ทันที' : 'รออนุมัติ'} · รหัสผ่านครั้งแรก = รหัสบุคลากรของแต่ละคน</p>
+        <p class="muted">สถานะ: ${S.imp.status === 'active' ? 'ใช้งานได้ทันที' : 'รออนุมัติ'} · เข้าสู่ระบบด้วยรหัสผ่าน HR Connect</p>
       </div>
       ${ok.length ? `<div style="text-align:center;margin-bottom:14px"><button type="button" class="btn btn-primary" data-imp="resultcsv"><span class="msr">download</span>ดาวน์โหลดรายชื่อ + ชื่อผู้ใช้ (CSV) เพื่อแจ้งผู้ใช้งาน</button></div>` : ''}
       ${fail.length ? `<div class="imp-scroll"><table class="tbl"><thead><tr><th>ชื่อ</th><th>รหัสบุคลากร</th><th>สาเหตุ</th></tr></thead><tbody>
@@ -5116,7 +5245,7 @@ function renderImp() {
   if (modalCfg) {
     modalCfg.confirmCancel = st === 'preview';
     modalCfg.confirmSave = st === 'preview' ? { tone: 'primary', icon: 'group_add', title: 'ยืนยันนำเข้าผู้ใช้งาน ' + good + ' คน?',
-      message: 'สถานะ: ' + (S.imp.status === 'active' ? 'ใช้งานได้ทันที' : 'รออนุมัติ') + ' · รหัสผ่านครั้งแรก = รหัสบุคลากรของแต่ละคน', okText: 'ยืนยันนำเข้า', cancelText: 'กลับไปตรวจสอบ' } : null;
+      message: 'สถานะ: ' + (S.imp.status === 'active' ? 'ใช้งานได้ทันที' : 'รออนุมัติ') + ' · บุคลากรเข้าสู่ระบบด้วยรหัสผ่าน HR Connect', okText: 'ยืนยันนำเข้า', cancelText: 'กลับไปตรวจสอบ' } : null;
   }
 }
 
@@ -5157,7 +5286,7 @@ function renderUsers() {
   <div class="toolbar">
     <div class="search"><span class="msr">search</span><input id="userQ" placeholder="ค้นหาชื่อ รหัสบุคลากร ตำแหน่ง ฝ่าย อีเมล..." value="${esc(S.f.userQ)}"></div>
     <div class="grow"></div>
-    <span class="muted small">รหัสผ่านครั้งแรก = รหัสบุคลากร</span>
+    <span class="muted small">บุคลากรเข้าด้วยรหัสบุคลากร + รหัสผ่าน HR Connect</span>
     <button class="btn btn-light" data-action="importUsers"><span class="msr">group_add</span>นำเข้าจากไฟล์</button>
     <button class="btn btn-primary" data-action="addUser"><span class="msr">person_add</span>เพิ่มผู้ใช้งาน</button>
   </div>
@@ -5171,15 +5300,16 @@ function renderUsers() {
       <td><input type="checkbox" class="u-cb" data-usel="${esc(u.id)}" ${S.userSel.has(u.id) ? 'checked' : ''}></td>
       <td><div class="t-main"><div class="avatar sm">${esc(initial(u.fullName))}</div>
         <div><b>${esc(u.fullName)}</b><small>${esc(u.fullNameEn)} · @${esc(u.username)}</small>${u.email ? `<small class="muted"><span class="msr" style="font-size:13px;vertical-align:-2px">mail</span> ${esc(u.email)}</small>` : '<small class="muted" style="color:var(--amber,#b7791f)">ยังไม่มีอีเมล</small>'}</div></div></td>
-      <td><span class="mono">${esc(u.employeeId)}</span></td>
+      <td><span class="mono">${esc(u.employeeId)}</span>${(() => { const r = ROLE_LBL[u.roleKey] || ROLE_LBL.user; return u.roleKey && u.roleKey !== 'user' ? `<br><span class="badge ${r[1]} role-badge"><span class="msr" style="font-size:13px">shield_person</span>${r[0]}</span>` : ''; })()}</td>
       <td>${esc(posLevel(u) || '-')}<br><small class="muted">${esc([u.department, u.adminPosition, u.academicPosition].filter(Boolean).join(' · '))}</small></td>
-      <td><span class="badge ${st.cls}">${st.label}</span>${u.mustChangePw && u.status === 'active' ? '<br><small class="muted">ยังไม่ได้เปลี่ยนรหัสผ่าน</small>' : ''}</td>
-      <td class="muted small">${u.lastLogin ? timeAgo(u.lastLogin) : 'ยังไม่เคยเข้าใช้'}<br>ลงทะเบียน ${fmtDate(u.createdAt)}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td class="muted small">${u.lastLogin ? timeAgo(u.lastLogin) : 'ยังไม่เคยเข้าใช้'}${u.lastLoginVia ? '<br>ผ่าน ' + esc(u.lastLoginVia) : ''}<br>ลงทะเบียน ${fmtDate(u.createdAt)}</td>
       <td><div class="actions">
         ${u.status === 'pending' ? `<button class="btn btn-soft btn-sm" style="--c:#16a34a;--c-soft:#e7f6ec" data-action="approveUser" data-id="${esc(u.id)}"><span class="msr">check_circle</span>อนุมัติ</button>` : ''}
         <button class="icon-btn" data-action="editUser" data-id="${esc(u.id)}" title="แก้ไขข้อมูล / สถานะ"><span class="msr">edit</span></button>
         <button class="icon-btn" data-action="chatUser" data-id="${esc(u.id)}" title="ส่งข้อความ"><span class="msr">chat</span></button>
-        <button class="icon-btn" data-action="resetUser" data-id="${esc(u.id)}" title="รีเซ็ตรหัสผ่านเป็นรหัสบุคลากร"><span class="msr">lock_reset</span></button>
+        ${S.user.role === 'superadmin' ? `<button class="icon-btn" data-action="userRole" data-id="${esc(u.id)}" title="กำหนดสิทธิ์"><span class="msr">shield_person</span></button>` : ''}
+        ${S.settings.legacyLogin !== false ? `<button class="icon-btn" data-action="resetUser" data-id="${esc(u.id)}" title="รีเซ็ตรหัสผ่านชื่อผู้ใช้เดิม (ช่วงเปลี่ยนผ่าน)"><span class="msr">lock_reset</span></button>` : ''}
         <button class="icon-btn danger" data-action="delUser" data-id="${esc(u.id)}" title="ลบ"><span class="msr">delete</span></button>
       </div></td></tr>`; }).join('')}</tbody></table></div>`
     : emptyState('group', S.users.length ? 'ไม่พบผู้ใช้งาน' : 'ยังไม่มีผู้ใช้งาน', S.users.length ? 'ลองเปลี่ยนคำค้นหาหรือสถานะ' : 'กดปุ่ม "เพิ่มผู้ใช้งาน" หรือ "นำเข้าจากไฟล์" เพื่อเพิ่มบุคลากร')}</div>`;
@@ -5198,7 +5328,7 @@ function openUserForm(u) {
   ].filter(Boolean);
   openModal({
     title: isNew ? 'เพิ่มผู้ใช้งาน' : 'แก้ไขข้อมูลผู้ใช้งาน', icon: isNew ? 'person_add' : 'manage_accounts', confirmSave: ASK.save(!isNew), confirmCancel: true,
-    body: `${isNew ? '<div class="notice" style="margin-bottom:12px"><span class="msr">info</span><div>ชื่อผู้ใช้งานสร้างอัตโนมัติจากชื่อ-นามสกุลภาษาอังกฤษ · รหัสผ่านครั้งแรก = รหัสบุคลากร 7 หลัก (บังคับเปลี่ยนเมื่อเข้าใช้งานครั้งแรก)</div></div>' : ''}<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => f.k === '__pfx' ? prefixFieldsHtml(u.prefixTh || '', false) : fieldHtml(f, u[f.k] || '')).join('')}</form>`,
+    body: `${isNew ? '<div class="notice" style="margin-bottom:12px"><span class="msr">info</span><div>บุคลากรเข้าสู่ระบบด้วย<b>รหัสบุคลากร + รหัสผ่าน SOMDEJ HR Connect</b> (ไม่ต้องตั้งรหัสผ่านใน HRD Center) · ชื่อ ตำแหน่ง ฝ่าย จะปรับตาม HR Connect ทุกครั้งที่เข้าระบบ</div></div>' : ''}<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => f.k === '__pfx' ? prefixFieldsHtml(u.prefixTh || '', false) : fieldHtml(f, u[f.k] || '')).join('')}</form>`,
     validate: () => {
       const d0 = readPrefix(null, collect($('#mForm'))); const pe = prefixCheck(d0, false); if (pe) { toast(pe, 'err'); return false; }
       if (!/^[0-9]{7}$/.test(d0.employeeId)) { toast('รหัสบุคลากรต้องเป็นตัวเลข 7 หลัก', 'err'); return false; }
@@ -5210,7 +5340,7 @@ function openUserForm(u) {
       if (isNew) {
         const r = await api('addUser', S.token, data);
         setUsers(r.users);
-        await ask({ tone: 'primary', icon: 'how_to_reg', title: 'เพิ่มผู้ใช้งานแล้ว', message: r.fullName + ' · ชื่อผู้ใช้งาน: ' + r.username + ' · รหัสผ่านครั้งแรก: ' + r.employeeId + ' (แจ้งให้บุคลากรเปลี่ยนรหัสผ่านเมื่อเข้าใช้งานครั้งแรก)', okText: 'ตกลง', noCancel: true });
+        await ask({ tone: 'primary', icon: 'how_to_reg', title: 'เพิ่มผู้ใช้งานแล้ว', message: r.fullName + ' (รหัสบุคลากร ' + r.employeeId + ') เข้าสู่ระบบได้ด้วยรหัสบุคลากรและรหัสผ่าน SOMDEJ HR Connect', okText: 'ตกลง', noCancel: true });
         return;
       }
       data.id = u.id;
@@ -5219,12 +5349,27 @@ function openUserForm(u) {
     }
   });
 }
+async function openUserRole(id) {
+  const u = S.users.find(x => x.id === id); if (!u) return;
+  const cur = u.roleKey || 'user';
+  openModal({
+    title: 'กำหนดสิทธิ์: ' + u.fullName, icon: 'shield_person', okText: 'บันทึกสิทธิ์', size: 'sm', confirmSave: ASK.save(true),
+    body: `<p class="small" style="color:var(--text-2);margin-top:0">รหัสบุคลากร <b class="mono">${esc(u.employeeId)}</b> · เมื่อเปลี่ยนสิทธิ์ บุคลากรต้องเข้าสู่ระบบใหม่</p>
+      <form id="mForm" onsubmit="return false">${['user', 'checkin', 'admin', 'superadmin'].map(k => `<label class="set-row" style="cursor:pointer"><input type="radio" name="role" value="${k}" ${k === cur ? 'checked' : ''} style="margin-right:10px">
+        <span class="set-txt"><b>${ROLE_LBL[k][0]}</b><small>${{ user: 'ใช้ PIP ของตนเอง · QR Code ของฉัน · แบบฟอร์มอบรม · เอกสาร · ประกาศ', checkin: 'ผู้ใช้งาน + สแกน QR ลงทะเบียนกิจกรรม (ไม่เห็นรายชื่อ/ไม่แก้ไขกิจกรรม)', admin: 'จัดการ PIP กิจกรรม เอกสาร ประกาศ ผู้ใช้งาน และใช้งานในนามตนเอง', superadmin: 'ทุกอย่าง + กำหนดสิทธิ์ผู้อื่น + บัญชีผู้ดูแลสำรอง' }[k]}</small></span></label>`).join('')}</form>`,
+    onOk: async () => {
+      const f = $('#mForm input[name=role]:checked'); if (!f) throw new Error('กรุณาเลือกสิทธิ์');
+      setUsers(await api('setUserRole', S.token, u.id, f.value));
+      toast('บันทึกสิทธิ์ ' + ROLE_LBL[f.value][0] + ' ให้ ' + u.fullName + ' แล้ว');
+    }
+  });
+}
 async function userAction(kind, id) {
   const u = S.users.find(x => x.id === id); if (!u) return;
   const cfg = {
     approve: { ask: { tone: 'primary', icon: 'how_to_reg', title: 'อนุมัติผู้ใช้งาน?', message: u.fullName + ' (' + u.employeeId + ') จะเข้าสู่ระบบได้ทันที', okText: 'อนุมัติ' },
                call: () => api('setUserStatus', S.token, id, 'active'), done: 'อนุมัติผู้ใช้งานแล้ว' },
-    reset:   { ask: { tone: 'warn', icon: 'lock_reset', title: 'รีเซ็ตรหัสผ่าน?', message: 'รหัสผ่านของ @' + u.username + ' จะกลับเป็นรหัสบุคลากร (' + u.employeeId + ') และต้องเปลี่ยนเมื่อเข้าใช้งาน', okText: 'รีเซ็ตรหัสผ่าน' },
+    reset:   { ask: { tone: 'warn', icon: 'lock_reset', title: 'รีเซ็ตรหัสผ่านชื่อผู้ใช้เดิม?', message: 'รหัสผ่านของ @' + u.username + ' จะกลับเป็นรหัสบุคลากร (' + u.employeeId + ') และต้องเปลี่ยนเมื่อเข้าใช้งาน', okText: 'รีเซ็ตรหัสผ่าน' },
                call: () => api('resetUserPassword', S.token, id), done: 'รีเซ็ตรหัสผ่านเป็นรหัสบุคลากรแล้ว' },
     del:     { ask: { tone: 'danger', icon: 'delete_forever', title: 'ลบผู้ใช้งาน @' + u.username + ' ?', message: 'ข้อมูลที่ลบแล้วจะไม่สามารถกู้คืนได้', okText: 'ลบผู้ใช้งาน' },
                call: () => api('deleteUser', S.token, id), done: 'ลบผู้ใช้งานแล้ว' }
@@ -5270,6 +5415,17 @@ function renderSettings() {
             <button class="btn btn-light" data-action="testEmail" type="button"><span class="msr">send</span>ส่งอีเมลทดสอบ</button>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3><span class="msr">key</span>การเข้าสู่ระบบ</h3></div>
+      <div class="card-b">
+        <p class="small" style="color:var(--text-2);margin-top:0">บุคลากรเข้าสู่ระบบด้วย<b>รหัสบุคลากร + รหัสผ่าน SOMDEJ HR Connect</b> · สิทธิ์ในระบบกำหนดที่หน้า "ผู้ใช้งาน" (ปุ่มรูปโล่ — เฉพาะผู้ดูแลระบบหลัก)</p>
+        <label class="set-row"><span class="set-ic" style="background:var(--gold-50);color:#a67a0c"><span class="msr">history</span></span>
+          <span class="set-txt"><b>ช่วงเปลี่ยนผ่าน: ยังเข้าด้วยชื่อผู้ใช้เดิมได้</b><small>สำหรับบุคลากรที่ยังไม่เคยตั้งรหัสผ่าน HR Connect · ปิดเมื่อทุกคนใช้ HR Connect ได้แล้ว</small></span>
+          <span class="switch"><input type="checkbox" data-setlegacy="1" ${d.legacyLogin !== false ? 'checked' : ''}><i></i></span></label>
+        <label class="field" style="margin-top:6px"><span>ใช้ชื่อผู้ใช้เดิมได้ถึงวันที่ <small class="muted">(หลังวันนี้ระบบปิดเองอัตโนมัติ)</small></span>
+          <input class="input" type="date" data-setlegacyuntil="1" value="${esc(d.legacyUntil || '')}" style="max-width:220px"></label>
       </div>
     </div>
     <div class="card">
@@ -5511,6 +5667,9 @@ function bindEvents() {
   });
   $('#loginForm').addEventListener('submit', e => { e.preventDefault(); onLogin(e); });
   $('#lgBtn').addEventListener('click', onLogin);
+  $('#hrcBtn').addEventListener('click', onHrcLogin);
+  ['#hrcEmp', '#hrcPass'].forEach(s => $(s).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); onHrcLogin(e); } }));
+  $('#hrcEmp').addEventListener('input', e => { const v = e.target.value.replace(/\D/g, ''); if (v !== e.target.value) e.target.value = v; });
   ['#lgUser', '#lgPass'].forEach(s => $(s).addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); onLogin(e); }
   }));
@@ -5555,6 +5714,8 @@ function bindEvents() {
     if (t.dataset.setemail) S.setDraft.notifyEmail = t.value;
     if (t.dataset.setappurl) S.setDraft.appUrl = t.value.trim();
     if (t.dataset.setsite) S.setDraft.siteUrl = t.value.trim();
+    if (t.dataset.setlegacy) S.setDraft.legacyLogin = t.checked;
+    if (t.dataset.setlegacyuntil) S.setDraft.legacyUntil = t.value;
   });
   $('#content').addEventListener('input', e => { if (S.setDraft && e.target.dataset && e.target.dataset.setemail) S.setDraft.notifyEmail = e.target.value; if (S.setDraft && e.target.dataset && e.target.dataset.setappurl) S.setDraft.appUrl = e.target.value.trim(); if (S.setDraft && e.target.dataset && e.target.dataset.setsite) S.setDraft.siteUrl = e.target.value.trim(); });
   $('#mBody').addEventListener('click', e => {
@@ -5661,6 +5822,8 @@ function bindEvents() {
       case 'viewFile': return openFile(d.ent || 'Documents', d.id, false);
       case 'approveUser': return userAction('approve', d.id);
       case 'resetUser': return userAction('reset', d.id);
+      case 'userRole': return openUserRole(d.id);
+      case 'hrcPw': closeDropdown(); window.open((S.loginCfg && S.loginCfg.hrcWeb) || HRC_WEB_DEFAULT, '_blank', 'noopener'); return;
       case 'delUser': return userAction('del', d.id);
       case 'editUser': return openUserForm(S.users.find(u => u.id === d.id));
       case 'importUsers': return openImport();
@@ -5898,11 +6061,14 @@ function initPosterShow() {
 function init() {
   bindEvents();
   $$('.js-year').forEach(e => e.textContent = new Date().getFullYear() + 543);
-  $$('.js-version').forEach(e => e.textContent = APP_INFO.VERSION);
+  $$('.js-version').forEach(e => e.textContent = 'build ' + APP_INFO.BUILD + ' (' + APP_INFO.VERSION + ')');
   $('#todayChip').textContent = new Date().toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   loadLogo();
   initPosterShow();
   initIdle();
+  const ticket = readUrlParams();
+  loadLoginConfig();
+  if (ticket) return redeemTicket(ticket);
   const t = store.get('hrd_token');
   const lastAct = Number(store.get('hrd_last') || 0);
   if (t && lastAct && Date.now() - lastAct >= IDLE_MS) {
