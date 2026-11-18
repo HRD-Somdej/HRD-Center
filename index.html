@@ -730,9 +730,38 @@ tr.u-sel td{background:#f0fbfb}
 .idle-warn{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:#fff7e6;border:1px solid #f6dfb5;color:#8a5a00;font-size:14px}
 .idle-warn .btn{margin-left:auto;background:#fff;border:1px solid #f6dfb5}
 @media (max-width:760px){.idle-warn{margin:10px 14px 0}}
+
+/* build 2569-11-18.1: ขั้นตอนระหว่างเข้าสู่ระบบ · ทางเลือกอื่นพับไว้ · งานของฉัน · ช่องจาก HR Connect */
+.lg-steps{list-style:none;margin:10px 0 0;padding:12px 14px;border:1px solid #d6e2f0;border-radius:12px;background:#f7fafd;display:grid;gap:8px}
+.lg-steps li{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#94a3b8;transition:color .2s}
+.lg-steps li .msr{font-size:19px}
+.lg-steps li.on{color:#0b2545;font-weight:600}
+.lg-steps li.on .msr{animation:lgPulse 1.1s ease-in-out infinite;color:#1d4ed8}
+.lg-steps li.done{color:#15803d}
+.lg-steps li.done .msr{color:#15803d}
+@keyframes lgPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.lg-slow{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff7e6;color:#8a5a00;font-size:13px;line-height:1.5}
+.lg-slow .msr{font-size:20px}
+.login-more{margin-top:14px;text-align:center}
+.login-more summary{cursor:pointer;color:var(--text-2,#64748b);font-size:13px;list-style:none;display:inline-flex;align-items:center;gap:4px}
+.login-more summary::-webkit-details-marker{display:none}
+.login-more summary::after{content:'expand_more';font-family:'Material Symbols Rounded';font-size:18px}
+.login-more[open] summary::after{content:'expand_less'}
+.login-more .alt-links{margin-top:8px}
+.todo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.todo-tile{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--line,#e2e8f0);border-radius:14px;background:#fff;cursor:pointer;transition:box-shadow .15s,transform .15s;text-align:left;font:inherit;color:inherit}
+.todo-tile:hover{box-shadow:0 6px 18px rgba(11,37,69,.08);transform:translateY(-1px)}
+.todo-tile .t-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#eef4ff;color:#1d4ed8;flex:none}
+.todo-tile.warn .t-ic{background:#fff4e0;color:#b45309}
+.todo-tile b{display:block;font-size:14.5px}
+.todo-tile small{color:var(--text-2,#64748b);font-size:12.5px}
+.todo-tile .t-n{margin-left:auto;min-width:26px;height:26px;padding:0 8px;border-radius:13px;background:#b45309;color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center}
+.hrc-src{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1e4b8f;background:#eef6ff;border:1px solid #d4e5fb;border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:500}
+.hrc-src .msr{font-size:14px}
+input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allowed}
 </style>
 <style>
-/* build 2569-11-17.1 — เข้าสู่ระบบด้วย SOMDEJ HR Connect */
+/* build 2569-11-17.1–17.2 — เข้าสู่ระบบด้วย SOMDEJ HR Connect */
 .hrc-sso{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:#8e4b9d;color:#fff;border-radius:12px;padding:12px 16px;font-weight:600;text-decoration:none;border:none;cursor:pointer;font:inherit;font-weight:600}
 .hrc-sso:hover{filter:brightness(1.07)}.hrc-sso.disabled{opacity:.55;pointer-events:none}
 .hrc-sso .hrc-plus{background:#fff;color:#c8202e;border-radius:6px;width:22px;height:22px;display:inline-grid;place-items:center;font-weight:900}
@@ -805,11 +834,19 @@ tr.u-sel td{background:#f0fbfb}
           <div class="row-between"><label class="check"><input type="checkbox" id="hrcRemember"> จดจำรหัสบุคลากร</label></div>
           <button class="btn btn-primary btn-block" id="hrcBtn" type="button"><span class="spinner"></span><span class="btn-label">เข้าสู่ระบบ</span><span class="msr">arrow_forward</span></button>
           <div id="hrcStatus" class="hint" style="text-align:center;min-height:18px"></div>
+          <ol id="lgSteps" class="lg-steps hidden" aria-live="polite">
+            <li data-step="1"><span class="msr">shield_person</span>ตรวจรหัสกับ SOMDEJ HR Connect</li>
+            <li data-step="2"><span class="msr">manage_accounts</span>ตรวจสิทธิ์และเตรียมข้อมูลของท่าน</li>
+            <li data-step="3"><span class="msr">dashboard</span>เปิดหน้าหลัก</li>
+          </ol>
+          <div id="lgSlow" class="lg-slow hidden"><span class="msr">hourglass_top</span><div>เซิร์ฟเวอร์ Google ตอบช้ากว่าปกติ <b id="lgSec"></b><br><small>ระบบยังทำงานอยู่ กรุณารอสักครู่ ไม่ต้องกดซ้ำ</small></div></div>
         </form>
         <div class="or-sep">หรือ</div>
         <a class="hrc-sso disabled" id="hrcSsoBtn" href="#"><span class="hrc-plus">+</span>เข้าสู่ระบบด้วย SOMDEJ HR Connect</a>
         <p class="hint hrc-help">ลืมรหัสผ่าน / ยังไม่เคยตั้งรหัสผ่าน → <a class="link" id="hrcWebLink" href="https://hr-somdej.github.io/hr-connect/" target="_blank" rel="noopener">เปิด SOMDEJ HR Connect</a></p>
-        <div class="alt-links"><a data-pane="user" id="legacyLink" class="hidden">เข้าด้วยชื่อผู้ใช้เดิม (ช่วงเปลี่ยนผ่าน)</a><a data-pane="admin">ผู้ดูแลระบบสำรอง</a></div>
+        <details class="login-more"><summary>ทางเลือกอื่นในการเข้าสู่ระบบ</summary>
+          <div class="alt-links"><a data-pane="user" id="legacyLink" class="hidden">เข้าด้วยชื่อผู้ใช้เดิม (ช่วงเปลี่ยนผ่าน)</a><a data-pane="admin">ผู้ดูแลระบบสำรอง</a></div>
+        </details>
       </div>
 
       <form id="loginForm" class="pane hidden" autocomplete="on" novalidate action="javascript:void(0)" onsubmit="return false">
@@ -965,7 +1002,7 @@ tr.u-sel td{background:#f0fbfb}
   </div>
 </div>
 <div id="toasts"></div>
-<div id="loader" class="page-loader hidden"><div class="ring"></div><p>กำลังโหลดข้อมูล...</p></div>
+<div id="loader" class="page-loader hidden"><div class="ring"></div><p>กำลังโหลดข้อมูล...</p><p id="loaderText" class="hidden" style="font-size:13px;opacity:.8;margin-top:-4px"></p></div>
 
 <script>
 window.__hrdReady = false;
@@ -996,8 +1033,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.8.0',
-  BUILD: '2569-11-17.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.9.0',
+  BUILD: '2569-11-18.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -2041,7 +2078,7 @@ async function onLogin(e) {
     store.set('hrd_token', r.token);
     if ($('#lgRemember').checked) store.set('hrd_user_' + loginMode, u, true); else store.del('hrd_user_' + loginMode, true);
     $('#lgPass').value = '';
-    await loadAll();
+    if (r.boot) applyBoot(r.boot); else await loadAll();
     enterApp();
     if (!firstLoginChecks()) toast('ยินดีต้อนรับ ' + S.user.fullName);
     if (S.user.kind === 'user' && S.user.email && !S.user.prefixTh) setTimeout(() => toast('กรุณาเพิ่มคำนำหน้าชื่อ ที่ "ข้อมูลส่วนตัว" (เมนูมุมขวาบน)', 'info'), 1500);
@@ -2056,32 +2093,77 @@ function loginStatus(t) { const el = $('#loginStatus'); if (el) el.textContent =
 /* ===================== เข้าสู่ระบบด้วย SOMDEJ HR Connect (build 2569-11-17.1) ===================== */
 function hrcError(msg) { const b = $('#hrcError'); $('#hrcErrorText').textContent = msg; b.classList.remove('hidden'); shake($('#authCard')); }
 function hrcStatus(t) { const el = $('#hrcStatus'); if (el) el.textContent = t; }
+/* ---------- ขั้นตอนระหว่างเข้าสู่ระบบ (build 2569-11-18.1) ---------- */
+const LGP = { timer: null, t0: 0 };
+let LOGIN_SLOW_SEC = 8;   // รอเกินกี่วินาทีจึงแสดงข้อความ "เซิร์ฟเวอร์ตอบช้า"
+function loginProgress(step) {
+  const box = $('#lgSteps'), slow = $('#lgSlow');
+  if (!box) return;
+  clearInterval(LGP.timer);
+  if (!step) { box.classList.add('hidden'); slow.classList.add('hidden'); return; }
+  if (step === 1) LGP.t0 = Date.now();
+  box.classList.remove('hidden');
+  $$('#lgSteps li').forEach(li => { const n = Number(li.dataset.step); li.classList.toggle('done', n < step); li.classList.toggle('on', n === step); });
+  if (step >= 3) { slow.classList.add('hidden'); return; }
+  const tick = () => {
+    const sec = Math.round((Date.now() - LGP.t0) / 1000);
+    if (sec >= LOGIN_SLOW_SEC) { slow.classList.remove('hidden'); $('#lgSec').textContent = '(' + sec + ' วินาที)'; }
+  };
+  tick(); LGP.timer = setInterval(tick, 1000);
+}
+/** ใส่ข้อมูลหน้าแรก (จาก getBootstrap หรือที่มากับผลการเข้าสู่ระบบ) */
+function applyBoot(d) {
+  Object.assign(S, { user: d.user, systems: d.systems || [], documents: d.documents || [], announcements: d.announcements || [],
+    recentLogs: d.recentLogs || [], counts: d.counts || {} });
+  if (d.settings) S.settings = Object.assign({ requireApproval: true }, d.settings);
+  S.menus = d.menus || [];
+  S.menuItems = d.menuItems || [];
+  S.posters = d.posters || [];
+  S.navOrder = d.navOrder || [];
+  if (d.sysCategories && d.sysCategories.length) S.sysCats = d.sysCategories;
+  S.pip = d.pip || { count: 0, todo: 0 };
+  S.me = d.me || null;
+  bootSave(d);
+}
+/** จำข้อมูลหน้าแรกไว้ในแท็บนี้ (sessionStorage · ผูกกับ token) — รีเฟรช/เปิดซ้ำเห็นหน้าทันที แล้วอัปเดตตามหลัง · ล้างเมื่อออกจากระบบ */
+function bootSave(d) { try { if (S.token) sessionStorage.setItem('hrd_boot', JSON.stringify({ t: S.token, at: Date.now(), d: d })); } catch (e) { try { sessionStorage.removeItem('hrd_boot'); } catch (x) { } } }
+function bootLoad(token) {
+  try { const o = JSON.parse(sessionStorage.getItem('hrd_boot') || 'null'); if (o && o.t === token && Date.now() - o.at < 12 * 3600000) return o.d; } catch (e) { }
+  return null;
+}
+function bootClear() { try { sessionStorage.removeItem('hrd_boot'); } catch (e) { } }
 /** หลังเข้าสู่ระบบสำเร็จ (ทุกวิธี) */
 async function finishLogin(r, statusFn) {
   S.token = r.token; S.user = r.user; expiredShown = false;
   store.set('hrd_token', r.token);
-  if (statusFn) statusFn('ยืนยันตัวตนสำเร็จ กำลังโหลดข้อมูลระบบ...');
-  await loadAll();
+  PS.stop = true;
+  loginProgress(2);
+  if (statusFn) statusFn('ยืนยันตัวตนสำเร็จ กำลังเตรียมข้อมูล...');
+  if (r.boot) applyBoot(r.boot); else await loadAll();   // หลังบ้านรุ่นใหม่ส่งข้อมูลมาพร้อมกัน = ไม่ต้องรออีกรอบ
+  loginProgress(3);
+  if (r.ms) console.info('[HRD] เวลาเข้าสู่ระบบ (มิลลิวินาที)', Object.assign({ total: Date.now() - (LGP.t0 || Date.now()) }, r.ms));
   enterApp();
-  if (!firstLoginChecks()) toast('ยินดีต้อนรับ ' + S.user.fullName);
+  loginProgress(0);
+  if (!firstLoginChecks()) toast(r.created ? 'ยินดีต้อนรับ ' + S.user.fullName + ' — ระบบสร้างบัญชีให้แล้วจากข้อมูล HR Connect' : 'ยินดีต้อนรับ ' + S.user.fullName);
 }
+const LOGIN_TIMEOUT_MS = 60000;
 async function onHrcLogin(e) {
   if (e) e.preventDefault();
   $('#hrcError').classList.add('hidden');
   const emp = $('#hrcEmp').value.replace(/\D/g, ''), pw = $('#hrcPass').value;
   if (!emp || !pw) return hrcError('กรุณากรอกรหัสบุคลากรและรหัสผ่าน');
   const btn = $('#hrcBtn'); if (btn.disabled) return;
-  setBtnLoading(btn, true); hrcStatus('กำลังตรวจสอบกับ SOMDEJ HR Connect...');
+  setBtnLoading(btn, true); hrcStatus(''); loginProgress(1);
   let r;
   try {
     r = await Promise.race([api('loginHrc', emp, pw),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('เซิร์ฟเวอร์ไม่ตอบสนองภายใน 40 วินาที — กรุณาลองใหม่')), 40000))]);
-  } catch (err) { setBtnLoading(btn, false); hrcStatus(''); return hrcError(err.message); }
+      new Promise((_, rej) => setTimeout(() => rej(new Error('เซิร์ฟเวอร์ Google ไม่ตอบกลับภายใน 60 วินาที — กดปุ่ม "เข้าสู่ระบบ" อีกครั้งได้เลย (ไม่ต้องกรอกใหม่)')), LOGIN_TIMEOUT_MS))]);
+  } catch (err) { setBtnLoading(btn, false); loginProgress(0); return hrcError(err.message); }
   $('#hrcPass').value = '';
   if ($('#hrcRemember').checked) store.set('hrd_emp', emp, true); else store.del('hrd_emp', true);
   try { await finishLogin(r, hrcStatus); }
-  catch (err) { console.error(err); showLogin('home'); hrcError('ยืนยันตัวตนสำเร็จ แต่โหลดข้อมูลระบบไม่สำเร็จ: ' + err.message); }
-  finally { setBtnLoading(btn, false); hrcStatus(''); }
+  catch (err) { console.error(err); showLogin('home'); hrcError('ยืนยันตัวตนสำเร็จ แต่โหลดข้อมูลระบบไม่สำเร็จ: ' + err.message + ' — กรุณากดเข้าสู่ระบบอีกครั้ง'); }
+  finally { setBtnLoading(btn, false); hrcStatus(''); loginProgress(0); }
 }
 /** อ่าน ?hrc_ticket= และ ?page= จากลิงก์ แล้วลบออกจากแถบที่อยู่ทันที */
 function readUrlParams() {
@@ -2096,9 +2178,11 @@ function readUrlParams() {
 }
 function takeGoto() { const g = store.get('hrd_goto'); if (g) store.del('hrd_goto'); return g || ''; }
 function siteBase() { return location.origin + location.pathname; }
-async function loadLoginConfig() {
+/** ข้อมูลหน้าเข้าสู่ระบบ: ลิงก์ HR Connect · โลโก้ · รายการโปสเตอร์ — คำขอเดียว (build 2569-11-18.1) */
+async function loadLoginConfig(opt) {
+  opt = opt || {};
   try {
-    const c = await api('getLoginConfig', siteBase());
+    const c = await api('getLoginConfig', siteBase(), { logoV: store.get('hrd_logo_v', true) || '', posters: opt.posters !== false });
     S.loginCfg = c;
     const b = $('#hrcSsoBtn');
     if (c.hrcReady && c.ssoUrl) { b.href = c.ssoUrl; b.classList.remove('disabled'); }
@@ -2110,15 +2194,21 @@ async function loadLoginConfig() {
     if (c.build && c.build !== APP_INFO.BUILD) {
       $$('.js-version').forEach(e => e.textContent = 'หน้าเว็บ build ' + APP_INFO.BUILD + ' · หลังบ้าน build ' + c.build + ' (ไม่ตรงกัน)');
     }
+    if (c.logo) { applyLogo(c.logo); store.set('hrd_logo', c.logo, true); store.set('hrd_logo_v', c.logoV || '', true); }
+    else if (c.logoV === undefined) loadLogoOld();   // หลังบ้านรุ่นเก่า
+    if (Array.isArray(c.posters)) showPosters(c.posters);
+    else if (c.logoV === undefined && opt.posters !== false) loadLoginPosters();
   } catch (e) { /* เข้าด้วยรหัสผ่านยังใช้ได้ */ }
 }
-/** แลกบัตรผ่านจากเมนู HR Connect */
+/** แลกบัตรผ่านจากเมนู HR Connect — ทำก่อนอย่างอื่น ไม่ให้มีคำขออื่นแย่งคิว */
 async function redeemTicket(ticket) {
-  showLogin('home'); loader(true); hrcStatus('กำลังเข้าสู่ระบบจาก HR Connect...');
+  showLogin('home'); loader(true); loginProgress(1); hrcStatus('กำลังเข้าสู่ระบบจาก HR Connect...');
+  setLoaderText('กำลังเข้าสู่ระบบจาก SOMDEJ HR Connect…');
   try { const r = await api('loginHrcTicket', ticket); await finishLogin(r); }
-  catch (e) { showLogin('home'); hrcError(e.message + ' — กรุณาเข้าสู่ระบบอีกครั้ง'); }
-  finally { loader(false); hrcStatus(''); }
+  catch (e) { showLogin('home'); hrcError(e.message + ' — กรุณาเข้าสู่ระบบอีกครั้ง'); loadLoginConfig(); }
+  finally { loader(false); hrcStatus(''); loginProgress(0); setLoaderText(''); }
 }
+function setLoaderText(t) { const el = $('#loaderText'); if (el) { el.textContent = t; el.classList.toggle('hidden', !t); } }
 
 const EN_TITLE = /^(mr|mrs|ms|miss|mister|dr|prof)([.]|\s|$)/i;
 const TH_PREFIX = ['นาย', 'นาง', 'นางสาว', 'นายแพทย์', 'แพทย์หญิง', 'ทันตแพทย์', 'ทันตแพทย์หญิง', 'พว.'];
@@ -2158,16 +2248,7 @@ async function onForgot() {
 
 async function loadAll() {
   const d = await api('getBootstrap', S.token);
-  Object.assign(S, { user: d.user, systems: d.systems, documents: d.documents, announcements: d.announcements,
-    recentLogs: d.recentLogs || [], counts: d.counts || {} });
-  if (d.settings) S.settings = Object.assign({ requireApproval: true }, d.settings);
-  S.menus = d.menus || [];
-  S.menuItems = d.menuItems || [];
-  S.posters = d.posters || [];
-  S.navOrder = d.navOrder || [];
-  if (d.sysCategories && d.sysCategories.length) S.sysCats = d.sysCategories;
-  S.pip = d.pip || { count: 0, todo: 0 };
-  S.me = d.me || null;
+  applyBoot(d);
 }
 const IDLE_MS = 30 * 60 * 1000, IDLE_WARN_MS = 28 * 60 * 1000;
 const IDLE = { last: Date.now(), saved: 0, warned: false, timer: null };
@@ -2191,7 +2272,7 @@ function idleLogout() {
   const t = S.token, mode = S.user && S.user.kind === 'user' ? 'user' : 'admin';
   stopChat(); clearTimeout(PEND.timer);
   S.token = null; S.user = null; S.me = null;
-  store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_last');
+  store.del('hrd_token'); bootClear(); store.del('hrd_page'); store.del('hrd_last');
   const w = $('#idleWarn'); if (w) w.classList.add('hidden');
   answerAsk(false); closeModal(true); loader(false);
   showLogin(mode);
@@ -2220,14 +2301,14 @@ async function doLogout() {
   if (!(await ask(ASK.logout))) return;
   const t = S.token;
   stopChat();
-  S.token = null; S.user = null; S.me = null; store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_admin_token'); store.del('hrd_last');
+  S.token = null; S.user = null; S.me = null; store.del('hrd_token'); bootClear(); store.del('hrd_page'); store.del('hrd_admin_token'); store.del('hrd_last');
   showLogin('home'); toast('ออกจากระบบเรียบร้อย', 'info');
   if (t) api('logout', t).catch(() => {});
 }
 function onExpired() {
   const mode = S.user && S.user.kind !== 'user' && !S.user.src ? 'admin' : S.user && S.user.src === 'legacy' ? 'user' : 'home';
   stopChat();
-  S.token = null; store.del('hrd_token');
+  S.token = null; store.del('hrd_token'); bootClear();
   answerAsk(false); closeModal(true); loader(false);
   if (!expiredShown) { expiredShown = true; toast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง', 'info'); }
   showLogin(mode);
@@ -2348,6 +2429,21 @@ function lockTag(r) {
   return '';
 }
 
+/** หน้าแรกของผู้ใช้งาน: "งานของฉัน" — ทางลัดสิ่งที่ต้องทำ (build 2569-11-18.1) */
+function myTodoHtml() {
+  const t = [], p = S.pip || {};
+  if (canSee('pip') && (p.todo || p.draft || p.count)) {
+    if (p.todo) t.push({ go: 'pip', icon: 'draw', warn: 1, b: 'แผน PIP รอท่านลงนาม/ดำเนินการ', s: 'กดเพื่อดูรายการที่ค้างอยู่', n: p.todo });
+    else if (p.draft) t.push({ go: 'pip', icon: 'edit_note', warn: 1, b: 'กำหนดเป้าหมาย KPI', s: 'แผนพัฒนาการปฏิบัติงานของท่าน', n: p.draft });
+    else t.push({ go: 'pip', icon: 'trending_up', b: 'แผนพัฒนาการปฏิบัติงาน (PIP)', s: 'ดูแผนและผลการประเมินของท่าน' });
+  }
+  if (canSee('checkin')) t.push({ go: 'checkin', icon: 'qr_code_2', b: 'QR Code ของฉัน', s: 'แสดงให้เจ้าหน้าที่สแกนเมื่อเข้าร่วมกิจกรรม' });
+  if (canSee('forms')) t.push({ go: 'forms', icon: 'flight_takeoff', b: 'ขออนุมัติไปอบรม', s: 'แบบฟอร์ม FM-HRD-008 · กรอกชื่อ-ตำแหน่งให้แล้ว' });
+  if (isStaff()) t.push({ go: 'staffscan', icon: 'qr_code_scanner', b: 'สแกนลงทะเบียนกิจกรรม', s: 'สำหรับเจ้าหน้าที่ลงทะเบียน' });
+  t.push({ act: 'profile', icon: hrcLocked() ? 'verified' : 'badge', b: 'ข้อมูลส่วนตัว', s: hrcLocked() ? 'ข้อมูลจาก SOMDEJ HR Connect' : 'ตรวจและแก้ไขข้อมูลของท่าน' });
+  return `<div class="card" id="myTodo"><div class="card-h"><h3><span class="msr">task_alt</span>งานของฉัน</h3></div><div class="card-b"><div class="todo-grid">${t.map(x =>
+    `<button type="button" class="todo-tile${x.warn ? ' warn' : ''}" ${x.go ? `data-go="${x.go}"` : `data-action="${x.act}"`}><span class="t-ic"><span class="msr">${x.icon}</span></span><span><b>${esc(x.b)}</b><small>${esc(x.s)}</small></span>${x.n ? `<span class="t-n">${x.n}</span>` : ''}</button>`).join('')}</div></div></div>`;
+}
 function renderDashboard() {
   const u = S.user, A = isAdmin();
   const showSys = canSee('systems'), showDoc = canSee('documents'), showAnn = canSee('announcements');
@@ -2400,7 +2496,7 @@ function renderDashboard() {
         }).join('') : '<p class="muted small">ยังไม่มีกิจกรรม</p>'}</div></div>
       </div>`;
   const left = sysCardHtml + docCardHtml, right = annCardHtml + logCardHtml;
-  return `${!A && S.pip && (S.pip.todo || S.pip.draft) && canSee('pip') ? `<div class="notice" style="background:#fff7e6;cursor:pointer" data-go="pip"><span class="msr">${S.pip.todo ? 'draw' : 'edit_note'}</span><div>แผนพัฒนาการปฏิบัติงาน (PIP):${S.pip.draft ? ` รอคุณกำหนดเป้าหมาย KPI <b>${S.pip.draft} รายการ</b>` : ''}${S.pip.todo ? ` รอให้คุณลงนาม <b>${S.pip.todo} รายการ</b>` : ''} — <u>คลิกเพื่อไปที่แผน PIP</u></div></div>` : ''}
+  return `
   <div class="hero"><div class="hero-in">
     <div><small><span class="msr" style="font-size:18px">waving_hand</span>${greeting()}</small>
       <h2>${esc(u.fullName || u.username)}</h2>
@@ -2411,8 +2507,9 @@ function renderDashboard() {
       <button class="btn btn-glass" data-add="Announcements"><span class="msr">campaign</span>สร้างประกาศ</button>
       ${S.counts.pendingUsers ? `<button class="btn btn-glass" data-go="users"><span class="msr">how_to_reg</span>รออนุมัติ ${S.counts.pendingUsers} คน</button>` : ''}
       ${CH.unread ? `<button class="btn btn-glass" data-go="chat"><span class="msr">forum</span>ข้อความใหม่ ${CH.unread}</button>` : ''}
-    </div>` : (canSee('forms') || canSee('checkin') ? `<div class="hero-actions">${canSee('checkin') ? '<button class="btn btn-glass" data-go="checkin"><span class="msr">qr_code_2</span>QR Code ของฉัน</button>' : ''}${canSee('forms') ? '<button class="btn btn-glass" data-action="reqNew"><span class="msr">edit_document</span>กรอกแบบฟอร์มขออนุมัติไปอบรม/ประชุม</button>' : ''}</div>` : '')}
+    </div>` : ''}
   </div></div>
+  ${A ? '' : myTodoHtml()}
   ${stats.length ? `<div class="grid stats">${stats.map(s => `
     <div class="card stat" style="${cvar(s.color)}" data-go="${s.page}">
       <div class="s-ic"><span class="msr">${s.icon}</span></div>
@@ -3349,11 +3446,27 @@ function pipEdit(id) {
   d.fy = String(pipFY(r) || fiscalYearBE());
   S.pv = { mode: 'edit', id, data: d, q: S.pv.q, st: S.pv.st }; render(); window.scrollTo(0, 0);
 }
+/** ไม่พบในรายชื่อที่โหลดไว้ → ค้นด้วยรหัสบุคลากร (lookupPerson · รองรับค้นจาก HR Connect เมื่อผู้ประสานกลางเปิดให้) */
+const PIPLK = {};
+function pipLookupHtml(k, id) {
+  const NO = '<small style="color:var(--red)">ไม่พบในทะเบียน HRD Center — บุคลากรจะมีบัญชีอัตโนมัติเมื่อเข้าสู่ระบบด้วย SOMDEJ HR Connect ครั้งแรก (ให้เข้าระบบ 1 ครั้งก่อนบันทึกแผน)</small>';
+  if (!/^[0-9]{7}$/.test(String(id || ''))) return '<small class="muted">รหัสบุคลากร 7 หลัก</small>';
+  const r = PIPLK[id];
+  if (r === undefined) {
+    PIPLK[id] = null;
+    api('lookupPerson', S.token, id).then(x => { PIPLK[id] = x || { found: false }; const w = $('#who_' + k); if (w && S.pv && S.pv.data && S.pv.data[k] === id) w.innerHTML = pipWho(k); })
+      .catch(() => { PIPLK[id] = { found: false }; });
+    return '<small class="muted">กำลังค้นรหัสบุคลากร…</small>';
+  }
+  if (r === null) return '<small class="muted">กำลังค้นรหัสบุคลากร…</small>';
+  if (r.found && r.source === 'hrc') return '<small style="color:#b45309">พบใน HR Connect: ' + esc(r.fullName) + ' · ' + esc(r.position || '-') + ' — ยังไม่มีบัญชี HRD Center (จะมีเมื่อเข้าสู่ระบบครั้งแรก)</small>';
+  return NO;
+}
 function pipUserById(id) { return /^[0-9]{7}$/.test(String(id || '')) ? (S.users || []).find(u => String(u.employeeId) === String(id)) : null; }
 function pipWho(k) {
   const d = S.pv.data, u = pipUserById(d[k]);
   if (!d[k]) return '<small class="muted">พิมพ์รหัส 7 หลัก หรือเลือกจากรายชื่อ</small>';
-  if (!u) return '<small style="color:var(--red)">ไม่พบบัญชีผู้ใช้งานรหัสนี้ (ต้องลงทะเบียนเข้าใช้งานก่อน)</small>';
+  if (!u) return pipLookupHtml(k, d[k]);
   if (u.status !== 'active') return '<small style="color:var(--red)">' + esc(u.fullName) + ' — บัญชียังไม่เปิดใช้งาน</small>';
   return '<small style="color:var(--green)"><span class="msr" style="font-size:15px;vertical-align:-3px">check_circle</span> ' + esc(u.fullName) + ' · ' + esc(u.position || '-') + '</small>';
 }
@@ -5426,6 +5539,9 @@ function renderSettings() {
           <span class="switch"><input type="checkbox" data-setlegacy="1" ${d.legacyLogin !== false ? 'checked' : ''}><i></i></span></label>
         <label class="field" style="margin-top:6px"><span>ใช้ชื่อผู้ใช้เดิมได้ถึงวันที่ <small class="muted">(หลังวันนี้ระบบปิดเองอัตโนมัติ)</small></span>
           <input class="input" type="date" data-setlegacyuntil="1" value="${esc(d.legacyUntil || '')}" style="max-width:220px"></label>
+        <label class="set-row" style="margin-top:10px"><span class="set-ic" style="background:#e8f3ff;color:#1e4b8f"><span class="msr">person_add</span></span>
+          <span class="set-txt"><b>สร้างบัญชีให้อัตโนมัติเมื่อเข้าด้วย HR Connect ครั้งแรก</b><small>บุคลากรที่ยืนยันตัวตนกับ HR Connect ผ่านแต่ยังไม่มีในทะเบียน จะได้บัญชีสิทธิ์ "ผู้ใช้งาน" ทันที (ชื่อ ตำแหน่ง ฝ่าย จาก HR Connect) · ปิด = ปฏิเสธ "ยังไม่มีสิทธิ์"</small></span>
+          <span class="switch"><input type="checkbox" data-setautocreate="1" ${d.hrcAutoCreate !== false ? 'checked' : ''}><i></i></span></label>
       </div>
     </div>
     <div class="card">
@@ -5539,6 +5655,7 @@ function openProfile() {
   closeDropdown();
   if (!isAdmin() || S.me) {
     const u = isAdmin() ? S.me : S.user;
+    if (hrcLocked()) return openProfileHrc(u);
     const fields = [
       { k: 'username', label: 'ชื่อผู้ใช้งาน', readonly: true, col: 2 },
       { k: '__pfx' },
@@ -5588,6 +5705,39 @@ function openProfile() {
     }
   });
 }
+/** เข้าด้วย HR Connect: ชื่อ ตำแหน่ง ฝ่าย ฯลฯ มาจาก HR Connect (แก้เองไม่ได้) · build 2569-11-18.1 */
+function hrcLocked() { return !!S.user && S.user.src === 'hrc'; }
+const HRC_NOTE = '<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb;margin-bottom:12px"><span class="msr">sync</span><div>ช่องสีเทา<b>มาจาก SOMDEJ HR Connect</b> และอัปเดตให้อัตโนมัติทุกครั้งที่เข้าสู่ระบบ — หากไม่ถูกต้อง กรุณาแจ้งฝ่ายทรัพยากรบุคคลให้แก้ที่ HR Connect</div></div>';
+function lockField(k, label, val, col) {
+  return `<label class="field${col === 2 ? ' col-2' : ''}"><span>${esc(label)}<span class="hrc-src"><span class="msr">verified</span>HR Connect</span></span><input class="input hrc-lock" name="${k}" value="${esc(val || '')}" readonly tabindex="-1"></label>`;
+}
+function openProfileHrc(u) {
+  openModal({
+    title: 'ข้อมูลส่วนตัว', icon: 'badge', confirmSave: ASK.save(true), confirmCancel: true, okText: 'บันทึกการแก้ไข',
+    body: HRC_NOTE + `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">
+      ${lockField('employeeId', 'รหัสบุคลากร', u.employeeId)}${lockField('prefixTh', 'คำนำหน้าชื่อ', u.prefixTh)}
+      ${lockField('firstNameTh', 'ชื่อ (ภาษาไทย)', u.firstNameTh)}${lockField('lastNameTh', 'นามสกุล (ภาษาไทย)', u.lastNameTh)}
+      ${lockField('position', 'ตำแหน่ง', u.position)}${lockField('level', 'ระดับ', u.level)}
+      ${lockField('department', 'ฝ่าย', u.department)}${lockField('unit', 'หน่วยงาน', u.unit)}
+      ${fieldHtml({ k: 'firstNameEn', label: 'ชื่อ (ภาษาอังกฤษ) — ไม่บังคับ', ph: 'e.g. Somchai' }, u.firstNameEn || '')}${fieldHtml({ k: 'lastNameEn', label: 'นามสกุล (ภาษาอังกฤษ) — ไม่บังคับ' }, u.lastNameEn || '')}
+      ${fieldHtml(F_ACAD, u.academicPosition || '')}${fieldHtml(F_ADMIN, u.adminPosition || '')}
+      ${fieldHtml({ k: 'email', label: 'อีเมล (ใช้รับการแจ้งเตือน PIP)', type: 'email', req: true, col: 2 }, u.email || '')}</form>`,
+    validate: () => {
+      const d = collect($('#mForm')), en = /^[A-Za-z][A-Za-z .'-]*$/;
+      const fe = String(d.firstNameEn || '').trim(), le = String(d.lastNameEn || '').trim();
+      if ((fe || le) && (!en.test(fe) || !en.test(le))) { toast('ชื่อ-นามสกุลภาษาอังกฤษต้องเป็นตัวอักษร A–Z และกรอกทั้ง 2 ช่อง (หรือเว้นว่างทั้งคู่)', 'err'); return false; }
+      if (EN_TITLE.test(fe)) { toast('ชื่อภาษาอังกฤษไม่ต้องระบุคำนำหน้า (Mr. / Mrs. / Ms. / Dr.)', 'err'); return false; }
+      if (!$('#mForm').reportValidity()) return false;
+    },
+    onOk: async () => {
+      const d = collect($('#mForm'));
+      if (isAdmin()) { const r = await api('updateMySelf', S.token, d); S.user = Object.assign(S.user, r.user); S.me = r.me; }
+      else S.user = await api('updateMyProfile', S.token, d);
+      renderUser(); toast('บันทึกข้อมูลส่วนตัวแล้ว');
+      if (S.page === 'dashboard') render();
+    }
+  });
+}
 function needEmail() { return !!S.user && !isAdmin() && !String(S.user.email || '').trim(); }
 function firstLoginChecks() {
   if (!S.user) return false;
@@ -5601,8 +5751,8 @@ function openEmailRequired() {
     title: 'กรุณาเพิ่มอีเมลก่อนใช้งาน', icon: 'alternate_email', locked: true, okText: 'บันทึกและเริ่มใช้งาน',
     body: `<div class="notice" style="background:#eef6ff;color:#1e4b8f;border-color:#d4e5fb"><span class="msr">mail</span><div>ระบบใช้อีเมลสำหรับ<b>ส่งรหัสผ่านชั่วคราวกรณีลืมรหัสผ่าน</b> และแจ้งเตือนงานที่เกี่ยวข้องกับคุณ (เช่น แผน PIP รอลงนาม) · พร้อมตรวจสอบข้อมูลตำแหน่งของคุณ</div></div>
       <form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">
-      ${fieldHtml({ k: 'position', label: 'ตำแหน่ง', req: true }, u.position || '')}
-      ${EXTRA_FIELDS.map(f => fieldHtml(f, u[f.k] || '')).join('')}
+      ${hrcLocked() ? lockField('position', 'ตำแหน่ง', u.position) + lockField('department', 'ฝ่าย', u.department) + fieldHtml(F_ACAD, u.academicPosition || '') + fieldHtml(F_ADMIN, u.adminPosition || '')
+        : fieldHtml({ k: 'position', label: 'ตำแหน่ง', req: true }, u.position || '') + EXTRA_FIELDS.map(f => fieldHtml(f, u[f.k] || '')).join('')}
       ${fieldHtml({ k: 'email', label: 'อีเมล', type: 'email', req: true, col: 2, ph: 'เช่น name@gmail.com' }, '')}
       ${fieldHtml({ k: 'email2', label: 'ยืนยันอีเมลอีกครั้ง', type: 'email', req: true, col: 2 }, '')}</form>`,
     validate: () => {
@@ -5716,6 +5866,7 @@ function bindEvents() {
     if (t.dataset.setsite) S.setDraft.siteUrl = t.value.trim();
     if (t.dataset.setlegacy) S.setDraft.legacyLogin = t.checked;
     if (t.dataset.setlegacyuntil) S.setDraft.legacyUntil = t.value;
+    if (t.dataset.setautocreate) S.setDraft.hrcAutoCreate = t.checked;
   });
   $('#content').addEventListener('input', e => { if (S.setDraft && e.target.dataset && e.target.dataset.setemail) S.setDraft.notifyEmail = e.target.value; if (S.setDraft && e.target.dataset && e.target.dataset.setappurl) S.setDraft.appUrl = e.target.value.trim(); if (S.setDraft && e.target.dataset && e.target.dataset.setsite) S.setDraft.siteUrl = e.target.value.trim(); });
   $('#mBody').addEventListener('click', e => {
@@ -5974,12 +6125,10 @@ function applyLogo(data) {
   $('#lhIcon').classList.add('hidden');
   $('#authCard').classList.add('has-logo');
 }
-function loadLogo() {
-  applyLogo(store.get('hrd_logo', true));
-  api('getLogo').then(d => { if (d) { applyLogo(d); store.set('hrd_logo', d, true); } }).catch(() => {});
-}
+function loadLogo() { applyLogo(store.get('hrd_logo', true)); }   // โลโก้ที่จำไว้ในเครื่อง · รุ่นใหม่มากับ getLoginConfig เมื่อเปลี่ยน
+function loadLogoOld() { api('getLogo').then(d => { if (d) { applyLogo(d); store.set('hrd_logo', d, true); } }).catch(() => {}); }
 const POSTER_MS = 15000;
-const PS = { list: [], idx: 0, timer: null, hover: false, loaded: false };
+const PS = { list: [], idx: 0, timer: null, hover: false, loaded: false, stop: false };
 function psSlides() { return 1 + PS.list.length; }
 function psShow(i) {
   const art = $('.login-art'); if (!art) return;
@@ -6030,9 +6179,14 @@ function psUpgrade(p, url) {
   pre.src = url;
 }
 async function loadLoginPosters() {
-  if (PS.loaded) return; PS.loaded = true;
+  if (PS.loaded) return;
   let list = [];
   try { list = await api('getLoginPosters'); } catch (e) { return; }
+  showPosters(list);
+}
+/** แสดงโปสเตอร์: ภาพที่จำไว้/ภาพย่อแสดงทันที · ภาพเต็มโหลดทีหลังทีละ 2 รูป และหยุดเมื่อเริ่มเข้าสู่ระบบ (ไม่แย่งคิวกับการเข้าสู่ระบบ) */
+async function showPosters(list) {
+  if (PS.loaded) return; PS.loaded = true;
   const need = [];
   (list || []).forEach(p => {
     const cached = psCacheGet(p);
@@ -6040,12 +6194,22 @@ async function loadLoginPosters() {
     if (p.thumb) { psAdd(p, p.thumb); $$('#posterLayer .poster-slide').slice(-1).forEach(el => el.classList.add('lowres')); }
     need.push(p);
   });
-  await Promise.all(need.map(p => api('getPosterImage', p.id).then(url => {
-    if (!url) return;
-    if (PS.list.indexOf(p) < 0) psAdd(p, url); else psUpgrade(p, url);
-    psCachePut(p, url);
-  }).catch(() => { })));
+  if (!need.length) return;
+  await new Promise(r => setTimeout(r, POSTER_DELAY_MS));
+  const one = async () => {
+    while (need.length && !PS.stop && !S.token) {
+      const p = need.shift();
+      try {
+        const url = await api('getPosterImage', p.id);
+        if (!url) continue;
+        if (PS.list.indexOf(p) < 0) psAdd(p, url); else psUpgrade(p, url);
+        psCachePut(p, url);
+      } catch (e) { }
+    }
+  };
+  await Promise.all([one(), one()]);
 }
+const POSTER_DELAY_MS = 2500;
 function initPosterShow() {
   const art = $('.login-art'); if (!art) return;
   art.style.setProperty('--pn-ms', POSTER_MS + 'ms');
@@ -6056,7 +6220,7 @@ function initPosterShow() {
     const v = b.dataset.pn;
     psShow(v === 'prev' ? PS.idx - 1 : v === 'next' ? PS.idx + 1 : Number(v));
   });
-  loadLoginPosters();
+  /* รายการโปสเตอร์มากับ getLoginConfig (build 2569-11-18.1) */
 }
 function init() {
   bindEvents();
@@ -6067,20 +6231,28 @@ function init() {
   initPosterShow();
   initIdle();
   const ticket = readUrlParams();
-  loadLoginConfig();
-  if (ticket) return redeemTicket(ticket);
+  if (ticket) return redeemTicket(ticket);   // มาจากเมนู HR Connect: เข้าสู่ระบบก่อน ไม่โหลดอย่างอื่นให้แย่งคิว
+  const t0 = store.get('hrd_token');
+  loadLoginConfig({ posters: !t0 });
   const t = store.get('hrd_token');
   const lastAct = Number(store.get('hrd_last') || 0);
   if (t && lastAct && Date.now() - lastAct >= IDLE_MS) {
-    store.del('hrd_token'); store.del('hrd_page'); store.del('hrd_last');
+    store.del('hrd_token'); bootClear(); store.del('hrd_page'); store.del('hrd_last');
     api('logout', t).catch(() => {});
     showLogin('home'); toast('ออกจากระบบอัตโนมัติ เนื่องจากไม่มีการใช้งานเกิน 30 นาที', 'info');
     return;
   }
   if (!t) return showLogin('home');
-  S.token = t; loader(true);
+  S.token = t;
+  const cached = bootLoad(t);
+  if (cached) {   // รีเฟรชหน้า: แสดงข้อมูลที่จำไว้ทันที แล้วอัปเดตจากเซิร์ฟเวอร์ตามหลัง
+    try { applyBoot(cached); enterApp(); } catch (e) { console.error(e); }
+    loadAll().then(() => { if (S.token === t) { renderUser(); refreshCounts(); render(); } }).catch(() => { });
+    return;
+  }
+  loader(true);
   loadAll().then(() => { enterApp(); firstLoginChecks(); })
-    .catch(() => { store.del('hrd_token'); showLogin(); }).finally(() => loader(false));
+    .catch(() => { store.del('hrd_token'); bootClear(); showLogin(); }).finally(() => loader(false));
 }
 function fatal(msg) {
   const box = document.getElementById('fatalBox');
