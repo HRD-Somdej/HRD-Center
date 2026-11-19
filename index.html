@@ -759,6 +759,26 @@ tr.u-sel td{background:#f0fbfb}
 .hrc-src{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#1e4b8f;background:#eef6ff;border:1px solid #d4e5fb;border-radius:999px;padding:1px 8px;margin-left:6px;font-weight:500}
 .hrc-src .msr{font-size:14px}
 input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allowed}
+
+/* build 2569-11-18.2: ช่องติ๊ก · สรุปการส่งอีเมล · ลงนาม PIP */
+.check-field{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line,#e2e8f0);border-radius:12px;background:#f8fafc;cursor:pointer}
+.check-field input{width:18px;height:18px;margin-top:2px;accent-color:#1d4ed8;flex:none}
+.check-field b{display:block;font-size:14px}
+.check-field small.hint{display:block;margin-top:2px}
+.mail-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mail-sum>div{border:1px solid var(--line,#e2e8f0);border-radius:12px;padding:10px;text-align:center}
+.mail-sum .msr{color:#1d4ed8}
+.mail-sum b{display:block;font-size:20px;color:#0b2545}
+.mail-sum small{color:var(--text-2,#64748b);font-size:12px;line-height:1.35;display:block}
+.mail-sum .bad b,.mail-sum .bad .msr{color:var(--red,#b42318)}
+.sign-wait{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:#b45309;background:#fff4e0;border:1px solid #f6dfb5;border-radius:999px;padding:3px 10px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.sign-wait .msr{font-size:16px}
+.pip-sign-act{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 14px;border-radius:12px;background:#eef4ff;border:1px solid #d4e2fb}
+.pip-sign-act>.msr{color:#1d4ed8;font-size:26px}
+.pip-sign-act>div{flex:1}
+.pip-sign-act small{display:block;color:var(--text-2,#64748b)}
+.req-sec.flash{box-shadow:0 0 0 3px #93c5fd;transition:box-shadow .3s}
+@media(max-width:560px){.mail-sum{grid-template-columns:1fr}.pip-sign-act{flex-wrap:wrap}}
 </style>
 <style>
 /* build 2569-11-17.1–17.2 — เข้าสู่ระบบด้วย SOMDEJ HR Connect */
@@ -1033,8 +1053,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.9.0',
-  BUILD: '2569-11-18.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.10.0',
+  BUILD: '2569-11-18.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -1262,7 +1282,8 @@ const FORMS = {
     { k: 'status', label: 'สถานะ', type: 'select', def: 'active', options: [['active', 'แสดง'], ['inactive', 'ไม่แสดง']] },
     { k: 'startDate', label: 'วันที่เริ่มแสดง', type: 'date' },
     { k: 'endDate', label: 'วันที่สิ้นสุด', type: 'date', hint: 'เว้นว่าง = แสดงตลอด' },
-    AUDIENCE_FIELD
+    AUDIENCE_FIELD,
+    { k: 'notifyMail', label: 'แจ้งเตือนทางอีเมลถึงบุคลากร', type: 'check', col: 2, hint: 'หลังกดบันทึก ระบบจะแสดงจำนวนผู้รับ ให้ส่งทดสอบถึงอีเมลของท่านก่อน แล้วจึงยืนยันส่งจริง' }
   ]},
   Posters: { title: 'โปสเตอร์หน้าเข้าสู่ระบบ', icon: 'gallery_thumbnail', fields: [
     { k: 'title', label: 'ชื่อโปสเตอร์ / กิจกรรม', req: true, col: 2, ph: 'เช่น โครงการอบรมการช่วยฟื้นคืนชีพขั้นสูง 2570' },
@@ -1781,6 +1802,9 @@ function fieldHtml(f, val) {
       input = `<textarea class="input" id="${id}" name="${f.k}" placeholder="${esc(f.ph || '')}"${req}>${esc(val)}</textarea>`; break;
     case 'hidden':
       return `<input type="hidden" name="${f.k}" value="${esc(val)}">`;
+    case 'check':
+      return `<label class="${cls} check-field" for="${id}"><input type="checkbox" id="${id}" name="${f.k}" value="Y"${val === 'Y' || val === true ? ' checked' : ''}>
+        <span><b>${esc(f.label)}</b>${f.hint ? `<small class="hint">${esc(f.hint)}</small>` : ''}</span></label>`;
     case 'level':
       input = `<input class="input" id="${id}" name="${f.k}" value="${esc(val)}" inputmode="numeric" maxlength="2" pattern="[0-9]{1,2}" title="ระดับเป็นตัวเลข เช่น 5, 7" placeholder="เช่น 7" autocomplete="off">`; break;
     case 'allowids':
@@ -1915,8 +1939,15 @@ function openForm(entity, rec) {
         delete data.removeFile;
       }
       if (isEdit) data.id = rec.id;
+      const wantMail = entity === 'Announcements' && data.notifyMail === 'Y';
+      delete data.notifyMail;
       S[ENT_KEY[entity]] = await api('saveRecord', S.token, entity, data);
       toast(isEdit ? 'บันทึกการแก้ไขเรียบร้อย' : 'เพิ่มข้อมูลเรียบร้อย');
+      if (wantMail) {
+        const saved = isEdit ? S.announcements.find(a => a.id === rec.id)
+          : S.announcements.filter(a => a.title === data.title).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+        if (saved) setTimeout(() => openAnnMail(saved.id), 350);
+      }
       refreshCounts(); renderUser();
       if (entity === 'Menus' && !isEdit) {
         const m = S.menus.filter(x => x.name === data.name && x.type === 'page').pop();
@@ -2123,6 +2154,8 @@ function applyBoot(d) {
   if (d.sysCategories && d.sysCategories.length) S.sysCats = d.sysCategories;
   S.pip = d.pip || { count: 0, todo: 0 };
   S.me = d.me || null;
+  S.navCfg = d.navCfg || {};
+  applyNavLabels();
   bootSave(d);
 }
 /** จำข้อมูลหน้าแรกไว้ในแท็บนี้ (sessionStorage · ผูกกับ token) — รีเฟรช/เปิดซ้ำเห็นหน้าทันที แล้วอัปเดตตามหลัง · ล้างเมื่อออกจากระบบ */
@@ -2620,6 +2653,44 @@ function renderPostersAdmin() {
           <button class="icon-btn danger" data-del="Posters" data-id="${esc(r.id)}" title="ลบ"><span class="msr">delete</span></button></div></div></div>`; }).join('')}</div>`
   : `<div class="card">${emptyState('gallery_thumbnail', 'ยังไม่มีโปสเตอร์', 'เพิ่มโปสเตอร์ประชาสัมพันธ์กิจกรรม เพื่อแสดงสลับในหน้าเข้าสู่ระบบ', { label: 'เพิ่มโปสเตอร์', attr: 'data-add="Posters"' })}</div>`}`;
 }
+/** แจ้งประกาศทางอีเมล: ดูจำนวนผู้รับ → ส่งทดสอบถึงตนเอง → ยืนยัน 2 ชั้น → ส่งจริง (build 2569-11-18.2) */
+async function openAnnMail(id) {
+  let p;
+  loader(true);
+  try { p = await api('announceMailPreview', S.token, id); } catch (e) { toast(e.message, 'err'); return; } finally { loader(false); }
+  const again = !!p.mailedAt && p.mailedAt !== 'sending';
+  const qtxt = p.quota < 0 ? '-' : p.quota.toLocaleString('th-TH') + ' ฉบับ';
+  const short = p.quota >= 0 && p.quota < p.count;
+  openModal({
+    title: 'แจ้งเตือนประกาศทางอีเมล', icon: 'forward_to_inbox', size: 'sm', okText: again ? 'ส่งซ้ำถึง ' + p.count + ' คน' : 'ส่งอีเมลถึง ' + p.count + ' คน',
+    body: `<div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--teal-50);border-color:#bfe6e6"><b style="font-size:15px">${esc(p.title)}</b></div>
+      <div class="mail-sum">
+        <div><span class="msr">groups</span><b>${p.count.toLocaleString('th-TH')}</b><small>ผู้รับ (บุคลากรที่ใช้งานอยู่และมีอีเมล)</small></div>
+        <div><span class="msr">unsubscribe</span><b>${p.noEmail.toLocaleString('th-TH')}</b><small>ไม่มีอีเมลในระบบ (ไม่ได้รับ)</small></div>
+        <div class="${short ? 'bad' : ''}"><span class="msr">outgoing_mail</span><b>${qtxt}</b><small>โควตาส่งอีเมลที่เหลือวันนี้</small></div>
+      </div>
+      ${again ? `<div class="notice" style="margin-top:12px"><span class="msr">history</span><div>ประกาศนี้<b>ส่งอีเมลไปแล้ว</b>เมื่อ ${fmtDate(p.mailedAt, true)} (${esc(p.mailedCount || 0)} คน · โดย ${esc(p.mailedBy || '-')}) — กดส่งอีกครั้งจะเป็นการ<b>ส่งซ้ำ</b></div></div>` : ''}
+      ${short ? '<div class="notice" style="margin-top:12px;background:var(--red-50);color:var(--red);border-color:#f6c8ce"><span class="msr">block</span><div>โควตาวันนี้ไม่พอ กรุณาส่งพรุ่งนี้</div></div>' : ''}
+      <p class="small muted" style="margin:12px 0 8px">ผู้รับแต่ละคนจะไม่เห็นรายชื่อผู้รับคนอื่น (ส่งแบบ BCC) · อีเมลมีหัวข้อ รายละเอียด และปุ่มเปิดอ่านใน HRD Center</p>
+      <button type="button" class="btn btn-light btn-sm" id="annTest"${p.myEmail ? '' : ' disabled title="เพิ่มอีเมลที่ข้อมูลส่วนตัวก่อน"'}><span class="msr">send</span>ส่งทดสอบถึง ${esc(p.myEmail || 'อีเมลของฉัน (ยังไม่มี)')}</button>`,
+    onOpen: () => {
+      if (short || !p.count) { const ok = $('#mOk'); if (ok) ok.disabled = true; }
+      const b = $('#annTest'); if (b) b.addEventListener('click', async () => {
+        setBtnLoading(b, true);
+        try { const r = await api('announceMailSend', S.token, id, { test: true }); toast('ส่งอีเมลทดสอบถึง ' + r.to + ' แล้ว — ตรวจหน้าตาอีเมลก่อนส่งจริง'); }
+        catch (e) { toast(e.message, 'err'); } finally { setBtnLoading(b, false); }
+      });
+    },
+    confirmSave: { tone: 'primary', icon: 'forward_to_inbox', title: (again ? 'ยืนยันส่งซ้ำ' : 'ยืนยันส่งอีเมล') + 'ถึงบุคลากร ' + p.count.toLocaleString('th-TH') + ' คน?',
+      message: 'ส่งแล้วยกเลิกไม่ได้ · ระบบจะบันทึกผู้ส่งและเวลาไว้ในบันทึกการใช้งาน', okText: 'ส่งเลย' },
+    onOk: async () => {
+      const r = await api('announceMailSend', S.token, id, { resend: again });
+      S.announcements = r.list;
+      toast('ส่งอีเมลแจ้งประกาศถึง ' + r.sent.toLocaleString('th-TH') + ' คนแล้ว' + (r.noEmail ? ' (ไม่มีอีเมล ' + r.noEmail + ' คน)' : ''));
+      if (S.page === 'announcements') render();
+    }
+  });
+}
 function renderAnnouncements() {
   const list = S.announcements.filter(a => match(S.f.annQ, a.title, a.content));
   return `
@@ -2637,8 +2708,10 @@ function renderAnnouncements() {
         ${isUrl(a.url) ? `<div style="margin-top:10px"><a class="btn btn-soft btn-sm" style="${cvar(p.color)}" href="${esc(a.url)}" target="_blank" rel="noopener"><span class="msr">link</span>เปิดลิงก์<span class="msr">open_in_new</span></a></div>` : ''}
         <div class="ann-meta">${lockTag(a)}<span class="badge ${st.cls}">${st.label}</span><span class="badge" style="background:${col(p.color).soft};color:${col(p.color).main}">${p.label}</span>
           <span><span class="msr">date_range</span>${a.startDate ? fmtDate(a.startDate) : 'ทันที'} – ${a.endDate ? fmtDate(a.endDate) : 'ไม่กำหนด'}</span>
-          <span><span class="msr">person</span>${esc(a.updatedBy || '-')} · ${timeAgo(a.updatedAt)}</span></div></div>
+          <span><span class="msr">person</span>${esc(a.updatedBy || '-')} · ${timeAgo(a.updatedAt)}</span>
+          ${isAdmin() && a.mailedAt && a.mailedAt !== 'sending' ? `<span class="badge b-blue" title="ส่งโดย ${esc(a.mailedBy || '-')}"><span class="msr" style="font-size:14px;vertical-align:-2px">mark_email_read</span> ส่งอีเมลแล้ว ${esc(a.mailedCount || 0)} คน · ${fmtDate(a.mailedAt, true)}</span>` : ''}</div></div>
       ${isAdmin() ? `<div class="actions" style="display:flex;gap:2px;align-self:flex-start">
+        <button class="icon-btn" data-action="annMail" data-id="${esc(a.id)}" title="แจ้งเตือนทางอีเมลถึงบุคลากร"><span class="msr">forward_to_inbox</span></button>
         <button class="icon-btn" data-edit="Announcements" data-id="${esc(a.id)}" title="แก้ไข"><span class="msr">edit</span></button>
         <button class="icon-btn danger" data-del="Announcements" data-id="${esc(a.id)}" title="ลบ"><span class="msr">delete</span></button></div>` : ''}
     </div>`; }).join('')}</div>`
@@ -3286,7 +3359,7 @@ function renderPipList() {
       <td>${pipBadge(r)}<div class="small muted" style="margin-top:4px">ผู้เข้ารับฯ: ${pipPersonSt(r, 'emp', true)}</div>${r.status === 'draft' && r.note ? '<div class="small" style="color:var(--red);margin-top:4px">ถูกส่งกลับแก้ไข</div>' : ''}</td>
       <td>${r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : r.summary === 'fail' ? '<span class="badge b-red">ไม่ผ่าน</span>' : '<span class="muted small">-</span>'}</td>
       <td><div class="actions">
-        ${pipSignable(r).length ? `<button class="btn btn-primary btn-sm" data-action="pipSign" data-id="${esc(r.id)}"><span class="msr">draw</span>ลงนาม</button>` : pipCanForward(r) && !isAdmin() ? `<button class="btn btn-primary btn-sm" data-action="pipForward" data-id="${esc(r.id)}"><span class="msr">forward_to_inbox</span>ส่งต่อ</button>` : r.status === 'evalOpen' && !isAdmin() && (r.myRoles || []).indexOf('sup1') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipEval" data-id="${esc(r.id)}"><span class="msr">grading</span>ประเมินผล</button>` : r.status === 'evalReview' && !isAdmin() && (r.myRoles || []).indexOf('sup2') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipView" data-id="${esc(r.id)}"><span class="msr">approval</span>พิจารณาผล</button>` : ''}
+        ${pipSignable(r).length ? `<a class="sign-wait" data-action="pipView" data-id="${esc(r.id)}" title="กดเพื่อเปิดรายละเอียดแผน ตรวจสอบข้อมูล แล้วลงนามในหน้ารายละเอียด"><span class="msr">pending_actions</span>รอท่านลงนาม · เปิดตรวจสอบ</a>` : pipCanForward(r) && !isAdmin() ? `<button class="btn btn-primary btn-sm" data-action="pipForward" data-id="${esc(r.id)}"><span class="msr">forward_to_inbox</span>ส่งต่อ</button>` : r.status === 'evalOpen' && !isAdmin() && (r.myRoles || []).indexOf('sup1') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipEval" data-id="${esc(r.id)}"><span class="msr">grading</span>ประเมินผล</button>` : r.status === 'evalReview' && !isAdmin() && (r.myRoles || []).indexOf('sup2') > -1 ? `<button class="btn btn-primary btn-sm" data-action="pipView" data-id="${esc(r.id)}"><span class="msr">approval</span>พิจารณาผล</button>` : ''}
         <button class="icon-btn" data-action="pipView" data-id="${esc(r.id)}" title="ดูรายละเอียด"><span class="msr">visibility</span></button>
         ${pipCanPrint(r) ? `<button class="icon-btn" data-action="pipPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>` : `<span class="icon-btn" style="opacity:.35;cursor:not-allowed" title="พิมพ์ได้หลังผู้บังคับบัญชาที่สูงขึ้นไปอนุมัติผล"><span class="msr">print_disabled</span></span>`}
       </div></td></tr>`).join('')}</tbody></table></div>`;
@@ -3874,7 +3947,7 @@ function renderPipView() {
     ${c.submit ? (A && !pipOwn(r, 'emp') ? btn('pipSubmit', 'send', 'ส่งลงนาม', 'btn-primary') : btn('pipEmpSend', 'draw', 'ลงนามและส่งต่อ', 'btn-primary')) : ''}
     ${c.ret ? btn('pipReturn', 'undo', 'ส่งกลับแก้ไข (ระบุเหตุผล)', 'btn-warn-soft') : ''}
     ${c.pull ? btn('pipPull', 'edit_note', 'ดึงกลับมาแก้ไข') : ''}
-    ${c.sign ? btn('pipSign', 'draw', pipSignable(r).indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : pipSignable(r).indexOf('sup2') > -1 ? 'ลงนาม (สิ้นสุดแผน)' : 'ลงนามอิเล็กทรอนิกส์', 'btn-primary') : ''}
+    ${c.sign ? btn('pipGoSign', 'fact_check', 'ตรวจสอบและลงนาม', 'btn-primary') : ''}
     ${c.approve ? btn('pipEvalApprove', 'approval', 'อนุมัติผลการประเมิน', 'btn-primary') + btn('pipEvalReturn', 'undo', 'ส่งกลับแก้ไขผล (ระบุเหตุผล)', 'btn-warn-soft') : ''}
     ${c.reopen ? btn('pipReopen', 'edit', 'เปิดให้แก้ไขผลอีกครั้ง') : ''}
     ${c.forward ? btn('pipForward', 'forward_to_inbox', 'ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป', 'btn-primary') : ''}
@@ -3917,12 +3990,24 @@ function renderPipView() {
       <td>${x.eval === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : x.eval === 'fail' ? '<span class="badge b-red">ไม่ผ่าน</span>' : '<span class="muted small">-</span>'}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">ยังไม่ได้กำหนดเป้าหมาย</td></tr>'}</tbody></table></div>
     ${r.summary ? `<div class="card-b"><b>สรุปผลการประเมิน:</b> ${r.summary === 'pass' ? '<span class="badge b-green">ผ่าน</span>' : '<span class="badge b-red">ไม่ผ่าน</span>'} ${r.reason ? '<span class="muted">เหตุผล</span> ' + esc(r.reason) : ''}</div>` : ''}
   </div>`}
-  <div class="card req-sec"><div class="card-h"><h3><span class="msr">draw</span>การลงนาม (ขั้นที่ 1 · อิเล็กทรอนิกส์)</h3>${r.docHash ? `<span class="muted small">รหัสยืนยันเอกสาร ${esc(r.docHash)}</span>` : ''}</div>
+  <div class="card req-sec" id="pipSignSec"><div class="card-h"><h3><span class="msr">draw</span>การลงนาม (ขั้นที่ 1 · อิเล็กทรอนิกส์)</h3>${r.docHash ? `<span class="muted small">รหัสยืนยันเอกสาร ${esc(r.docHash)}</span>` : ''}</div>
     <div class="card-b"><div class="pip-signs">${['emp', 'sup1', 'sup2'].map(x => pipSignBox(r, x)).join('')}</div>
+    ${c.sign ? `<div class="pip-sign-act"><span class="msr">fact_check</span><div><b>ก่อนลงนาม กรุณาตรวจสอบข้อมูลด้านบนให้ครบ</b><small>ข้อมูลผู้เข้ารับการพัฒนา · ระยะเวลา · เป้าหมาย KPI และการดำเนินการ</small></div>
+      ${btn('pipSign', 'draw', pipSignable(r).indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : pipSignable(r).indexOf('sup2') > -1 ? 'ลงนาม (สิ้นสุดแผน)' : 'ลงนามอิเล็กทรอนิกส์', 'btn-primary')}</div>` : ''}
     ${r.status === 'evalOpen' || r.status === 'evaluated' ? '<p class="small muted" style="margin:12px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">print</span> ขั้นที่ 2 (สรุปผลการประเมิน) ให้พิมพ์เอกสาร แล้วลงนามด้วยปากกาในกรอบ "สรุปผลการประเมิน"</p>' : ''}</div></div>`;
+}
+/** ปุ่มด้านบนของหน้ารายละเอียด → เลื่อนไปส่วนการลงนาม (ผ่านข้อมูลทั้งหมดก่อน) */
+function pipGoSign() {
+  const sec = $('#pipSignSec'); if (!sec) return;
+  sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  sec.classList.add('flash'); setTimeout(() => sec.classList.remove('flash'), 1600);
 }
 function pipSign(id) {
   const r = S.pips.find(x => x.id === id); if (!r) return;
+  if (!(S.pv && S.pv.mode === 'view' && S.pv.id === id)) {   // ลงนามได้จากหน้ารายละเอียดเท่านั้น (build 2569-11-18.2)
+    S.pv = Object.assign({}, S.pv, { mode: 'view', id: id, data: null }); render();
+    return toast('กรุณาตรวจสอบรายละเอียดแผนก่อน แล้วกดลงนามที่ส่วน "การลงนาม" ด้านล่าง', 'info');
+  }
   const roles = pipSignable(r);
   openModal({
     title: roles.indexOf('sup1') > -1 ? 'ลงนามและส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป' : 'ลงนามอิเล็กทรอนิกส์ แผน PIP', icon: 'draw', okText: roles.indexOf('sup1') > -1 ? 'ลงนามและส่งต่อ' : 'ลงนาม', size: 'sm',
@@ -3930,10 +4015,14 @@ function pipSign(id) {
       <b style="font-size:16px">แผนพัฒนาการปฏิบัติงานของ ${esc(r.fullName)}</b>
       <div class="small" style="color:var(--text-2);margin-top:4px">${esc(pipPeriod(r))}<br>ลงนามในฐานะ: <b>${roles.map(k => PIP_ROLE[k]).join(', ')}</b><br>รหัสยืนยันเอกสาร ${esc(r.docHash || '-')}</div></div>
       <p class="small" style="color:var(--text-2)">ข้าพเจ้าได้อ่านและรับทราบเป้าหมาย KPI และการดำเนินการตามแผนนี้แล้ว การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า${roles.indexOf('sup2') > -1 ? ' <b>(การลงนามของผู้บังคับบัญชาที่สูงขึ้นไปถือเป็นที่สิ้นสุดของขั้นกำหนดแผน)</b>' : ''}</p>
-      <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'pipPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
+      <form id="mForm" onsubmit="return false">
+        <label class="check-field" for="f_pipAck" style="margin-bottom:12px"><input type="checkbox" id="f_pipAck" name="pipAck" value="Y" required>
+          <span><b>ข้าพเจ้าได้ตรวจสอบข้อมูลในแผนนี้ครบถ้วนแล้ว</b><small class="hint">ข้อมูลผู้เข้ารับการพัฒนา ระยะเวลา เป้าหมาย KPI และการดำเนินการตามแผน</small></span></label>
+        ${fieldHtml({ k: 'pipPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => { const i = $('#f_pipPw'); if (i) i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); modalOk(); } }); },
+    validate: () => { if (!$('#f_pipAck').checked) { toast('กรุณาติ๊กยืนยันว่าได้ตรวจสอบข้อมูลในแผนแล้ว', 'err'); return false; } },
     onOk: async () => {
-      const res = await api('signPip', S.token, r.id, $('#f_pipPw').value);
+      const res = await api('signPip', S.token, r.id, $('#f_pipPw').value, true);
       S.pips = res.list; pipSetSummary();
       const cur = S.pips.find(x => x.id === r.id);
       toast(res.done ? 'ลงนามเรียบร้อย — แผนนี้ลงนามครบทั้ง 3 ท่านแล้ว (สิ้นสุดขั้นกำหนดแผน)' : res.forwarded ? 'ลงนามและส่งต่อผู้บังคับบัญชาที่สูงขึ้นไปแล้ว' : cur && pipCanForward(cur) ? 'ลงนามเรียบร้อย — กด "ส่งต่อผู้บังคับบัญชาที่สูงขึ้นไป" ได้แล้ว' : 'ลงนามอิเล็กทรอนิกส์เรียบร้อย');
@@ -4959,6 +5048,76 @@ function renderNav() {
 }
 const NAV_MAIN = ['dashboard', 'systems', 'documents', 'announcements', 'forms', 'checkin', 'pip'];
 const NAV_LABEL = { dashboard: 'หน้าแรก', systems: 'ระบบย่อย', documents: 'คลังข้อมูล', announcements: 'ประกาศ / ข่าวสาร', forms: 'ขออนุมัติไปอบรม/ประชุม', checkin: 'QR Code ของฉัน', pip: 'แผนพัฒนาการปฏิบัติงาน (PIP)' };
+/* ---------- เมนูหลักที่ระบบสร้างขึ้น: ผู้ดูแลตั้งชื่อ / การเข้าถึงเองได้ (build 2569-11-18.2) ---------- */
+const NAV_DEF = Object.assign({}, NAV_LABEL);   // ชื่อเดิมของระบบ
+const PAGE_TITLE0 = {}; Object.keys(PAGES).forEach(k => { PAGE_TITLE0[k] = PAGES[k].title; });
+const NAV_ICON = { dashboard: 'space_dashboard', systems: 'apps', documents: 'folder_open', announcements: 'campaign', forms: 'assignment', checkin: 'qr_code_2', pip: 'trending_up' };
+const NAV_DESC = { dashboard: 'หน้าสรุปหลังเข้าสู่ระบบ', systems: 'การ์ดลิงก์เข้าระบบงาน', documents: 'เอกสาร/ไฟล์ตามหมวดหมู่', announcements: 'ข่าวสารถึงบุคลากร',
+  forms: 'แบบฟอร์ม FM-HRD-008', checkin: 'QR สำหรับลงทะเบียนกิจกรรม (ผู้ใช้งาน)', pip: 'แผนพัฒนาการปฏิบัติงาน · ลงนามอิเล็กทรอนิกส์' };
+function navCfgOf(k) { return (S.navCfg || {})[k] || {}; }
+function navName(k) { return navCfgOf(k).label || NAV_DEF[k] || k; }
+function applyNavLabels() {
+  NAV_MAIN.forEach(k => {
+    NAV_LABEL[k] = navName(k);
+    if (PAGES[k]) PAGES[k].title = navCfgOf(k).label || PAGE_TITLE0[k];
+    const a = $('#nav a[data-page="' + k + '"]'); if (!a) return;
+    const tn = Array.from(a.childNodes).filter(n => n.nodeType === 3 && n.textContent.trim());
+    if (tn.length) { tn[0].textContent = NAV_LABEL[k]; tn.slice(1).forEach(n => n.remove()); }
+    else a.insertBefore(document.createTextNode(NAV_LABEL[k]), a.querySelector('em'));
+    const lk = a.querySelector('.nav-lock'); if (lk) lk.remove();
+    const aud = navCfgOf(k).audience;
+    if (isAdmin() && (aud === 'admin' || aud === 'list')) a.insertAdjacentHTML('beforeend', `<span class="msr ext nav-lock" title="${aud === 'admin' ? 'เฉพาะผู้ดูแลระบบ' : 'เฉพาะบุคลากรที่กำหนด'}">${aud === 'admin' ? 'lock' : 'group'}</span>`);
+  });
+}
+function navAccessTag(k) {
+  const c = navCfgOf(k);
+  if (c.audience === 'admin') return '<span class="tag lock-tag"><span class="msr">lock</span>เฉพาะผู้ดูแลระบบ</span>';
+  if (c.audience === 'list') return `<span class="tag lock-tag"><span class="msr">group</span>เฉพาะ ${String(c.allowIds || '').split(',').filter(Boolean).length} คน</span>`;
+  return '<span class="tag">บุคลากรทุกคน</span>';
+}
+function builtinMenusHtml() {
+  const mods = S.settings.modules || {};
+  return `<div class="card" style="margin-bottom:16px"><div class="card-h"><h3><span class="msr">widgets</span>เมนูที่ระบบสร้างขึ้น</h3><span class="muted small">เปลี่ยนชื่อ · กำหนดผู้ที่เข้าถึง · แสดง/ซ่อน</span></div>
+    <div class="table-wrap"><table class="tbl" id="builtinMenus"><thead><tr><th>เมนู</th><th>ผู้ที่เข้าถึงได้</th><th>สถานะ</th><th></th></tr></thead>
+    <tbody>${NAV_MAIN.map(k => { const on = k === 'dashboard' || mods[k] !== false, c = navCfgOf(k); return `<tr data-key="${k}">
+      <td><div class="t-main"><div class="doc-ic" style="${cvar('indigo')}"><span class="msr">${NAV_ICON[k]}</span></div>
+        <div><b>${esc(navName(k))}</b><small>${c.label ? 'ชื่อเดิมของระบบ: ' + esc(NAV_DEF[k]) : esc(NAV_DESC[k])}</small></div></div></td>
+      <td>${navAccessTag(k)}</td>
+      <td>${on ? '<span class="badge b-green">แสดง</span>' : '<span class="badge b-gray">ซ่อน</span>'}</td>
+      <td><div class="actions"><button class="icon-btn" data-action="navEdit" data-key="${k}" title="แก้ไขชื่อและการเข้าถึง"><span class="msr">edit</span></button></div></td></tr>`; }).join('')}</tbody></table></div></div>`;
+}
+function openNavEdit(k) {
+  if (!NAV_DEF[k]) return;
+  const c = navCfgOf(k), dash = k === 'dashboard', on = dash || (S.settings.modules || {})[k] !== false;
+  openModal({
+    title: 'แก้ไขเมนูหลัก', icon: NAV_ICON[k] || 'edit', confirmSave: ASK.save(true), confirmCancel: true, okText: 'บันทึกการแก้ไข',
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">
+      ${fieldHtml({ k: 'label', label: 'ชื่อเมนู', col: 2, ph: NAV_DEF[k], hint: 'ชื่อเดิมของระบบ: ' + NAV_DEF[k] + ' · ลบให้ว่างแล้วบันทึก = กลับเป็นชื่อเดิม · ไม่เกิน 60 ตัวอักษร' }, c.label || NAV_DEF[k])}
+      ${dash ? '<p class="small muted col-2" style="margin:0">หน้าแรกเปิดให้บุคลากรทุกคนเสมอ (เปลี่ยนชื่อได้อย่างเดียว)</p>'
+        : fieldHtml(AUDIENCE_LIST_FIELD, c.audience || 'all') + fieldHtml(ALLOW_FIELD, String(c.allowIds || '').split(',').filter(Boolean).join(', ')) +
+          fieldHtml({ k: 'show', label: 'แสดงเมนูนี้', type: 'check', col: 2, hint: 'ไม่ติ๊ก = ซ่อนจากผู้ใช้งานทุกคน (ผู้ดูแลยังเห็น)' }, on ? 'Y' : '')}
+      ${k === 'pip' ? '<div class="notice col-2" style="margin:0"><span class="msr">info</span><div>ถ้าจำกัดผู้เข้าถึง ผู้ที่ไม่อยู่ในรายชื่อจะ<b>เปิดแผน PIP / ลงนาม / ประเมินผล ไม่ได้</b> แม้เป็นผู้เข้ารับการพัฒนาหรือผู้บังคับบัญชาในแผน</div></div>' : ''}
+    </form>`,
+    onOpen: () => { if ($('#allowBox')) setupAllow(); },
+    validate: () => {
+      const fd = collect($('#mForm'));
+      if (String(fd.label || '').trim().length > 60) { toast('ชื่อเมนูยาวได้ไม่เกิน 60 ตัวอักษร', 'err'); return false; }
+      if (/[<>]/.test(fd.label || '')) { toast('ชื่อเมนูห้ามมีเครื่องหมาย < หรือ >', 'err'); return false; }
+      if (fd.audience === 'list') {
+        const r = parseAllow(fd.allowIds);
+        if (r.bad.length) { toast('รหัสบุคลากรต้องเป็นตัวเลข 7 หลัก: ' + r.bad.slice(0, 5).join(', '), 'err'); return false; }
+        if (!r.ids.length) { toast('กรุณาระบุรหัสบุคลากรที่เข้าถึงได้อย่างน้อย 1 คน', 'err'); return false; }
+      }
+    },
+    onOk: async () => {
+      const fd = collect($('#mForm'));
+      const r = await api('saveBuiltinMenu', S.token, k, { label: fd.label, audience: dash ? 'all' : fd.audience, allowIds: fd.allowIds || '', show: dash ? undefined : fd.show === 'Y' });
+      S.navCfg = r.navCfg || {}; S.settings = Object.assign({ requireApproval: true }, r.settings);
+      applyNavLabels(); renderNav(); refreshCounts(); render();
+      toast('บันทึกเมนู "' + navName(k) + '" แล้ว');
+    }
+  });
+}
 function navKeysAll() { return NAV_MAIN.concat(S.menus.map(m => 'm:' + m.id)); }
 function navSorted() {
   const all = navKeysAll(), ord = (S.navOrder || []).filter(k => all.indexOf(k) > -1);
@@ -5045,7 +5204,7 @@ function renderMenuPage(menuId) {
 }
 
 function renderMenusAdmin() {
-  return `
+  return `${builtinMenusHtml()}
   <div class="toolbar"><p class="muted">เมนูที่เพิ่มจะแสดงในแถบด้านซ้ายใต้ "เมนูหลัก" · ผู้ใช้งานจะเห็นเฉพาะเมนูที่แสดงและกำหนดให้ "ทุกคน"</p><div class="grow"></div>
     <button class="btn btn-primary" data-add="Menus"><span class="msr">add</span>เพิ่มเมนูหลัก</button></div>
   <div class="card">${S.menus.length ? `<div class="table-wrap"><table class="tbl">
@@ -5503,7 +5662,7 @@ function renderSettings() {
       <div class="card-b">
         <p class="muted small">ผู้ใช้งานดูข้อมูลได้อย่างเดียว เพิ่ม แก้ไข หรือลบไม่ได้ · เมนูผู้ใช้งาน ผู้ดูแลระบบ ตั้งค่า และบันทึกการใช้งาน แสดงเฉพาะ Admin เสมอ</p>
         ${MOD_INFO.map(m => `<label class="set-row"><span class="set-ic"><span class="msr">${m[1]}</span></span>
-          <span class="set-txt"><b>${m[2]}</b><small>${m[3]}</small></span>
+          <span class="set-txt"><b>${esc(NAV_DEF[m[0]] ? navName(m[0]) : m[2])}</b><small>${m[3]}</small></span>
           <span class="switch"><input type="checkbox" data-setmod="${m[0]}" ${d.modules[m[0]] ? 'checked' : ''}><i></i></span></label>`).join('')}
       </div>
     </div>
@@ -6016,6 +6175,9 @@ function bindEvents() {
       case 'pipDel': return pipDo(d.id, 'delete');
       case 'pipReturn': return pipReturn(d.id);
       case 'pipSign': return pipSign(d.id);
+      case 'pipGoSign': return pipGoSign();
+      case 'annMail': return openAnnMail(d.id);
+      case 'navEdit': return openNavEdit(d.key);
       case 'pipEval': return pipEvalStart(d.id);
       case 'pipEvalCancel': return (async () => { if (!(await ask(ASK.cancel))) return; S.pv.mode = 'view'; S.pv.data = null; render(); })();
       case 'pipEvalSave': return savePipEval(false);
