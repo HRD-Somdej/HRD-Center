@@ -778,6 +778,27 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .pip-sign-act>div{flex:1}
 .pip-sign-act small{display:block;color:var(--text-2,#64748b)}
 .req-sec.flash{box-shadow:0 0 0 3px #93c5fd;transition:box-shadow .3s}
+/* build 2569-11-23.1: เมนูพิมพ์แบบฟอร์ม */
+.pf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.pf-card{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:#fff;border:1px solid var(--line,#e2e8f0);box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.pf-card-h{display:flex;gap:12px;align-items:center}.pf-card-h b{display:block;font-size:15px;line-height:1.35}.pf-card-h small{color:var(--muted,#64748b);font-size:12.5px}
+.pf-card p{margin:0;color:var(--text-2,#475569);font-size:13.5px;line-height:1.5;flex:1}
+.pf-card-a{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.pf-ed-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}.pf-ed-head b{display:block;font-size:17px}.pf-ed-head small{color:var(--muted,#64748b)}
+.pf-rows .tbl td{padding:6px 6px;vertical-align:middle}.pf-rows .tbl th{padding:10px 6px}
+.pf-rows .input,.pf-exp .input{min-width:0;width:100%;height:38px;padding:6px 8px}
+.pf-rows .tbl{min-width:760px}.pf-rows.wide .tbl{min-width:1180px;table-layout:fixed}.pf-exp{min-width:760px;margin-bottom:6px}.pf-exp td{padding:6px}.pf-exp th{padding:8px 6px;white-space:normal}
+.pf-rows-foot{display:flex;align-items:center;gap:12px;margin-top:10px}
+.pf-num{text-align:right;font-variant-numeric:tabular-nums}
+.pf-out{display:inline-block;min-width:90px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.pf-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-top:14px;padding:12px 14px;border-radius:12px;background:#f1f7ff;border:1px solid #d4e5fb}
+.pf-total small{display:block;color:var(--muted,#64748b);font-size:12.5px}.pf-total b{font-size:22px;color:#0b2545;font-variant-numeric:tabular-nums}
+.pf-words{color:#1e4b8f;font-size:14px}
+.pf-fixed{min-height:42px;display:flex;align-items:center;padding:8px 12px;border-radius:10px;background:#f4f7fb;border:1px dashed var(--line,#d6dee8);color:#334155}
+.pf-sub{margin:16px 0 8px;font-size:14.5px;color:#0b2545}
+.pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
+.pf-pick{display:grid;gap:8px;max-height:52vh;overflow:auto}
+@media (max-width:560px){.pf-card-a{justify-content:stretch}.pf-card-a .btn{flex:1}}
 @media(max-width:560px){.mail-sum{grid-template-columns:1fr}.pip-sign-act{flex-wrap:wrap}}
 </style>
 <style>
@@ -934,6 +955,7 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
       <a data-page="forms"><span class="msr">assignment</span>ขออนุมัติไปอบรม/ประชุม</a>
       <a data-page="checkin"><span class="msr">qr_code_2</span>QR Code ของฉัน</a>
       <a data-page="pip"><span class="msr">trending_up</span>แผนพัฒนาการปฏิบัติงาน (PIP)<em class="count warn hidden" id="cntPip">0</em></a>
+      <a data-page="printforms"><span class="msr">print</span>พิมพ์แบบฟอร์ม</a>
       <div id="customNav"></div>
       <a data-page="staffscan" class="hidden"><span class="msr">qr_code_scanner</span>สแกนลงทะเบียนกิจกรรม</a>
       <a class="nav-add admin-only" data-navadd="1"><span class="msr">add</span>เพิ่มเมนูหลัก</a>
@@ -1053,13 +1075,14 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.10.0',
-  BUILD: '2569-11-18.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.11.0',
+  BUILD: '2569-11-23.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
 const GOTO_ALIAS = { home: 'dashboard', dashboard: 'dashboard', pip: 'pip', myqr: 'checkin', qr: 'checkin', checkin: 'checkin', forms: 'forms', training: 'forms',
-  documents: 'documents', docs: 'documents', announcements: 'announcements', news: 'announcements', systems: 'systems', scan: 'staffscan', chat: 'chat' };
+  documents: 'documents', docs: 'documents', announcements: 'announcements', news: 'announcements', systems: 'systems', scan: 'staffscan', chat: 'chat',
+  printforms: 'printforms', printform: 'printforms', print: 'printforms' };
 
 const PAGES = {
   dashboard:     { title: 'หน้าแรก',             render: renderDashboard, mod: 'dashboard' },
@@ -1069,6 +1092,7 @@ const PAGES = {
   forms:         { title: 'แบบฟอร์มขออนุมัติไปอบรม/ประชุม (FM-HRD-008)', render: renderForms, load: loadRequests, mod: 'forms' },
   checkin:       { title: 'QR Code ของฉัน', render: renderMyQr, load: loadMyQrPage, mod: 'checkin', userOnly: true },
   pip:           { title: 'แผนพัฒนาการปฏิบัติงาน (PIP)', render: renderPip, load: loadPips, mod: 'pip' },
+  printforms:    { title: 'พิมพ์แบบฟอร์ม', render: renderPrintForms, load: loadPrintForms, mod: 'printforms' },
   staffscan:     { title: 'สแกนลงทะเบียนกิจกรรม', render: renderStaffScan, load: loadStaffActs, staff: true },
   activities:    { title: 'โครงการ/กิจกรรม', render: renderActivities, load: loadActivities, admin: true },
   chat:          { title: 'ข้อความจากผู้ใช้งาน',   render: renderChatAdmin, load: loadChatThreads, admin: true },
@@ -1223,6 +1247,7 @@ const MOD_INFO = [
   ['forms', 'assignment', 'แบบฟอร์มขออนุมัติไปอบรม/ประชุม', 'กรอกและพิมพ์แบบฟอร์ม FM-HRD-008 (เห็นเฉพาะแบบฟอร์มของตนเอง)'],
   ['checkin', 'qr_code_2', 'QR Code ของฉัน (ลงทะเบียนเข้าร่วมกิจกรรม)', 'แสดง QR ประจำตัวให้เจ้าหน้าที่สแกน แล้วยืนยันการเข้าร่วมด้วยรหัสผ่าน'],
   ['pip', 'trending_up', 'แผนพัฒนาการปฏิบัติงาน (PIP)', 'เมนูจะแสดงเฉพาะบุคลากรที่มีแผน PIP เกี่ยวข้อง (ผู้เข้ารับการพัฒนา / ผู้บังคับบัญชา) เพื่อลงนามและดูแผน'],
+  ['printforms', 'print', 'พิมพ์แบบฟอร์ม', 'กรอกและพิมพ์ใบรับรองการจ่ายเงิน (2144) · ใบรับรองค่าพาหนะ (2318) · แบบรายงานการเดินทาง (FM-HRM-026) · เห็นเฉพาะของตนเอง'],
   ['chat', 'forum', 'แชทกับผู้ดูแลระบบ', 'ปุ่มแชทมุมขวาล่าง ให้ผู้ใช้งานส่งข้อความสอบถามผู้ดูแลระบบ']
 ];
 const ENT_KEY = { Systems: 'systems', Documents: 'documents', Announcements: 'announcements', Menus: 'menus', MenuItems: 'menuItems', Posters: 'posters' };
@@ -2472,6 +2497,7 @@ function myTodoHtml() {
   }
   if (canSee('checkin')) t.push({ go: 'checkin', icon: 'qr_code_2', b: 'QR Code ของฉัน', s: 'แสดงให้เจ้าหน้าที่สแกนเมื่อเข้าร่วมกิจกรรม' });
   if (canSee('forms')) t.push({ go: 'forms', icon: 'flight_takeoff', b: 'ขออนุมัติไปอบรม', s: 'แบบฟอร์ม FM-HRD-008 · กรอกชื่อ-ตำแหน่งให้แล้ว' });
+  if (canSee('printforms')) t.push({ go: 'printforms', icon: 'print', b: navName('printforms'), s: 'ใบรับรองการจ่ายเงิน · ค่าพาหนะ · รายงานการเดินทาง' });
   if (isStaff()) t.push({ go: 'staffscan', icon: 'qr_code_scanner', b: 'สแกนลงทะเบียนกิจกรรม', s: 'สำหรับเจ้าหน้าที่ลงทะเบียน' });
   t.push({ act: 'profile', icon: hrcLocked() ? 'verified' : 'badge', b: 'ข้อมูลส่วนตัว', s: hrcLocked() ? 'ข้อมูลจาก SOMDEJ HR Connect' : 'ตรวจและแก้ไขข้อมูลของท่าน' });
   return `<div class="card" id="myTodo"><div class="card-h"><h3><span class="msr">task_alt</span>งานของฉัน</h3></div><div class="card-b"><div class="todo-grid">${t.map(x =>
@@ -3171,6 +3197,700 @@ async function printReq(d, win, auto) {
   fr.srcdoc = html.replace('<div class="bar">', '<div class="bar" style="display:none">');
   fr.onload = () => { setTimeout(() => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { toast('เปิดหน้าพิมพ์ไม่ได้ กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้', 'err'); } setTimeout(() => fr.remove(), 60000); }, 800); };
   toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ จึงพิมพ์จากหน้านี้แทน', 'info');
+}
+
+const PF_L2144 = [[["hl",246.8,88.8,348.6,0.5],["hd",222.4,116.8,416.8,0.5],["hl",72.0,226.8,523.4,0.5],["hl",305.7,245.2,419.6,0.5],["hl",72.0,264.2,523.4,0.5],["hd",72.0,282.5,523.4,0.5],["hd",72.0,301.0,523.4,0.5],["hd",72.0,320.0,523.4,0.5],["hd",72.0,338.5,523.4,0.5],["hd",72.0,357.0,523.4,0.5],["hd",72.0,375.5,523.4,0.5],["hd",72.0,394.0,523.4,0.5],["hd",72.0,412.5,523.4,0.5],["hd",72.0,431.5,523.4,0.5],["hd",72.0,450.0,523.4,0.5],["hd",72.0,468.5,523.4,0.5],["hd",72.0,487.0,523.4,0.5],["hd",72.0,505.5,523.4,0.5],["hd",72.0,524.0,523.4,0.5],["hl",72.0,543.0,523.4,0.5],["hl",72.0,561.2,523.4,0.5],["hl",72.0,580.2,523.4,0.5],["hl",70.6,768.0,524.9,1.0],["vl",72.2,226.7,580.3,0.5],["vl",135.8,226.7,561.7,0.5],["vl",305.8,226.7,561.7,0.5],["vl",391.2,245.2,561.7,0.5],["vl",419.2,226.7,580.3,0.5],["vl",523.2,226.7,580.3,0.5],["d",140.3,131.6,334.0,147.5,16.0,0,0,""],["d",369.4,131.6,459.8,147.5,16.0,0,0,""],["d",461.4,131.6,521.0,147.5,16.0,0,0,""],["d",89.2,159.2,337.9,175.1,16.0,0,0,""],["d",167.7,563.7,232.3,579.7,16.0,0,0,""],["d",232.7,566.7,413.1,578.7,12.0,0,0,""],["d",356.1,627.7,487.8,643.7,16.0,0,0,""],["d",358.7,647.2,490.2,663.1,16.0,0,0,""],["d",357.2,666.7,492.0,682.7,16.0,0,0,""],["t",246.8,74.4,348.5,92.4,18.0,1,0,"ใบรับรองการจ่ายเงิน"],["t",178.5,104.1,416.6,120.0,16.0,0,0,"สำนักงาน โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา"],["t",108.0,131.6,140.3,147.5,16.0,0,0,"ข้าพเจ้า"],["t",334.0,131.6,369.4,147.5,16.0,0,0,"ตำแหน่ง"],["t",72.0,159.2,89.1,175.1,16.0,0,0,"ฝ่าย"],["t",338.0,159.2,521.3,175.1,16.0,0,0,"ขอรับรองว่าได้จ่ายเงินตามรายการดังต่อไปนี้"],["t",72.0,178.6,502.7,194.6,16.0,0,0,"ไปในการปฏิบัติงานของสภากาชาดไทยจริง และไม่อาจเรียกใบเสร็จรับเงินหรือใบสำคัญรับเงินจากผู้รับได้"],["t",340.4,229.2,384.8,245.2,16.0,0,0,"จำนวนเงิน"],["t",79.9,229.5,128.1,245.4,16.0,0,0,"วัน เดือน ปี"],["t",204.7,238.6,237.2,254.6,16.0,0,0,"รายการ"],["t",448.6,238.6,493.7,254.6,16.0,0,0,"หมายเหตุ*"],["t",84.7,247.6,123.1,263.6,16.0,0,0,"ที่จ่ายเงิน"],["t",339.1,247.8,357.8,263.8,16.0,0,0,"บาท"],["t",397.6,247.8,412.5,263.8,16.0,0,0,"สต."],["t",259.4,545.3,300.6,561.2,16.0,0,0,"รวมทั้งสิ้น"],["t",77.7,563.7,167.7,579.7,16.0,0,0,"จำนวนเงิน (ตัวอักษร)"],["t",327.1,627.7,356.1,643.7,16.0,0,0,"(ลงชื่อ)"],["t",488.5,627.7,522.6,643.7,16.0,0,0,"ผู้รับรอง"],["t",355.6,647.2,358.7,663.1,16.0,0,0,"("],["t",490.2,647.2,493.2,663.1,16.0,0,0,")"],["t",338.2,666.7,357.2,682.7,16.0,0,0,"วันที่"],["t",72.0,778.4,317.2,794.4,16.0,0,0,"*ช่องหมายเหตุ ให้ระบุเหตุผลที่ไม่อาจเรียกใบเสร็จรับเงินได้"],["t",379.6,778.4,519.9,794.4,16.0,0,0,"(แบบพิมพ์หมายเลข 2144/2553)"]]];
+const PF_L026 = [[["hd",450.0,96.8,574.1,0.5],["hd",342.9,116.2,382.5,0.5],["hd",405.5,116.2,502.5,0.5],["hd",523.3,116.2,574.1,0.5],["hd",108.5,145.2,347.0,0.5],["hd",382.3,145.2,574.1,0.5],["hd",156.0,164.8,574.1,0.5],["hd",118.1,184.2,346.5,0.5],["hd",418.1,184.2,574.1,0.5],["hd",36.0,203.8,574.1,0.5],["hd",36.0,223.0,574.1,0.5],["hd",105.8,242.2,232.5,0.5],["hd",252.9,242.2,418.2,0.5],["hd",438.4,242.2,574.1,0.5],["hd",81.0,261.8,232.5,0.5],["hd",279.0,261.8,418.2,0.5],["hd",447.2,261.8,574.1,0.5],["hd",66.7,281.2,120.5,0.5],["hd",144.0,281.2,232.5,0.5],["hd",255.0,281.2,325.5,0.5],["hd",348.0,281.2,418.2,0.5],["hd",66.7,300.8,120.5,0.5],["hd",144.0,300.8,232.5,0.5],["hd",255.0,300.8,325.5,0.5],["hd",348.0,300.8,418.2,0.5],["hd",138.8,320.0,232.5,0.5],["hl",35.2,331.8,574.4,0.5],["hl",35.2,350.8,574.4,0.5],["hl",35.2,372.2,574.4,0.5],["hl",35.2,393.2,574.4,0.5],["hl",35.2,411.8,574.4,0.5],["hl",35.2,430.2,574.4,0.5],["hl",35.2,448.8,574.4,0.5],["hl",35.2,467.8,574.4,0.5],["hl",35.2,486.0,574.4,0.5],["hl",35.2,504.8,574.4,0.5],["hl",35.2,523.2,574.4,0.5],["hl",35.2,541.8,574.4,0.5],["hl",35.2,560.2,574.4,0.5],["hl",35.2,578.8,574.4,0.5],["hl",35.2,597.2,574.4,0.5],["hl",35.2,615.8,574.4,0.5],["hl",35.2,634.2,574.4,0.5],["hl",35.2,652.8,574.4,0.5],["hl",35.2,671.2,574.4,0.5],["hl",35.2,689.8,574.4,0.5],["hl",35.2,708.2,574.4,0.5],["hl",35.2,726.8,574.4,0.5],["hl",35.2,745.2,574.4,0.5],["hl",35.2,763.8,574.4,0.5],["hl",35.2,782.2,574.4,0.5],["vl",35.2,331.6,782.6,0.5],["vl",108.8,332.0,782.6,0.5],["vl",204.8,332.0,782.6,0.5],["vl",283.2,332.0,782.6,0.5],["vl",379.8,332.0,782.6,0.5],["vl",574.2,331.6,782.6,0.5],["rf",35.7,332.0,108.2,350.7,"#fde9d9"],["rf",108.8,332.0,156.7,350.7,"#fde9d9"],["rf",156.7,332.0,204.7,350.7,"#fde9d9"],["rf",205.1,332.0,283.1,350.7,"#fde9d9"],["rf",283.6,332.0,331.6,350.7,"#fde9d9"],["rf",331.6,332.0,379.6,350.7,"#fde9d9"],["rf",380.0,332.0,573.8,350.7,"#fde9d9"],["t",219.8,51.3,419.7,69.3,18.0,1,0,"แบบรายงานการเดินทางไปปฏิบัติงาน"],["t",418.2,85.5,449.7,99.5,14.0,0,0,"ที่ทำการ"],["t",326.0,104.9,342.9,118.9,14.0,0,0,"วันที่"],["t",385.3,104.9,405.4,118.9,14.0,0,0,"เดือน"],["t",505.8,104.9,523.2,118.9,14.0,0,0,"พ.ศ."],["t",78.0,134.0,107.6,148.0,14.0,0,0,"ข้าพเจ้า"],["t",349.9,134.0,382.2,148.0,14.0,0,0,"ตำแหน่ง"],["t",35.5,153.4,154.5,167.4,14.0,0,0,"ขอทำรายงานการเดินทางยื่นต่อ"],["t",78.0,172.9,115.4,186.8,14.0,0,0,"ตามคำสั่ง"],["t",349.9,172.9,418.1,186.8,14.0,0,0,"ข้าพเจ้าพร้อมด้วย"],["t",35.5,231.1,105.8,245.0,14.0,0,0,"ออกจากที่พักเลขที่"],["t",236.4,231.1,252.9,245.0,14.0,0,0,"ซอย"],["t",420.7,231.1,438.3,245.0,14.0,0,0,"ถนน"],["t",35.5,250.4,80.3,264.4,14.0,0,0,"ตำบล/แขวง"],["t",236.4,250.4,277.8,264.4,14.0,0,0,"อำเภอ/เขต"],["t",420.7,250.4,447.1,264.4,14.0,0,0,"จังหวัด"],["t",35.5,269.9,66.7,283.9,14.0,0,0,"เมื่อวันที่"],["t",123.1,269.9,143.2,283.9,14.0,0,0,"เดือน"],["t",236.4,269.9,253.8,283.9,14.0,0,0,"พ.ศ."],["t",328.6,269.9,346.7,283.9,14.0,0,0,"เวลา"],["t",420.7,269.9,522.1,283.9,14.0,0,0,"นาฬิกา และได้กลับถึงที่พัก"],["t",35.5,289.3,66.7,303.2,14.0,0,0,"เมื่อวันที่"],["t",123.1,289.3,143.2,303.2,14.0,0,0,"เดือน"],["t",236.4,289.3,253.8,303.2,14.0,0,0,"พ.ศ."],["t",328.6,289.3,346.7,303.2,14.0,0,0,"เวลา"],["t",420.7,289.3,448.5,303.2,14.0,0,0,"นาฬิกา"],["t",35.5,308.7,141.4,322.7,14.0,0,0,"รวมเวลาไปปฏิบัติงานครั้งนี้"],["t",236.4,308.7,380.7,322.7,14.0,0,0,"วัน ตามรายละเอียดการเดินทางดังนี้ :-"],["t",55.4,333.2,88.6,346.2,13.0,1,0,"ออกจาก"],["t",113.9,333.2,125.0,346.2,13.0,1,0,"วัน"],["t",181.1,333.2,199.5,346.2,13.0,1,0,"เวลา"],["t",239.1,333.2,249.1,346.2,13.0,1,0,"ถึง"],["t",288.8,333.2,299.9,346.2,13.0,1,0,"วัน"],["t",356.0,333.2,374.4,346.2,13.0,1,0,"เวลา"],["t",400.0,333.2,445.4,346.2,13.0,1,0,"รายการเดิน"],["t",445.3,333.2,554.0,346.2,13.0,1,0,"ทางและปฏิบัติงานประจำวัน"],["t",262.3,803.6,299.5,817.6,14.0,0,0,"หน้า 1 / 2"],["t",456.6,807.7,553.9,815.7,8.0,0,0,"FM-HRM-026/01 : 13/09/66"]],[["hl",29.8,68.8,579.8,0.5],["hl",29.8,85.2,579.8,0.5],["hl",49.7,106.5,124.7,0.5],["hd",90.7,142.8,205.0,0.5],["hd",233.5,142.8,268.0,0.5],["hd",308.5,142.8,354.4,0.5],["hd",402.5,142.8,433.0,0.5],["hd",459.1,142.8,496.5,0.5],["hd",510.0,142.8,519.1,0.5],["hd",531.0,142.8,574.1,0.5],["hd",90.7,160.8,205.0,0.5],["hd",233.5,160.8,268.0,0.5],["hd",308.5,160.8,354.4,0.5],["hd",402.5,160.8,433.0,0.5],["hd",459.1,160.8,496.5,0.5],["hd",510.0,160.8,519.1,0.5],["hd",531.0,160.8,574.1,0.5],["hd",90.7,178.8,205.0,0.5],["hd",233.5,178.8,268.0,0.5],["hd",308.5,178.8,354.4,0.5],["hd",402.5,178.8,433.0,0.5],["hd",459.1,178.8,496.5,0.5],["hd",510.0,178.8,519.1,0.5],["hd",531.0,178.8,574.1,0.5],["hd",90.7,214.8,169.0,0.5],["hd",197.6,214.8,219.8,0.5],["hd",272.9,214.8,304.0,0.5],["hd",327.2,214.8,354.4,0.5],["hd",411.9,214.8,433.0,0.5],["hd",459.1,214.8,496.5,0.5],["hd",510.0,214.8,519.1,0.5],["hd",531.0,214.8,574.1,0.5],["hd",90.7,232.8,169.0,0.5],["hd",197.6,232.8,219.8,0.5],["hd",272.9,232.8,304.0,0.5],["hd",327.2,232.8,354.4,0.5],["hd",411.9,232.8,433.0,0.5],["hd",459.1,232.8,496.5,0.5],["hd",510.0,232.8,519.1,0.5],["hd",531.0,232.8,574.1,0.5],["hd",90.7,250.8,169.0,0.5],["hd",197.6,250.8,219.8,0.5],["hd",272.9,250.8,304.0,0.5],["hd",327.2,250.8,354.4,0.5],["hd",411.9,250.8,433.0,0.5],["hd",459.1,250.8,496.5,0.5],["hd",510.0,250.8,519.1,0.5],["hd",531.0,250.8,574.1,0.5],["hl",49.7,268.8,92.3,0.5],["hd",90.7,304.8,169.0,0.5],["hd",197.6,304.8,219.8,0.5],["hd",272.9,304.8,304.0,0.5],["hd",327.2,304.8,354.4,0.5],["hd",402.5,304.8,433.0,0.5],["hd",459.1,304.8,496.5,0.5],["hd",510.0,304.8,519.1,0.5],["hd",531.0,304.8,574.1,0.5],["hd",90.7,322.8,169.0,0.5],["hd",197.6,322.8,219.8,0.5],["hd",272.9,322.8,304.0,0.5],["hd",327.2,322.8,354.4,0.5],["hd",402.5,322.8,433.0,0.5],["hd",459.1,322.8,496.5,0.5],["hd",510.0,322.8,519.1,0.5],["hd",531.0,322.8,574.1,0.5],["hd",90.7,340.8,169.0,0.5],["hd",197.6,340.8,219.8,0.5],["hd",272.9,340.8,304.0,0.5],["hd",327.2,340.8,354.4,0.5],["hd",402.5,340.8,433.0,0.5],["hd",459.1,340.8,496.5,0.5],["hd",510.0,340.8,519.1,0.5],["hd",531.0,340.8,574.1,0.5],["hd",90.7,376.8,169.0,0.5],["hd",197.6,376.8,219.8,0.5],["hd",272.9,376.8,304.0,0.5],["hd",327.2,376.8,354.4,0.5],["hd",411.9,376.8,433.0,0.5],["hd",459.1,376.8,496.5,0.5],["hd",510.0,376.8,519.1,0.5],["hd",531.0,376.8,574.1,0.5],["hd",90.7,395.0,169.0,0.5],["hd",197.6,395.0,219.8,0.5],["hd",272.9,395.0,304.0,0.5],["hd",327.2,395.0,354.4,0.5],["hd",411.9,395.0,433.0,0.5],["hd",459.1,395.0,496.5,0.5],["hd",510.0,395.0,519.1,0.5],["hd",531.0,395.0,574.1,0.5],["hd",90.7,413.0,169.0,0.5],["hd",197.6,413.0,219.8,0.5],["hd",272.9,413.0,304.0,0.5],["hd",327.2,413.0,354.4,0.5],["hd",411.9,413.0,433.0,0.5],["hd",459.1,413.0,496.5,0.5],["hd",510.0,413.0,519.1,0.5],["hd",531.0,413.0,574.1,0.5],["hd",90.0,431.0,439.4,0.5],["hd",459.1,431.0,496.5,0.5],["hd",510.0,431.0,519.1,0.5],["hd",531.0,431.0,574.1,0.5],["hd",99.0,449.0,439.4,0.5],["hd",459.1,449.0,496.5,0.5],["hd",510.0,449.0,519.1,0.5],["hd",531.0,449.0,574.1,0.5],["hl",29.8,454.8,579.8,0.5],["hd",65.4,475.0,389.9,0.5],["hd",459.1,475.8,496.5,0.5],["hd",510.0,475.8,519.1,0.5],["hd",531.0,477.2,574.1,0.5],["hl",29.8,496.2,579.8,0.5],["hd",189.5,520.8,254.0,0.5],["hd",381.4,579.2,517.4,0.5],["hd",387.0,598.5,517.4,0.5],["hd",384.0,618.0,517.4,0.5],["hd",186.8,637.2,276.5,0.5],["hd",81.7,656.8,148.5,0.5],["hd",168.0,656.8,205.5,0.5],["hd",57.3,679.2,226.8,0.5],["hd",60.3,698.5,226.8,0.5],["hd",72.0,737.2,211.5,0.5],["hd",354.7,748.2,517.5,0.5],["hd",402.0,767.5,517.5,0.5],["hd",384.0,786.8,517.5,0.5],["vl",30.2,68.4,496.4,0.5],["vl",453.8,68.9,496.4,0.5],["vl",503.2,85.6,496.4,0.5],["vl",524.8,68.9,496.4,0.5],["vl",579.8,68.4,496.4,0.5],["rf",30.3,68.9,453.4,85.1,"#fde9d9"],["rf",453.9,68.9,524.3,85.1,"#fde9d9"],["rf",524.8,68.9,579.2,85.1,"#fde9d9"],["t",145.4,51.0,447.5,66.0,15.0,1,0,"ข้าพเจ้าขอเบิกเงินค่าใช้จ่ายในการเดินทางไปปฏิบัติงานครั้งนี้ ดังนี้ :-"],["t",226.9,70.1,256.8,83.1,13.0,1,0,"รายการ"],["t",468.5,70.1,509.7,83.1,13.0,1,0,"จำนวนเงิน"],["t",533.0,70.1,573.9,83.1,13.0,1,0,"หมายเหตุ"],["t",35.5,95.4,43.1,109.4,14.0,1,0,"1."],["t",49.7,96.2,75.3,109.2,13.0,1,0,"ค่าเบี้ย"],["t",75.2,96.2,124.8,109.2,13.0,1,0,"เลี้ยงเดินทาง"],["b",52.1,114.5,63.7,127.5,13.0,0,0,""],["t",70.9,115.2,112.6,128.2,13.0,1,0,"ในประเทศ"],["t",70.9,132.1,90.7,145.1,13.0,0,0,"ระดับ"],["t",208.0,132.1,233.1,145.1,13.0,0,0,"จำนวน"],["t",271.7,132.1,282.7,145.1,13.0,0,0,"คน"],["t",287.5,132.1,307.5,145.1,13.0,0,0,"วันละ"],["t",356.8,132.1,372.7,145.1,13.0,0,0,"บาท"],["t",377.5,132.1,402.6,145.1,13.0,0,0,"จำนวน"],["t",436.5,132.1,446.6,145.1,13.0,0,0,"วัน"],["t",70.9,150.1,90.7,163.1,13.0,0,0,"ระดับ"],["t",208.0,150.1,233.1,163.1,13.0,0,0,"จำนวน"],["t",271.7,150.1,282.7,163.1,13.0,0,0,"คน"],["t",287.5,150.1,307.5,163.1,13.0,0,0,"วันละ"],["t",356.8,150.1,372.7,163.1,13.0,0,0,"บาท"],["t",377.5,150.1,402.6,163.1,13.0,0,0,"จำนวน"],["t",436.5,150.1,446.6,163.1,13.0,0,0,"วัน"],["t",70.9,168.2,90.7,181.2,13.0,0,0,"ระดับ"],["t",208.0,168.2,233.1,181.2,13.0,0,0,"จำนวน"],["t",271.7,168.2,282.7,181.2,13.0,0,0,"คน"],["t",287.5,168.2,307.5,181.2,13.0,0,0,"วันละ"],["t",356.8,168.2,372.7,181.2,13.0,0,0,"บาท"],["t",377.5,168.2,402.6,181.2,13.0,0,0,"จำนวน"],["t",436.5,168.2,446.6,181.2,13.0,0,0,"วัน"],["b",52.1,186.6,63.7,199.6,13.0,0,0,""],["t",71.5,187.2,117.6,200.3,13.0,1,0,"ต่างประเทศ"],["t",70.9,204.2,90.7,217.2,13.0,0,0,"ระดับ"],["t",172.6,204.2,197.7,217.2,13.0,0,0,"จำนวน"],["t",222.2,204.2,233.2,217.2,13.0,0,0,"คน"],["t",237.9,204.2,273.0,217.2,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,204.2,327.2,217.2,13.0,0,0,"วันละ"],["t",356.8,204.2,382.1,217.2,13.0,0,0,"เหรียญ"],["t",386.8,204.2,411.9,217.2,13.0,0,0,"จำนวน"],["t",436.5,204.2,446.6,217.2,13.0,0,0,"วัน"],["t",70.9,222.2,90.7,235.3,13.0,0,0,"ระดับ"],["t",172.6,222.2,197.7,235.3,13.0,0,0,"จำนวน"],["t",222.2,222.2,233.2,235.3,13.0,0,0,"คน"],["t",237.9,222.2,273.0,235.3,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,222.2,327.2,235.3,13.0,0,0,"วันละ"],["t",356.8,222.2,382.1,235.3,13.0,0,0,"เหรียญ"],["t",386.8,222.2,411.9,235.3,13.0,0,0,"จำนวน"],["t",436.5,222.2,446.6,235.3,13.0,0,0,"วัน"],["t",70.9,240.2,90.7,253.3,13.0,0,0,"ระดับ"],["t",172.6,240.2,197.7,253.3,13.0,0,0,"จำนวน"],["t",222.2,240.2,233.2,253.3,13.0,0,0,"คน"],["t",237.9,240.2,273.0,253.3,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,240.2,327.2,253.3,13.0,0,0,"วันละ"],["t",356.8,240.2,382.1,253.3,13.0,0,0,"เหรียญ"],["t",386.8,240.2,411.9,253.3,13.0,0,0,"จำนวน"],["t",436.5,240.2,446.6,253.3,13.0,0,0,"วัน"],["t",35.5,257.6,43.1,271.6,14.0,1,0,"2."],["t",49.7,258.3,92.3,271.4,13.0,1,0,"ค่าเช่าที่พัก"],["b",52.1,276.7,63.7,289.7,13.0,0,0,""],["t",70.9,277.4,112.6,290.4,13.0,1,0,"ในประเทศ"],["t",70.9,294.3,90.7,307.3,13.0,0,0,"ระดับ"],["t",172.6,294.3,197.7,307.3,13.0,0,0,"จำนวน"],["t",222.2,294.3,233.2,307.3,13.0,0,0,"คน"],["t",237.9,294.3,273.0,307.3,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,294.3,327.2,307.3,13.0,0,0,"วันละ"],["t",356.8,294.3,372.7,307.3,13.0,0,0,"บาท"],["t",377.5,294.3,402.6,307.3,13.0,0,0,"จำนวน"],["t",436.5,294.3,446.6,307.3,13.0,0,0,"วัน"],["t",70.9,312.3,90.7,325.3,13.0,0,0,"ระดับ"],["t",172.6,312.3,197.7,325.3,13.0,0,0,"จำนวน"],["t",222.2,312.3,233.2,325.3,13.0,0,0,"คน"],["t",237.9,312.3,273.0,325.3,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,312.3,327.2,325.3,13.0,0,0,"วันละ"],["t",356.8,312.3,372.7,325.3,13.0,0,0,"บาท"],["t",377.5,312.3,402.6,325.3,13.0,0,0,"จำนวน"],["t",436.5,312.3,446.6,325.3,13.0,0,0,"วัน"],["t",70.9,330.4,90.7,343.4,13.0,0,0,"ระดับ"],["t",172.6,330.4,197.7,343.4,13.0,0,0,"จำนวน"],["t",222.2,330.4,233.2,343.4,13.0,0,0,"คน"],["t",237.9,330.4,273.0,343.4,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,330.4,327.2,343.4,13.0,0,0,"วันละ"],["t",356.8,330.4,372.7,343.4,13.0,0,0,"บาท"],["t",377.5,330.4,402.6,343.4,13.0,0,0,"จำนวน"],["t",436.5,330.4,446.6,343.4,13.0,0,0,"วัน"],["b",52.1,348.8,63.7,361.8,13.0,0,0,""],["t",71.5,349.4,117.6,362.4,13.0,1,0,"ต่างประเทศ"],["t",70.9,366.4,90.7,379.4,13.0,0,0,"ระดับ"],["t",172.6,366.4,197.7,379.4,13.0,0,0,"จำนวน"],["t",222.2,366.4,233.2,379.4,13.0,0,0,"คน"],["t",237.9,366.4,273.0,379.4,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,366.4,327.2,379.4,13.0,0,0,"วันละ"],["t",356.8,366.4,382.1,379.4,13.0,0,0,"เหรียญ"],["t",386.8,366.4,411.9,379.4,13.0,0,0,"จำนวน"],["t",436.5,366.4,446.6,379.4,13.0,0,0,"วัน"],["t",70.9,384.4,90.7,397.4,13.0,0,0,"ระดับ"],["t",172.6,384.4,197.7,397.4,13.0,0,0,"จำนวน"],["t",222.2,384.4,233.2,397.4,13.0,0,0,"คน"],["t",237.9,384.4,273.0,397.4,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,384.4,327.2,397.4,13.0,0,0,"วันละ"],["t",356.8,384.4,382.1,397.4,13.0,0,0,"เหรียญ"],["t",386.8,384.4,411.9,397.4,13.0,0,0,"จำนวน"],["t",436.5,384.4,446.6,397.4,13.0,0,0,"วัน"],["t",70.9,402.4,90.7,415.4,13.0,0,0,"ระดับ"],["t",172.6,402.4,197.7,415.4,13.0,0,0,"จำนวน"],["t",222.2,402.4,233.2,415.4,13.0,0,0,"คน"],["t",237.9,402.4,273.0,415.4,13.0,0,0,"อัตรากลุ่ม"],["t",307.2,402.4,327.2,415.4,13.0,0,0,"วันละ"],["t",356.8,402.4,382.1,415.4,13.0,0,0,"เหรียญ"],["t",386.8,402.4,411.9,415.4,13.0,0,0,"จำนวน"],["t",436.5,402.4,446.6,415.4,13.0,0,0,"วัน"],["t",35.5,419.8,43.1,433.8,14.0,1,0,"3."],["t",49.7,420.5,88.8,433.5,13.0,1,0,"ค่าพาหนะ"],["t",35.5,437.9,43.1,451.8,14.0,1,0,"4."],["t",49.7,438.6,97.7,451.6,13.0,1,0,"ค่าใช้จ่ายอื่น"],["t",49.7,464.6,65.4,477.6,13.0,1,0,"รวม"],["t",212.6,480.8,251.9,493.8,13.0,1,0,"(ตัวอักษร)"],["t",78.0,509.6,188.7,523.6,14.0,0,0,"ได้ส่งหลักฐานการจ่ายมาด้วย"],["t",257.8,509.6,555.8,523.6,14.0,0,0,"ฉบับ และขอรับรองว่า รายงานการเดินทางดังกล่าวข้างต้นเป็นความจริงและเป็น"],["t",35.5,529.0,469.1,542.9,14.0,0,0,"จำนวนเงินที่ขอเบิกถูกต้องตามระเบียบสภากาชาดไทย ว่าด้วย ค่าใช้จ่ายในการเดินทางไปปฏิบัติงาน พ.ศ.2544 แล้ว"],["t",354.4,567.8,381.4,581.8,14.0,0,0,"(ลงชื่อ)"],["t",517.4,567.8,548.5,581.8,14.0,0,0,"ผู้ขอเบิก"],["t",382.7,587.2,385.8,601.2,14.0,0,0,"("],["t",517.4,587.2,520.4,601.2,14.0,0,0,")"],["t",425.3,606.6,427.9,620.6,14.0,0,0,"/"],["t",474.9,606.6,477.4,620.6,14.0,0,0,"/"],["t",56.8,626.0,186.8,640.0,14.0,0,0,"ได้ตรวจหลักฐานการจ่ายหมายเลข"],["t",35.5,645.4,81.7,659.3,14.0,0,0,"ถึงหมายเลข"],["t",151.4,645.4,166.5,659.3,14.0,0,0,"รวม"],["t",208.1,645.4,301.3,659.3,14.0,0,0,"ฉบับ เป็นการถูกต้องแล้ว"],["t",56.8,687.2,59.8,701.2,14.0,0,0,"("],["t",226.9,687.2,229.9,701.2,14.0,0,0,")"],["t",101.8,706.6,163.6,720.5,14.0,0,0,"เจ้าหน้าที่ผู้ตรวจ"],["t",420.1,714.4,450.9,728.4,14.0,0,0,"อนุญาต"],["t",113.5,725.9,116.0,739.9,14.0,0,0,"/"],["t",163.1,725.9,165.6,739.9,14.0,0,0,"/"],["t",354.7,756.2,401.8,770.2,14.0,0,0,"ผู้อำนวยการ"],["t",425.6,775.5,428.2,789.5,14.0,0,0,"/"],["t",475.2,775.5,477.7,789.5,14.0,0,0,"/"],["t",262.3,803.6,299.5,817.6,14.0,0,0,"หน้า 2 / 2"],["t",456.6,807.7,553.9,815.7,8.0,0,0,"FM-HRM-026/01 : 13/09/66"]]];
+/* โลโก้ตามที่แสดงในแบบฟอร์มต้นฉบับ (ตัดจากไฟล์ต้นฉบับที่เจ้าของระบบส่งให้ 23 พ.ย. 69) */
+const PF_LOGO026 = 'data:image/png;base64,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';
+const PF_LOGO2318 = 'data:image/png;base64,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';
+/* ===================== เมนู "พิมพ์แบบฟอร์ม" (build 2569-11-23.1) =====================
+ * กรอกแล้วพิมพ์ / บันทึกเป็น PDF ให้หน้าตาเหมือนต้นฉบับ · เก็บข้อมูลที่กรอกในชีต PrintForms
+ *   2144 ใบรับรองการจ่ายเงิน (แบบพิมพ์หมายเลข 2144/2553)          A4 · 15 รายการต่อหน้า
+ *   2318 ใบรับรองการจ่ายเงินค่าพาหนะที่ได้ไปกิจการต่าง ๆ (2318/2547)  A4 หรือ ฟุลสแก๊ป · หน้า 1 = 35 แถว หน้าถัดไป = 39 แถว
+ *   026  แบบรายงานการเดินทางไปปฏิบัติงาน (FM-HRM-026/01)           A4 · 2 หน้า
+ * พิกัดทุกจุดเป็นหน่วย pt ถอดจากไฟล์ต้นฉบับ · ลายมือชื่อทุกช่องเว้นว่างไว้ลงนามด้วยปากกา */
+const PF_DEF = {
+  '2144': { name: 'ใบรับรองการจ่ายเงิน', code: 'แบบพิมพ์หมายเลข 2144/2553', icon: 'receipt_long', color: 'teal',
+    desc: 'รับรองการจ่ายเงินในการปฏิบัติงานที่เรียกใบเสร็จรับเงินไม่ได้ · กระดาษ A4 · 15 รายการต่อหน้า' },
+  '2318': { name: 'ใบรับรองการจ่ายเงินค่าพาหนะ', code: 'แบบพิมพ์หมายเลข 2318/2547', icon: 'directions_bus', color: 'blue',
+    desc: 'ค่าพาหนะที่ได้ไปกิจการต่าง ๆ · A4 หรือฟุลสแก๊ป · หน้าแรก 35 รายการ หน้าถัดไป 39 รายการ' },
+  '026': { name: 'แบบรายงานการเดินทางไปปฏิบัติงาน', code: 'FM-HRM-026/01', icon: 'luggage', color: 'violet',
+    desc: 'รายงานการเดินทางและขอเบิกค่าใช้จ่ายในการเดินทางไปปฏิบัติงาน · กระดาษ A4 · 2 หน้า' }
+};
+const PF_ORG = 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา';
+const PF_ORG_S = 'รพ.สมเด็จพระบรมราชเทวี ณ ศรีราชา';
+const PF_TO = 'ผู้อำนวยการโรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา';
+const PF_PAPER = { a4: { w: 595.32, h: 841.92, css: 'A4', label: 'A4' }, fs: { w: 612, h: 936, css: '8.5in 13in', label: 'ฟุลสแก๊ป 8.5 × 13 นิ้ว' } };
+const PF_MAX = { '2144': 150, '2318': 296, '026': 23 };
+S.pforms = []; S.pfm = { mode: 'list', type: '', id: null, data: {}, q: '', ft: '', touched: {} };
+
+/* ---------- ตัวเลข / เงิน / วันที่ ---------- */
+function pfNum(v) { const s = String(v == null ? '' : v).replace(/[,\s]/g, ''); if (!s) return NaN; const n = Number(s); return isFinite(n) ? n : NaN; }
+function pfMoneyOk(v) { const s = String(v == null ? '' : v).replace(/[,\s]/g, ''); return !s || /^[0-9]+(\.[0-9]{1,2})?$/.test(s); }
+function pfR2(n) { return Math.round(n * 100) / 100; }
+function pfFmt(n) { return isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''; }
+function pfSplit(n) {
+  if (!isFinite(n) || n <= 0) return { b: '', s: '' };
+  const c = Math.round(n * 100);
+  return { b: Math.floor(c / 100).toLocaleString('en-US'), s: String(c % 100).padStart(2, '0') };
+}
+const TH_DG = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+const TH_PL = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
+function thIntText(str, tail) {
+  str = String(str).replace(/^0+/, '');
+  if (!str) return '';
+  if (str.length > 6) { const hi = thIntText(str.slice(0, -6), tail); return hi + 'ล้าน' + thIntText(str.slice(-6), true); }
+  let out = '';
+  const L = str.length;
+  for (let i = 0; i < L; i++) {
+    const d = +str[i], p = L - i - 1;
+    if (!d) continue;
+    if (p === 0 && d === 1 && (L > 1 || tail)) out += 'เอ็ด';
+    else if (p === 1 && d === 2) out += 'ยี่';
+    else if (p === 1 && d === 1) out += '';
+    else out += TH_DG[d];
+    out += TH_PL[p];
+  }
+  return out;
+}
+/** จำนวนเงินเป็นตัวอักษร เช่น 1,250.50 → หนึ่งพันสองร้อยห้าสิบบาทห้าสิบสตางค์ */
+function bahtText(v) {
+  const n = typeof v === 'number' ? v : pfNum(v);
+  if (!isFinite(n) || n < 0) return '';
+  const c = Math.round(n * 100);
+  if (c === 0) return 'ศูนย์บาทถ้วน';
+  const b = Math.floor(c / 100), s = c % 100;
+  return (b ? thIntText(String(b)) + 'บาท' : '') + (s ? thIntText(String(s)) + 'สตางค์' : 'ถ้วน');
+}
+function thDateLong(iso) { const p = thParts(iso); return p ? p.d + ' ' + TH_MONTHS[p.m] + ' ' + p.y : ''; }
+function pfTime(t) { t = String(t || '').trim(); return /^[0-9]{1,2}:[0-9]{2}$/.test(t) ? t.replace(':', '.') : t; }
+function pfDaysBetween(a, b) {
+  const p = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
+  const x = p.exec(a || ''), y = p.exec(b || '');
+  if (!x || !y) return '';
+  const d = Math.round((Date.UTC(+y[1], +y[2] - 1, +y[3]) - Date.UTC(+x[1], +x[2] - 1, +x[3])) / 86400000) + 1;
+  return d > 0 ? String(d) : '';
+}
+function pfRowUsed(r) { return !!r && Object.keys(r).some(k => String(r[k] == null ? '' : r[k]).trim() !== ''); }
+
+/* ---------- ตัววาดหน้า (หน่วย pt) ---------- */
+function pfLine(x0, y, x1, w) { w = w || 0.5; return '<div class="ln" style="left:' + x0 + 'pt;top:' + (y - w / 2).toFixed(2) + 'pt;width:' + (x1 - x0).toFixed(2) + 'pt;border-top-width:' + w + 'pt"></div>'; }
+function pfVLine(x, y0, y1, w) { w = w || 0.5; return '<div class="lv" style="left:' + (x - w / 2).toFixed(2) + 'pt;top:' + y0 + 'pt;height:' + (y1 - y0).toFixed(2) + 'pt;border-left-width:' + w + 'pt"></div>'; }
+function pfDotLine(x0, y, x1) {
+  const w = +(x1 - x0).toFixed(2);
+  return '<svg class="dl" style="left:' + x0 + 'pt;top:' + (y - 1).toFixed(2) + 'pt;width:' + w + 'pt;height:2pt" viewBox="0 0 ' + w + ' 2"><line x1="0.6" y1="1" x2="' + w + '" y2="1" stroke="#000" stroke-width="0.8" stroke-linecap="round" stroke-dasharray="0 2.2"></line></svg>';
+}
+function pfDraw(items) {
+  let h = '';
+  for (const it of items) {
+    const k = it[0];
+    if (k === 'hl') h += pfLine(it[1], it[2], it[3], it[4]);
+    else if (k === 'hd') h += pfDotLine(it[1], it[2], it[3]);
+    else if (k === 'vl') h += pfVLine(it[1], it[2], it[3], it[4]);
+    else if (k === 'rf') h += '<div class="rf" style="left:' + it[1] + 'pt;top:' + it[2] + 'pt;width:' + (it[3] - it[1]).toFixed(2) + 'pt;height:' + (it[4] - it[2]).toFixed(2) + 'pt;background:' + it[5] + '"></div>';
+    else h += fmPage([it], '');
+  }
+  return h;
+}
+/** ค่าที่กรอก (สีน้ำเงินเข้ม) ในกรอบ x0–x1 · y0–y1 · align l / c / r · ยาวเกินกรอบจะบีบแนวนอน (ไม่ต่ำกว่า 55%) */
+function pfText(x0, y0, x1, y1, size, text, align) {
+  text = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  const pad = 2, w = x1 - x0 - pad * 2, h = y1 - y0;
+  const mw = fmWidth(text, size, false);
+  const sx = mw > w ? Math.max(0.55, w / mw) : 1;
+  const tw = mw * sx;
+  let left = x0 + pad;
+  if (align === 'r') left = Math.max(x0 + pad, x1 - pad - tw);
+  else if (align !== 'l' && tw < w) left = x0 + pad + (w - tw) / 2;
+  return '<div class="r v" style="left:' + left.toFixed(2) + 'pt;top:' + (y0 - h * 0.12).toFixed(2) + 'pt;height:' + h + 'pt;line-height:' + h + 'pt;font-size:' + (size * FM_FONT.k).toFixed(2) + 'pt;transform:scaleX(' + sx.toFixed(3) + ')">' + fmEsc(text) + '</div>';
+}
+/** ค่าที่วางบนเส้นจุดไข่ปลาที่ระดับ y */
+function pfOn(x0, x1, y, size, text, align) { const h = size * 1.1; const top = y - 0.8 * h; return pfText(x0, top, x1, top + h, size, text, align); }
+/** ค่าในช่องตาราง (กึ่งกลางแนวตั้ง) */
+function pfCell(x0, x1, yT, yB, size, text, align) { const h = size * 1.1; const top = yT + (yB - yT - h) / 2 + h * 0.16; return pfText(x0, top, x1, top + h, size, text, align || 'c'); }
+/** ข้อความของแบบฟอร์ม (สีดำ) กึ่งกลางกรอบ */
+function pfLabel(xa, xb, ya, yb, size, bold, text, align) {
+  const w = fmWidth(text, size, bold), h = size * 1.25;
+  const x0 = align === 'l' ? xa : align === 'r' ? xb - w : (xa + xb) / 2 - w / 2;
+  const y0 = (ya + yb) / 2 - h / 2;
+  return fmRun(+x0.toFixed(2), +y0.toFixed(2), +(x0 + w).toFixed(2), +(y0 + h).toFixed(2), size, bold, 0, text);
+}
+function pfImg(src, x, y, w, h) { return '<img class="logo" src="' + src + '" style="left:' + x + 'pt;top:' + y + 'pt;width:' + w + 'pt;height:' + h + 'pt">'; }
+function pfPageCss(paper) {
+  const P = PF_PAPER[paper] || PF_PAPER.a4;
+  const fam = FM_FONT.family;
+  return '@page{size:' + P.css + ';margin:0}' +
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'html,body{margin:0;padding:0;background:#e9edf3}' +
+    '.page{position:relative;width:' + P.w + 'pt;height:' + P.h + 'pt;margin:16pt auto;background:#fff;overflow:hidden;box-shadow:0 4pt 18pt rgba(0,0,0,.18);font-family:"' + fam + '","Sarabun",sans-serif;color:#000}' +
+    '.r{position:absolute;white-space:nowrap;transform-origin:0 50%}.r.b{font-weight:700}.r.v{color:#0b2a6b}' +
+    '.dl{position:absolute;overflow:visible}.ln{position:absolute;height:0;border-top:solid #000}.lv{position:absolute;width:0;border-left:solid #000}.rf{position:absolute}' +
+    '.sb{position:absolute;border:0.75pt solid #000}.sb::after{content:"";position:absolute;left:0.6pt;top:0.6pt;right:-1.75pt;bottom:-1.75pt;border-right:1pt solid #000;border-bottom:1pt solid #000}' +
+    '.ck{position:absolute;overflow:visible}.logo{position:absolute;object-fit:contain}' +
+    '.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:10px;background:#0b2545;color:#fff;font:14px sans-serif}' +
+    '.bar button{font:inherit;padding:8px 16px;border-radius:8px;border:none;cursor:pointer}.bar .pr{background:#13a3a9;color:#fff;font-weight:600}' +
+    '@media print{html,body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;page-break-after:always;break-after:page}.page:last-child{page-break-after:auto;break-after:auto}}';
+}
+
+/* ---------- 2144 ใบรับรองการจ่ายเงิน ---------- */
+const PF2144_Y = [264.2, 282.5, 301.0, 320.0, 338.5, 357.0, 375.5, 394.0, 412.5, 431.5, 450.0, 468.5, 487.0, 505.5, 524.0, 543.0];
+const PF2144_X = [72.2, 135.8, 305.8, 391.2, 419.2, 523.2];
+function pf2144Pages(d) {
+  d = d || {};
+  const rows = (d.rows || []).filter(pfRowUsed);
+  const per = PF2144_Y.length - 1, n = Math.max(1, Math.ceil(rows.length / per));
+  const total = pfR2(rows.reduce((a, r) => a + (pfNum(r.amount) || 0), 0));
+  const X = PF2144_X, Y = PF2144_Y, out = [];
+  for (let p = 0; p < n; p++) {
+    let x = pfDraw(PF_L2144[0]);
+    x += pfText(140.3, 131.6, 334.0, 147.5, 16, d.fullName);
+    x += pfText(369.4, 131.6, 521.0, 147.5, 16, d.position);
+    x += pfText(89.2, 159.2, 337.9, 175.1, 16, d.department);
+    rows.slice(p * per, p * per + per).forEach((r, i) => {
+      const yT = Y[i], yB = Y[i + 1], m = pfSplit(pfNum(r.amount));
+      x += pfCell(X[0], X[1], yT, yB, 15, thDateShort(r.date));
+      x += pfCell(X[1], X[2], yT, yB, 15, r.item, 'l');
+      x += pfCell(X[2], X[3], yT, yB, 15, m.b, 'r') + pfCell(X[3], X[4], yT, yB, 15, m.s);
+      x += pfCell(X[4], X[5], yT, yB, 14, r.note, 'l');
+    });
+    if (p === n - 1 && rows.length) {
+      const m = pfSplit(total);
+      x += pfCell(X[2], X[3], 543.0, 561.2, 15, m.b, 'r') + pfCell(X[3], X[4], 543.0, 561.2, 15, m.s);
+      x += pfText(167.7, 563.7, 413.1, 579.7, 16, total > 0 ? '(' + bahtText(total) + ')' : '', 'c');
+    }
+    x += pfText(358.7, 647.2, 490.2, 663.1, 16, d.signName);
+    x += pfText(357.2, 666.7, 492.0, 682.7, 16, thDateLong(d.signDate));
+    if (n > 1) x += pfLabel(430, 523.4, 40, 56, 13, 0, 'แผ่นที่ ' + (p + 1) + '/' + n, 'r');
+    out.push(x);
+  }
+  return { pages: out, paper: 'a4' };
+}
+
+/* ---------- 2318 ใบรับรองการจ่ายเงินค่าพาหนะ (ต้นฉบับเป็นแบบพิมพ์สแกน: ออกแบบในหน่วย pt ของภาพสแกน 603 × 978 แล้วย่อ/ขยายตามกระดาษ) ---------- */
+const PF2318 = { W: 603, H: 978, X: [36.5, 96.2, 133.2, 269.5, 411.4, 465.1, 497.8, 576.0], RH: 19.96,
+  P1: { t1: 173.5, t2: 175.7, sp: 195.8, hb: 215.8, n: 35 }, P2: { t1: 105.4, t2: 107.5, sp: 127.3, hb: 147.4, n: 39 } };
+function pf2318Pages(d) {
+  d = d || {};
+  const paper = d.paper === 'fs' ? 'fs' : 'a4', P = PF_PAPER[paper];
+  const sx = P.w / PF2318.W, sy = P.h / PF2318.H, sf = Math.min(sx, sy);
+  const X = x => +(x * sx).toFixed(2), Y = y => +(y * sy).toFixed(2), F = s => +(s * sf).toFixed(2);
+  const rows = (d.rows || []).filter(pfRowUsed);
+  const pages = [];
+  let left = rows.slice();
+  const yearOf = () => { const r = rows.find(r => thParts(r.date)); return r ? String(thParts(r.date).y) : ''; };
+  const yr = yearOf();
+  do {
+    const first = !pages.length, G = first ? PF2318.P1 : PF2318.P2, C = PF2318.X;
+    const take = left.slice(0, G.n); left = left.slice(G.n);
+    const bot = G.hb + G.n * PF2318.RH;
+    let x = '';
+    if (first) {
+      x += pfImg(PF_LOGO2318, X(281.5), Y(37.9), X(86.2), Y(72.5));
+      x += fmRun(X(216), Y(118), X(258), Y(136), F(16), 1, 0, 'สำนักงาน');
+      x += fmDots(X(258.5), Y(118), X(426), Y(136));
+      x += pfText(X(259), Y(118), X(426), Y(136), F(15), d.office || PF_ORG);
+      x += fmRun(X(149), Y(139), X(490), Y(158), F(16.5), 1, 0, 'ใบรับรองการจ่ายเงินค่าพาหนะที่ได้ไปกิจการต่าง ๆ ตามรายละเอียดต่อไปนี้ คือ');
+      x += pfLabel(X(300), X(576), Y(941), Y(959), F(15), 1, '( แบบพิมพ์หมายเลข 2318 / 2547 )', 'r');
+    }
+    // เส้นตาราง: ขอบบนเส้นคู่ · ขอบนอกหนา · เส้นในบาง
+    x += pfLine(X(C[0]), Y(G.t1), X(C[7]), 1.3) + pfLine(X(C[0]), Y(G.t2), X(C[7]), 0.6);
+    x += pfLine(X(C[0]), Y(G.sp), X(C[2]), 0.6) + pfLine(X(C[4]), Y(G.sp), X(C[6]), 0.6);
+    x += pfLine(X(C[0]), Y(G.hb), X(C[7]), 0.7);
+    for (let i = 1; i < G.n; i++) x += pfLine(X(C[0]), Y(G.hb + i * PF2318.RH), X(C[7]), 0.45);
+    x += pfLine(X(C[0]), Y(bot), X(C[7]), 1.1);
+    x += pfVLine(X(C[0]), Y(G.t1), Y(bot), 1.1) + pfVLine(X(C[7]), Y(G.t1), Y(bot), 1.1);
+    [2, 3, 4, 6].forEach(i => { x += pfVLine(X(C[i]), Y(G.t2), Y(bot), 0.6); });
+    x += pfVLine(X(C[1]), Y(G.sp), Y(bot), 0.6) + pfVLine(X(C[5]), Y(G.sp), Y(bot), 0.6);
+    // หัวตาราง
+    x += fmRun(X(42), Y(G.t2 + 3), X(58), Y(G.sp - 2), F(15), 1, 0, 'พ.ศ.');
+    x += fmDots(X(59), Y(G.t2 + 3), X(127), Y(G.sp - 2));
+    x += pfText(X(60), Y(G.t2 + 3), X(127), Y(G.sp - 2), F(15), yr);
+    x += pfLabel(X(C[0]), X(C[1]), Y(G.sp), Y(G.hb), F(15), 1, 'เดือน') + pfLabel(X(C[1]), X(C[2]), Y(G.sp), Y(G.hb), F(15), 1, 'วันที่');
+    x += pfLabel(X(C[2]), X(C[3]), Y(G.t2), Y(G.hb), F(15), 1, 'ไปกิจการอย่างใด') + pfLabel(X(C[3]), X(C[4]), Y(G.t2), Y(G.hb), F(15), 1, 'รายการ และ พาหนะที่จ้าง');
+    x += pfLabel(X(C[4]), X(C[6]), Y(G.t2), Y(G.sp), F(15), 1, 'จำนวนเงิน');
+    x += pfLabel(X(C[4]), X(C[5]), Y(G.sp), Y(G.hb), F(15), 1, 'บาท') + pfLabel(X(C[5]), X(C[6]), Y(G.sp), Y(G.hb), F(15), 1, 'สต.');
+    x += pfLabel(X(C[6]), X(C[7]), Y(G.t2), Y(G.hb), F(15), 1, 'ลงนามผู้รับรอง');
+    take.forEach((r, i) => {
+      const yT = Y(G.hb + i * PF2318.RH), yB = Y(G.hb + (i + 1) * PF2318.RH), p = thParts(r.date), m = pfSplit(pfNum(r.amount)), fs = F(15);
+      x += pfCell(X(C[0]), X(C[1]), yT, yB, fs, p ? TH_MON_S[p.m] : '') + pfCell(X(C[1]), X(C[2]), yT, yB, fs, p ? p.d : '');
+      x += pfCell(X(C[2]), X(C[3]), yT, yB, fs, r.purpose, 'l') + pfCell(X(C[3]), X(C[4]), yT, yB, fs, r.item, 'l');
+      x += pfCell(X(C[4]), X(C[5]), yT, yB, fs, m.b, 'r') + pfCell(X(C[5]), X(C[6]), yT, yB, fs, m.s);
+    });
+    pages.push(x);
+  } while (left.length);
+  return { pages, paper };
+}
+
+/* ---------- 026 แบบรายงานการเดินทางไปปฏิบัติงาน ---------- */
+const PF026_IT_Y = [350.8, 372.2, 393.2, 411.8, 430.2, 448.8, 467.8, 486.0, 504.8, 523.2, 541.8, 560.2, 578.8, 597.2, 615.8, 634.2, 652.8, 671.2, 689.8, 708.2, 726.8, 745.2, 763.8, 782.2];
+const PF026_IT_X = [35.2, 108.8, 204.8, 283.2, 379.8, 574.2];
+/** แถวค่าใช้จ่ายหน้า 2: y ของเส้น · ตำแหน่งช่อง (ระดับ คน อัตรากลุ่ม วันละ วัน) */
+const PF026_EXP = {
+  alD: { y: [142.8, 160.8, 178.8], box: [52.1, 114.5], f: { level: [90.7, 205.0], persons: [233.5, 268.0], rate: [308.5, 354.4], days: [402.5, 433.0] } },
+  alF: { y: [214.8, 232.8, 250.8], box: [52.1, 186.6], f: { level: [90.7, 169.0], persons: [197.6, 219.8], group: [272.9, 304.0], rate: [327.2, 354.4], days: [411.9, 433.0] } },
+  loD: { y: [304.8, 322.8, 340.8], box: [52.1, 276.7], f: { level: [90.7, 169.0], persons: [197.6, 219.8], group: [272.9, 304.0], rate: [327.2, 354.4], days: [402.5, 433.0] } },
+  loF: { y: [376.8, 395.0, 413.0], box: [52.1, 348.8], f: { level: [90.7, 169.0], persons: [197.6, 219.8], group: [272.9, 304.0], rate: [327.2, 354.4], days: [411.9, 433.0] } }
+};
+const PF026_GROUPS = [['alD', 'ค่าเบี้ยเลี้ยงเดินทาง · ในประเทศ', 'บาท'], ['alF', 'ค่าเบี้ยเลี้ยงเดินทาง · ต่างประเทศ', 'เหรียญ'],
+  ['loD', 'ค่าเช่าที่พัก · ในประเทศ', 'บาท'], ['loF', 'ค่าเช่าที่พัก · ต่างประเทศ', 'เหรียญ']];
+/** ยอดเงินบาทของแถวค่าใช้จ่าย: ในประเทศ = คน × วันละ × วัน (ถ้ากรอกครบ) · ต่างประเทศ = ยอดบาทที่ผู้ใช้กรอก */
+function pf026RowAmt(g, r) {
+  if (!r) return NaN;
+  if (g === 'alD' || g === 'loD') {
+    const a = pfNum(r.persons), b = pfNum(r.rate), c = pfNum(r.days);
+    if (a > 0 && b > 0 && c > 0) return pfR2(a * b * c);
+  }
+  return pfNum(r.amount);
+}
+function pf026Total(d) {
+  const ex = (d && d.exp) || {};
+  let t = 0;
+  ['alD', 'alF', 'loD', 'loF'].forEach(g => (ex[g] || []).forEach(r => { const v = pf026RowAmt(g, r); if (v > 0) t += v; }));
+  ['veh', 'oth'].forEach(g => { const v = pfNum((ex[g] || {}).amount); if (v > 0) t += v; });
+  return pfR2(t);
+}
+function pf026Pages(d) {
+  d = d || {};
+  const ex = d.exp || {};
+  let a = pfDraw(PF_L026[0]) + pfImg(PF_LOGO026, 36, 25.9, 126.2, 44.9);
+  const dd = thParts(d.docDate), dep = thParts(d.departDate), ret = thParts(d.returnDate);
+  a += pfOn(450.0, 574.1, 96.8, 14, d.office);
+  if (dd) a += pfOn(342.9, 382.5, 116.2, 14, dd.d) + pfOn(405.5, 502.5, 116.2, 14, TH_MONTHS[dd.m]) + pfOn(523.3, 574.1, 116.2, 14, dd.y);
+  a += pfOn(108.5, 347.0, 145.2, 14, d.fullName) + pfOn(382.3, 574.1, 145.2, 14, d.position);
+  a += pfOn(156.0, 574.1, 164.8, 14, d.submitTo, 'l');
+  a += pfOn(118.1, 346.5, 184.2, 14, d.orderRef);
+  a += fmWrap(d.companions, [[418.1, 574.1, 184.2 - 12.3, 184.2 + 3.1, 14], [36.0, 574.1, 203.8 - 12.3, 203.8 + 3.1, 14], [36.0, 574.1, 223.0 - 12.3, 223.0 + 3.1, 14]], 14);
+  a += pfOn(105.8, 232.5, 242.2, 14, d.addrNo) + pfOn(252.9, 418.2, 242.2, 14, d.soi) + pfOn(438.4, 574.1, 242.2, 14, d.road);
+  a += pfOn(81.0, 232.5, 261.8, 14, d.subdistrict) + pfOn(279.0, 418.2, 261.8, 14, d.district) + pfOn(447.2, 574.1, 261.8, 14, d.province);
+  [[dep, d.departTime, 281.2], [ret, d.returnTime, 300.8]].forEach(t => {
+    if (t[0]) a += pfOn(66.7, 120.5, t[2], 14, t[0].d) + pfOn(144.0, 232.5, t[2], 14, TH_MONTHS[t[0].m]) + pfOn(255.0, 325.5, t[2], 14, t[0].y);
+    a += pfOn(348.0, 418.2, t[2], 14, pfTime(t[1]));
+  });
+  a += pfOn(138.8, 232.5, 320.0, 14, d.totalDays);
+  const X = PF026_IT_X, Y = PF026_IT_Y;
+  (d.rows || []).slice(0, 23).forEach((r, i) => {
+    if (!pfRowUsed(r)) return;
+    const yT = Y[i], yB = Y[i + 1];
+    a += pfCell(X[0], X[1], yT, yB, 13, r.fromPlace);
+    a += pfCell(X[1], 158.0, yT, yB, 13, thDateShort(r.fromDate)) + pfCell(158.0, X[2], yT, yB, 13, pfTime(r.fromTime));
+    a += pfCell(X[2], X[3], yT, yB, 13, r.toPlace);
+    a += pfCell(X[3], 333.0, yT, yB, 13, thDateShort(r.toDate)) + pfCell(333.0, X[4], yT, yB, 13, pfTime(r.toTime));
+    a += pfCell(X[4], X[5], yT, yB, 13, r.detail, 'l');
+  });
+  let b = pfDraw(PF_L026[1]);
+  const amt = (y, v, note) => {
+    const m = pfSplit(v);
+    return pfOn(459.1, 496.5, y, 13, m.b, 'r') + pfOn(505.0, 524.0, y, 13, m.s) + pfOn(531.0, 574.1, y, 12, note, 'l');
+  };
+  Object.keys(PF026_EXP).forEach(g => {
+    const G = PF026_EXP[g], rows = (ex[g] || []).slice(0, 3);
+    if (rows.some(pfRowUsed)) b += fmCheck(G.box[0] + 5.9, G.box[1] + 9.2, 9);
+    rows.forEach((r, i) => {
+      if (!pfRowUsed(r)) return;
+      const y = G.y[i];
+      Object.keys(G.f).forEach(k => { b += pfOn(G.f[k][0], G.f[k][1], y, 13, r[k], k === 'level' ? 'l' : 'c'); });
+      b += amt(y, pf026RowAmt(g, r), r.note);
+    });
+  });
+  const veh = ex.veh || {}, oth = ex.oth || {};
+  b += pfOn(92.0, 439.4, 431.0, 13, veh.detail, 'l') + amt(431.0, pfNum(veh.amount), veh.note);
+  b += pfOn(101.0, 439.4, 449.0, 13, oth.detail, 'l') + amt(449.0, pfNum(oth.amount), oth.note);
+  const total = pf026Total(d);
+  if (total > 0) { b += pfOn(65.4, 389.9, 475.0, 13, '(' + bahtText(total) + ')') + amt(475.8, total, ''); }
+  b += pfOn(189.5, 254.0, 520.8, 14, d.evidence);
+  b += pfOn(387.0, 517.4, 598.5, 14, d.signName);
+  const sd = thParts(d.signDate);
+  if (sd) b += pfOn(384.0, 425.3, 618.0, 14, sd.d) + pfOn(427.9, 474.9, 618.0, 14, TH_MON_S[sd.m]) + pfOn(477.4, 517.4, 618.0, 14, sd.y);
+  return { pages: [a, b], paper: 'a4' };
+}
+function pfPages(type, d) { return type === '2144' ? pf2144Pages(d) : type === '2318' ? pf2318Pages(d) : pf026Pages(d); }
+
+/** เปิดหน้าพิมพ์ (หน้าต่างใหม่ · ถ้าถูกบล็อกพิมพ์ผ่าน iframe) */
+async function pfPrint(type, d, win, auto) {
+  await fmPrepareFont();
+  const def = PF_DEF[type], r = pfPages(type, d || {}), P = PF_PAPER[r.paper];
+  const body = r.pages.map(p => '<div class="page">' + p + '</div>').join('');
+  const fontUrl = 'https:' + '/' + '/fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap';
+  const SC = 'scr' + 'ipt';
+  const ttl = def.name + (d && d.fullName ? ' ' + d.fullName : (d && Object.keys(d).length ? '' : ' (แบบเปล่า)'));
+  const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + fmEsc(ttl) + '</title><style>' + pfPageCss(r.paper) + '</style></head><body>' +
+    '<div class="bar"><span>' + fmEsc(def.name + ' (' + def.code + ')') + ' · กระดาษ ' + fmEsc(P.label) + ' · ขนาด 100% · ปิด "ส่วนหัวและส่วนท้าย" ของเบราว์เซอร์</span>' +
+    '<button class="pr" onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="window.close()">ปิด</button></div>' + body +
+    '<' + SC + '>(function(){var auto=' + (auto ? 'true' : 'false') + ',done=false;function fin(){if(done)return;done=true;' +
+    'var p=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();p.then(function(){if(auto)setTimeout(function(){window.print()},400)})}' +
+    'var l=document.createElement("link");l.rel="stylesheet";l.href="' + fontUrl + '";l.onload=fin;l.onerror=fin;document.head.appendChild(l);setTimeout(fin,3500)})();</' + SC + '></body></html>';
+  win = win || window.open('', '_blank');
+  if (win && !win.closed) { win.document.open(); win.document.write(html); win.document.close(); win.focus(); return; }
+  const fr = document.createElement('iframe');
+  fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(fr);
+  fr.srcdoc = html.replace('<div class="bar">', '<div class="bar" style="display:none">');
+  fr.onload = () => { setTimeout(() => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { toast('เปิดหน้าพิมพ์ไม่ได้ กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้', 'err'); } setTimeout(() => fr.remove(), 60000); }, 600); };
+  toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ จึงพิมพ์จากหน้านี้แทน', 'info');
+}
+
+/* ---------- ข้อมูลเริ่มต้นของแต่ละแบบ ---------- */
+function pfMe() {
+  const u = (isAdmin() && S.me) ? Object.assign({ kind: 'user' }, S.me) : S.user || {};
+  const name = u.firstNameTh ? ((u.prefixTh || '') + u.firstNameTh + ' ' + (u.lastNameTh || '')).trim() : (u.fullName || '');
+  return { name, position: u.firstNameTh || u.position ? posLevel(u) : '', department: u.department || '' };
+}
+function pfBlankRows(n, f) { return Array.from({ length: n }, () => f()); }
+function pfDefaults(type) {
+  const me = pfMe();
+  if (type === '2144') return { fullName: me.name, position: me.position, department: me.department, rows: pfBlankRows(3, () => ({ date: todayStr(), item: '', amount: '', note: '' })), signName: me.name, signDate: todayStr() };
+  if (type === '2318') return { office: PF_ORG, paper: 'a4', rows: pfBlankRows(3, () => ({ date: todayStr(), purpose: '', item: '', amount: '' })) };
+  const ex = {};
+  ['alD', 'alF', 'loD', 'loF'].forEach(g => { ex[g] = pfBlankRows(3, () => ({})); });
+  ex.veh = {}; ex.oth = {};
+  return { office: PF_ORG_S, docDate: todayStr(), fullName: me.name, position: me.position, submitTo: PF_TO, orderRef: '', companions: '',
+    addrNo: '', soi: '', road: '', subdistrict: '', district: '', province: '', departDate: '', departTime: '', returnDate: '', returnTime: '', totalDays: '',
+    rows: pfBlankRows(4, () => ({})), exp: ex, evidence: '', signName: me.name, signDate: '' };
+}
+/** ให้ข้อมูลมีโครงครบก่อนแสดงในหน้ากรอก (กันข้อมูลรุ่นเก่า/ไม่ครบ) */
+function pfNormalize(type, d) {
+  d = JSON.parse(JSON.stringify(d || {}));
+  if (!Array.isArray(d.rows)) d.rows = [];
+  if (type === '026') {
+    d.exp = d.exp && typeof d.exp === 'object' ? d.exp : {};
+    ['alD', 'alF', 'loD', 'loF'].forEach(g => { const a = Array.isArray(d.exp[g]) ? d.exp[g].slice(0, 3) : []; while (a.length < 3) a.push({}); d.exp[g] = a; });
+    ['veh', 'oth'].forEach(g => { if (!d.exp[g] || typeof d.exp[g] !== 'object') d.exp[g] = {}; });
+    if (!d.rows.length) d.rows = pfBlankRows(4, () => ({}));
+  } else if (!d.rows.length) d.rows = [{}];
+  return d;
+}
+
+/* ---------- หน้ารายการ ---------- */
+async function loadPrintForms() { S.pforms = await api('listPrintForms', S.token); }
+function renderPrintForms() { return S.pfm.mode === 'edit' ? pfEditorHtml() : pfListHtml(); }
+function pfTotalOf(r) { return r.formType === '026' ? pf026Total(r.data) : Number(r.total) || 0; }
+function pfListHtml() {
+  const A = isAdmin(), q = S.pfm.q, ft = S.pfm.ft;
+  const list = S.pforms.filter(r => (!ft || r.formType === ft) && match(q, r.title, r.fullName, r.username, (PF_DEF[r.formType] || {}).name, thDateShort(r.docDate)));
+  const cards = Object.keys(PF_DEF).map(k => { const f = PF_DEF[k]; return `
+    <div class="pf-card" style="${cvar(f.color)}">
+      <div class="pf-card-h"><div class="doc-ic"><span class="msr">${f.icon}</span></div><div><b>${esc(f.name)}</b><small>${esc(f.code)}</small></div></div>
+      <p>${esc(f.desc)}</p>
+      <div class="pf-card-a"><button class="btn btn-light btn-sm" data-action="pfBlank" data-type="${k}"><span class="msr">print</span>พิมพ์แบบเปล่า</button>
+        <button class="btn btn-primary btn-sm" data-action="pfNew" data-type="${k}"><span class="msr">edit_document</span>กรอกแบบฟอร์ม</button></div>
+    </div>`; }).join('') + (canSee('forms') ? `
+    <div class="pf-card" style="${cvar('orange')}">
+      <div class="pf-card-h"><div class="doc-ic"><span class="msr">flight_takeoff</span></div><div><b>${esc(navName('forms'))}</b><small>FM-HRD-008</small></div></div>
+      <p>แบบฟอร์มขออนุมัติเข้าร่วมดูงาน ฝึกอบรม สัมมนา ประชุม หรือเป็นวิทยากร (อยู่ในเมนูเดิม)</p>
+      <div class="pf-card-a"><button class="btn btn-light btn-sm" data-go="forms"><span class="msr">arrow_forward</span>ไปที่เมนูนี้</button></div>
+    </div>` : '');
+  return `
+  <div class="req-note"><span class="msr">info</span><div>เลือกแบบฟอร์ม กรอกข้อมูล แล้วกด <b>บันทึกและพิมพ์</b> · หน้าพิมพ์มีขนาดและตำแหน่งตรงกับต้นฉบับ พิมพ์ลงกระดาษหรือเลือก <b>"บันทึกเป็น PDF"</b> ได้ · ช่องลายมือชื่อเว้นไว้ลงนามด้วยปากกา</div></div>
+  <div class="pf-cards">${cards}</div>
+  <div class="toolbar" style="margin-top:22px">
+    <div class="search"><span class="msr">search</span><input id="pfQ" placeholder="ค้นหารายการ ${A ? 'ชื่อผู้กรอก ' : ''}..." value="${esc(q)}"></div>
+    <select class="input" id="pfFt" style="max-width:260px"><option value="">ทุกแบบฟอร์ม</option>${Object.keys(PF_DEF).map(k => `<option value="${k}"${ft === k ? ' selected' : ''}>${esc(PF_DEF[k].name)}</option>`).join('')}</select>
+  </div>
+  <div class="card"><div class="card-h"><h3><span class="msr">folder_open</span>แบบฟอร์มที่บันทึกไว้${A ? ' (ทุกคน)' : ''}</h3><span class="muted small">${list.length} ฉบับ</span></div>
+  ${list.length ? `<div class="table-wrap"><table class="tbl" id="pfTable">
+    <thead><tr><th>แบบฟอร์ม / รายการ</th><th>วันที่</th><th style="text-align:right">ยอดเงิน (บาท)</th>${A ? '<th>ผู้กรอก</th>' : ''}<th>บันทึกล่าสุด</th><th></th></tr></thead>
+    <tbody>${list.map(r => { const f = PF_DEF[r.formType] || { name: r.formType, icon: 'description', color: 'slate' }; const tot = pfTotalOf(r); return `<tr>
+      <td><div class="t-main"><div class="doc-ic" style="${cvar(f.color)}"><span class="msr">${f.icon}</span></div>
+        <div><a class="doc-link" data-action="pfPrint" data-id="${esc(r.id)}" title="คลิกเพื่อพิมพ์">${esc(r.title || f.name)}</a><small>${esc(f.name)}</small></div></div></td>
+      <td style="white-space:nowrap">${esc(thDateShort(r.docDate) || '-')}</td>
+      <td style="text-align:right;white-space:nowrap">${tot > 0 ? esc(pfFmt(tot)) : '-'}</td>
+      ${A ? `<td>${esc(r.fullName || '-')}<br><small class="muted">@${esc(r.username)}</small></td>` : ''}
+      <td class="muted small">${timeAgo(r.updatedAt)}</td>
+      <td><div class="actions">
+        <button class="icon-btn" data-action="pfPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>
+        <button class="icon-btn" data-action="pfEdit" data-id="${esc(r.id)}" title="แก้ไข"><span class="msr">edit</span></button>
+        <button class="icon-btn" data-action="pfCopy" data-id="${esc(r.id)}" title="คัดลอกเป็นฉบับใหม่"><span class="msr">content_copy</span></button>
+        <button class="icon-btn danger" data-action="pfDel" data-id="${esc(r.id)}" title="ลบ"><span class="msr">delete</span></button>
+      </div></td></tr>`; }).join('')}</tbody></table></div>`
+    : emptyState('print', S.pforms.length ? 'ไม่พบแบบฟอร์ม' : 'ยังไม่มีแบบฟอร์มที่บันทึกไว้', S.pforms.length ? 'ลองเปลี่ยนคำค้นหาหรือชนิดแบบฟอร์ม' : 'เลือกแบบฟอร์มด้านบนแล้วกด "กรอกแบบฟอร์ม"')}</div>`;
+}
+
+/* ---------- หน้ากรอก ---------- */
+function pfGet(path) { return String(path).split('.').reduce((o, k) => (o == null ? undefined : o[k]), S.pfm.data); }
+function pfSet(path, v) {
+  const ks = String(path).split('.');
+  let o = S.pfm.data;
+  ks.slice(0, -1).forEach((k, i) => { if (o[k] == null || typeof o[k] !== 'object') o[k] = /^[0-9]+$/.test(ks[i + 1]) ? [] : {}; o = o[k]; });
+  o[ks[ks.length - 1]] = v;
+}
+function pfv(path) { const v = pfGet(path); return v == null ? '' : v; }
+function pfIn(path, label, o) {
+  o = o || {};
+  return `<label class="field ${o.cls || ''}"><span>${esc(label)}${o.req ? ' <span class="req">*</span>' : ''}</span>
+    <input class="input${o.num ? ' pf-num' : ''}" name="${path}" type="${o.type || 'text'}" value="${esc(pfv(path))}" placeholder="${esc(o.ph || '')}"${o.max ? ` maxlength="${o.max}"` : ''}${o.mode ? ` inputmode="${o.mode}"` : ''}${o.list ? ` list="${o.list}"` : ''}>${o.hint ? `<small class="hint">${o.hint}</small>` : ''}</label>`;
+}
+function pfCellIn(path, o) {
+  o = o || {};
+  return `<input class="input${o.num ? ' pf-num' : ''}" name="${path}" type="${o.type || 'text'}" value="${esc(pfv(path))}" placeholder="${esc(o.ph || '')}"${o.max ? ` maxlength="${o.max}"` : ''}${o.mode ? ` inputmode="${o.mode}"` : ''} aria-label="${esc(o.label || '')}">`;
+}
+function pfSec(icon, title, body, extra) { return `<div class="card req-sec"><div class="card-h"><h3><span class="msr">${icon}</span>${title}</h3>${extra || ''}</div><div class="card-b">${body}</div></div>`; }
+function pfRowsTable(cols, max, addLabel, wide) {
+  const rows = S.pfm.data.rows || [];
+  return `<div class="table-wrap pf-rows${wide ? ' wide' : ''}"><table class="tbl"><thead><tr><th style="width:36px">#</th>${cols.map(c => `<th style="${c.w ? 'width:' + c.w : ''}">${esc(c.label)}</th>`).join('')}<th style="width:44px"></th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr><td class="muted">${i + 1}</td>${cols.map(c => `<td>${c.out ? `<span class="pf-out" data-out="${c.out}" data-i="${i}">${esc(c.show(i))}</span>` : pfCellIn('rows.' + i + '.' + c.k, c)}</td>`).join('')}
+      <td><button type="button" class="icon-btn danger" data-action="pfRowDel" data-i="${i}" title="ลบแถวนี้"><span class="msr">close</span></button></td></tr>`).join('')}</tbody></table></div>
+    <div class="pf-rows-foot"><button type="button" class="btn btn-light btn-sm" data-action="pfRowAdd"${rows.length >= max ? ' disabled' : ''}><span class="msr">add</span>${esc(addLabel || 'เพิ่มแถว')}</button>
+      <span class="muted small">${rows.length}/${max} แถว</span></div>`;
+}
+function pfTotalBox() {
+  return `<div class="pf-total"><div><small>รวมทั้งสิ้น</small><b data-out="total">0.00</b> บาท</div><div class="pf-words" data-out="words"></div></div>`;
+}
+function pfEditorHtml() {
+  const t = S.pfm.type, f = PF_DEF[t];
+  const head = `<div class="pf-ed-head" style="${cvar(f.color)}"><div class="doc-ic"><span class="msr">${f.icon}</span></div><div><b>${esc(f.name)}</b><small>${esc(f.code)} · ${S.pfm.id ? 'แก้ไขฉบับที่บันทึกไว้' : 'ฉบับใหม่'}</small></div></div>`;
+  const body = t === '2144' ? pf2144Ed() : t === '2318' ? pf2318Ed() : pf026Ed();
+  return `${head}<form id="pfForm" onsubmit="return false" autocomplete="off">${body}</form>
+  <div class="req-actions">
+    <button class="btn btn-light" data-action="pfCancel">ยกเลิก</button>
+    <button class="btn btn-light" data-action="pfPreview"><span class="msr">visibility</span>ดูตัวอย่างก่อนพิมพ์</button>
+    <button class="btn btn-light" data-action="pfSave"><span class="msr">save</span>บันทึก</button>
+    <button class="btn btn-primary" data-action="pfSavePrint"><span class="spinner"></span><span class="msr">print</span><span class="btn-label">บันทึกและพิมพ์</span></button>
+  </div>`;
+}
+function pf2144Ed() {
+  return pfSec('badge', 'ผู้รับรอง (ข้าพเจ้า)', `<div class="req-grid">
+      ${pfIn('fullName', 'ชื่อ-นามสกุล', { cls: 'c2', req: true, max: 120 })}
+      ${pfIn('position', 'ตำแหน่ง', { cls: 'c2', max: 120 })}
+      ${pfIn('department', 'ฝ่าย', { cls: 'c2', max: 120 })}
+      <div class="field c2"><span>สำนักงาน</span><div class="pf-fixed">${esc(PF_ORG)}</div></div></div>`) +
+    pfSec('receipt_long', 'รายการที่จ่ายเงิน', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>หมายเหตุ</b> ให้ระบุเหตุผลที่ไม่อาจเรียกใบเสร็จรับเงินได้ · หน้าละ 15 รายการ ถ้าเกินระบบจะพิมพ์หน้าต่อให้อัตโนมัติ (รวมทั้งสิ้นอยู่หน้าสุดท้าย)</p>` +
+      pfRowsTable([{ k: 'date', label: 'วันที่จ่ายเงิน', type: 'date', w: '160px' }, { k: 'item', label: 'รายการ', max: 120 },
+        { k: 'amount', label: 'จำนวนเงิน (บาท)', num: 1, mode: 'decimal', ph: '0.00', w: '140px' }, { k: 'note', label: 'หมายเหตุ*', max: 80, w: '24%' }], PF_MAX['2144'], 'เพิ่มรายการ') + pfTotalBox()) +
+    pfSec('draw', 'ลงชื่อผู้รับรอง (ลงลายมือชื่อด้วยปากกาหลังพิมพ์)', `<div class="req-grid">
+      ${pfIn('signName', 'ชื่อในวงเล็บใต้ลายมือชื่อ', { cls: 'c2', max: 120 })}
+      ${pfIn('signDate', 'วันที่', { type: 'date', hint: 'เว้นว่างได้ ถ้าต้องการเขียนเอง' })}</div>`);
+}
+function pf2318Ed() {
+  const d = S.pfm.data;
+  return pfSec('description', 'ข้อมูลหัวแบบฟอร์ม', `<div class="req-grid">
+      ${pfIn('office', 'สำนักงาน', { cls: 'c2', max: 120 })}
+      <label class="field"><span>ขนาดกระดาษ</span><select class="input" name="paper">${Object.keys(PF_PAPER).map(k => `<option value="${k}"${(d.paper || 'a4') === k ? ' selected' : ''}>${esc(PF_PAPER[k].label)}</option>`).join('')}</select></label>
+      <div class="field"><span>พ.ศ. (ตามวันที่ในรายการ)</span><div class="pf-fixed" data-out="year">-</div></div></div>
+      <div class="pf-warn hidden" data-out="yearWarn"><span class="msr">warning</span><span>มีรายการต่าง พ.ศ. กัน · แบบฟอร์มนี้มีช่อง พ.ศ. ช่องเดียว แนะนำให้แยกเป็นฉบับละ 1 ปี</span></div>`) +
+    pfSec('directions_bus', 'รายการค่าพาหนะ', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>ลงนามผู้รับรอง</b> ในแบบฟอร์มเว้นว่างไว้ลงนามด้วยปากกาทุกแถว · หน้าแรก 35 รายการ หน้าถัดไปหน้าละ 39 รายการ</p>` +
+      pfRowsTable([{ k: 'date', label: 'วันที่', type: 'date', w: '160px' }, { k: 'purpose', label: 'ไปกิจการอย่างใด', max: 100 },
+        { k: 'item', label: 'รายการ และ พาหนะที่จ้าง', max: 100 }, { k: 'amount', label: 'จำนวนเงิน (บาท)', num: 1, mode: 'decimal', ph: '0.00', w: '140px' }], PF_MAX['2318'], 'เพิ่มรายการ') + pfTotalBox().replace('รวมทั้งสิ้น', 'รวม (แสดงบนหน้าจอเท่านั้น · ต้นฉบับไม่มีแถวรวม)'));
+}
+function pf026Ed() {
+  const canImp = canSee('forms');
+  const expRows = (g, foreign) => {
+    const cur = PF026_GROUPS.find(x => x[0] === g)[2], hasGroup = g !== 'alD';
+    return `<table class="tbl pf-exp"><thead><tr><th>ระดับ</th><th style="width:80px">จำนวน (คน)</th>${hasGroup ? '<th style="width:90px">อัตรากลุ่ม</th>' : ''}<th style="width:110px">วันละ (${cur})</th><th style="width:80px">จำนวน (วัน)</th>
+      <th style="width:150px">จำนวนเงิน (บาท)</th><th>หมายเหตุ</th></tr></thead><tbody>${[0, 1, 2].map(i => { const p = 'exp.' + g + '.' + i + '.'; return `<tr>
+      <td>${pfCellIn(p + 'level', { max: 40, label: 'ระดับ' })}</td><td>${pfCellIn(p + 'persons', { num: 1, mode: 'numeric', max: 4, label: 'จำนวนคน' })}</td>
+      ${hasGroup ? `<td>${pfCellIn(p + 'group', { max: 10, label: 'อัตรากลุ่ม' })}</td>` : ''}
+      <td>${pfCellIn(p + 'rate', { num: 1, mode: 'decimal', max: 12, label: 'วันละ' })}</td><td>${pfCellIn(p + 'days', { num: 1, mode: 'numeric', max: 4, label: 'จำนวนวัน' })}</td>
+      <td>${foreign ? pfCellIn(p + 'amount', { num: 1, mode: 'decimal', ph: 'กรอกยอดเป็นบาท', label: 'จำนวนเงินบาท' }) + `<small class="hint" data-out="usd" data-g="${g}" data-i="${i}"></small>` : `<span class="pf-out" data-out="amt" data-g="${g}" data-i="${i}">-</span>`}</td>
+      <td>${pfCellIn(p + 'note', { max: 40, label: 'หมายเหตุ' })}</td></tr>`; }).join('')}</tbody></table>`;
+  };
+  return pfSec('description', 'หัวแบบฟอร์ม', `<div class="req-grid">
+      ${pfIn('office', 'ที่ทำการ', { cls: 'c2', max: 80 })}
+      ${pfIn('docDate', 'วันที่เขียนรายงาน', { type: 'date' })}</div>`) +
+    pfSec('badge', 'ผู้เดินทาง', `<div class="req-grid">
+      ${pfIn('fullName', 'ข้าพเจ้า (ชื่อ-นามสกุล)', { cls: 'c2', req: true, max: 120 })}
+      ${pfIn('position', 'ตำแหน่ง', { cls: 'c2', max: 120 })}
+      ${pfIn('submitTo', 'ขอทำรายงานการเดินทางยื่นต่อ', { cls: 'c4', max: 150 })}
+      ${pfIn('orderRef', 'ตามคำสั่ง', { cls: 'c2', max: 120, ph: 'เช่น ที่ ... ลงวันที่ ...' })}
+      <label class="field c4"><span>ข้าพเจ้าพร้อมด้วย (ชื่อผู้ร่วมเดินทาง ถ้ามี)</span><textarea class="input" name="companions" rows="2" maxlength="400" style="min-height:64px">${esc(pfv('companions'))}</textarea><small class="hint">พื้นที่ในแบบฟอร์มประมาณ 2 บรรทัดครึ่ง</small></label>
+    </div>`, canImp ? '<button type="button" class="btn btn-light btn-sm" data-action="pfImport008"><span class="msr">download</span>ดึงจากแบบขออนุมัติไปอบรม (FM-HRD-008)</button>' : '') +
+    pfSec('home', 'ออกจากที่พักและกลับถึงที่พัก', `<div class="req-grid">
+      ${pfIn('addrNo', 'ที่พักเลขที่', { max: 40 })}${pfIn('soi', 'ซอย', { max: 60 })}${pfIn('road', 'ถนน', { cls: 'c2', max: 60 })}
+      ${pfIn('subdistrict', 'ตำบล/แขวง', { max: 60 })}${pfIn('district', 'อำเภอ/เขต', { max: 60 })}${pfIn('province', 'จังหวัด', { cls: 'c2', max: 60 })}
+      ${pfIn('departDate', 'ออกจากที่พัก วันที่', { type: 'date' })}${pfIn('departTime', 'เวลา (นาฬิกา)', { type: 'time' })}
+      ${pfIn('returnDate', 'กลับถึงที่พัก วันที่', { type: 'date' })}${pfIn('returnTime', 'เวลา (นาฬิกา)', { type: 'time' })}
+      ${pfIn('totalDays', 'รวมเวลาไปปฏิบัติงานครั้งนี้ (วัน)', { mode: 'decimal', max: 10, hint: 'คำนวณจากวันที่ให้อัตโนมัติ แก้ได้' })}
+    </div><p class="small muted" style="margin:10px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">lock</span> ที่อยู่เก็บไว้กับแบบฟอร์มฉบับนี้เท่านั้น (เจ้าของและผู้ดูแลระบบเห็น) ไม่บันทึกลงข้อมูลส่วนตัว</p>`,
+      '<button type="button" class="btn btn-light btn-sm" data-action="pfLastAddr"><span class="msr">history</span>ใช้ที่อยู่จากฉบับก่อน</button>') +
+    pfSec('route', 'รายละเอียดการเดินทาง (สูงสุด 23 แถว ตามแบบฟอร์ม)', pfRowsTable([
+      { k: 'fromPlace', label: 'ออกจาก', max: 40, w: '140px' }, { k: 'fromDate', label: 'วัน', type: 'date', w: '150px' }, { k: 'fromTime', label: 'เวลา', type: 'time', w: '110px' },
+      { k: 'toPlace', label: 'ถึง', max: 40, w: '140px' }, { k: 'toDate', label: 'วัน', type: 'date', w: '150px' }, { k: 'toTime', label: 'เวลา', type: 'time', w: '110px' },
+      { k: 'detail', label: 'รายการเดินทางและปฏิบัติงานประจำวัน', max: 90, w: '280px' }], PF_MAX['026'], 'เพิ่มแถว', true)) +
+    pfSec('payments', 'ค่าใช้จ่ายที่ขอเบิก', `<p class="small muted" style="margin:0 0 6px">ในประเทศ: ระบบคูณ <b>คน × วันละ × วัน</b> ให้ · ต่างประเทศ: กรอกยอดเงินเป็นบาทเอง (ระบบแสดงยอดเป็นเหรียญไว้ให้ตรวจ) · ระบบไม่ได้ตั้งอัตราไว้ล่วงหน้า กรุณาตรวจอัตราตามระเบียบ</p>` +
+      PF026_GROUPS.map(g => `<h4 class="pf-sub">${['alD', 'alF'].indexOf(g[0]) > -1 ? '1.' : '2.'} ${esc(g[1])}</h4>${expRows(g[0], g[0].slice(-1) === 'F')}`).join('') +
+      `<h4 class="pf-sub">3. ค่าพาหนะ</h4><div class="req-grid">${pfIn('exp.veh.detail', 'รายละเอียด', { cls: 'c2', max: 120 })}${pfIn('exp.veh.amount', 'จำนวนเงิน (บาท)', { num: 1, mode: 'decimal', ph: '0.00' })}${pfIn('exp.veh.note', 'หมายเหตุ', { max: 40 })}</div>
+      <h4 class="pf-sub">4. ค่าใช้จ่ายอื่น</h4><div class="req-grid">${pfIn('exp.oth.detail', 'รายละเอียด', { cls: 'c2', max: 120 })}${pfIn('exp.oth.amount', 'จำนวนเงิน (บาท)', { num: 1, mode: 'decimal', ph: '0.00' })}${pfIn('exp.oth.note', 'หมายเหตุ', { max: 40 })}</div>` +
+      pfTotalBox() + `<div class="req-grid" style="margin-top:12px">${pfIn('evidence', 'ได้ส่งหลักฐานการจ่ายมาด้วย (ฉบับ)', { mode: 'numeric', max: 6 })}</div>`) +
+    pfSec('draw', 'ลงชื่อผู้ขอเบิก (ลงลายมือชื่อด้วยปากกาหลังพิมพ์)', `<div class="req-grid">
+      ${pfIn('signName', 'ชื่อในวงเล็บใต้ลายมือชื่อ', { cls: 'c2', max: 120 })}
+      ${pfIn('signDate', 'วันที่', { type: 'date', hint: 'เว้นว่างได้ ถ้าต้องการเขียนเอง' })}</div>
+      <p class="small muted" style="margin:10px 0 0">ส่วน "เจ้าหน้าที่ผู้ตรวจ" และ "ผู้อำนวยการ อนุญาต" เว้นว่างไว้ตามต้นฉบับ</p>`);
+}
+/** อัปเดตยอดรวม/ตัวเลขที่คำนวณ บนหน้ากรอก โดยไม่วาดหน้าใหม่ (ไม่เสียตำแหน่งเคอร์เซอร์) */
+function pfRefreshOut() {
+  const t = S.pfm.type, d = S.pfm.data, f = $('#pfForm'); if (!f) return;
+  let total = 0;
+  if (t === '026') {
+    total = pf026Total(d);
+    $$('[data-out=amt]', f).forEach(el => { const v = pf026RowAmt(el.dataset.g, ((d.exp || {})[el.dataset.g] || [])[+el.dataset.i]); el.textContent = v > 0 ? pfFmt(v) : '-'; });
+    $$('[data-out=usd]', f).forEach(el => {
+      const r = ((d.exp || {})[el.dataset.g] || [])[+el.dataset.i] || {}, a = pfNum(r.persons), b = pfNum(r.rate), c = pfNum(r.days);
+      el.textContent = a > 0 && b > 0 && c > 0 ? '= ' + pfFmt(pfR2(a * b * c)) + ' เหรียญ' : '';
+    });
+  } else total = pfR2((d.rows || []).reduce((a, r) => a + (pfNum(r && r.amount) || 0), 0));
+  const tt = $('[data-out=total]', f); if (tt) tt.textContent = pfFmt(total);
+  const w = $('[data-out=words]', f); if (w) w.textContent = total > 0 ? '(' + bahtText(total) + ')' : '';
+  if (t === '2318') {
+    const ys = Array.from(new Set((d.rows || []).map(r => thParts(r && r.date)).filter(Boolean).map(p => p.y)));
+    const y = $('[data-out=year]', f); if (y) y.textContent = ys.length ? ys.join(', ') : '-';
+    const yw = $('[data-out=yearWarn]', f); if (yw) yw.classList.toggle('hidden', ys.length < 2);
+  }
+}
+function onPfInput(e) {
+  const t = e.target; if (!t.name) return;
+  const d = S.pfm.data;
+  const before = pfv(t.name);
+  pfSet(t.name, t.value);
+  t.classList.remove('req-field-err');
+  if (t.name === 'fullName' && (d.signName || '') === before) { d.signName = t.value; const s = $('#pfForm [name=signName]'); if (s) s.value = t.value; }
+  if (t.name === 'signName') S.pfm.touched.signName = true;
+  if (S.pfm.type === '026') {
+    if (t.name === 'totalDays') S.pfm.touched.totalDays = true;
+    if ((t.name === 'departDate' || t.name === 'returnDate')) {
+      if (t.name === 'departDate' && d.departDate && (!d.returnDate || d.returnDate < d.departDate)) { d.returnDate = d.departDate; const r = $('#pfForm [name=returnDate]'); if (r) r.value = d.returnDate; }
+      if (!S.pfm.touched.totalDays) { d.totalDays = pfDaysBetween(d.departDate, d.returnDate); const td = $('#pfForm [name=totalDays]'); if (td) td.value = d.totalDays; }
+    }
+  }
+  if (t.classList.contains('pf-num') && !pfMoneyOk(t.value) && !/persons|days$/.test(t.name)) t.classList.add('req-field-err');
+  pfRefreshOut();
+}
+function pfReadForm() {
+  $$('#pfForm input[name],#pfForm select[name],#pfForm textarea[name]').forEach(el => pfSet(el.name, el.value));
+  return S.pfm.data;
+}
+function pfValidate() {
+  const t = S.pfm.type, d = pfReadForm(), miss = [];
+  $$('#pfForm .req-field-err').forEach(el => el.classList.remove('req-field-err'));
+  const mark = n => { const el = $('#pfForm [name="' + n + '"]'); if (el) el.classList.add('req-field-err'); };
+  if ((t === '2144' || t === '026') && !String(d.fullName || '').trim()) { miss.push('ชื่อ-นามสกุล'); mark('fullName'); }
+  if (t !== '026') {
+    const used = (d.rows || []).map((r, i) => ({ r, i })).filter(x => pfRowUsed(Object.assign({}, x.r, { date: '' })));
+    if (!used.length) miss.push('รายการอย่างน้อย 1 รายการ');
+    used.forEach(x => {
+      const p = 'rows.' + x.i + '.';
+      if (!x.r.date) { mark(p + 'date'); miss.push('วันที่ของรายการที่ ' + (x.i + 1)); }
+      if (!String(t === '2144' ? x.r.item || '' : (x.r.purpose || '') + (x.r.item || '')).trim()) { mark(p + (t === '2144' ? 'item' : 'purpose')); miss.push('รายการที่ ' + (x.i + 1)); }
+      if (!(pfNum(x.r.amount) > 0) || !pfMoneyOk(x.r.amount)) { mark(p + 'amount'); miss.push('จำนวนเงินของรายการที่ ' + (x.i + 1)); }
+    });
+  } else {
+    if (d.departDate && d.returnDate && d.returnDate < d.departDate) { mark('returnDate'); miss.push('วันที่กลับต้องไม่ก่อนวันที่ออกเดินทาง'); }
+    $$('#pfForm .pf-num').forEach(el => { if (/amount|rate/.test(el.name) && !pfMoneyOk(el.value)) { el.classList.add('req-field-err'); miss.push('จำนวนเงินต้องเป็นตัวเลข'); } });
+  }
+  if (miss.length) {
+    const u = Array.from(new Set(miss));
+    toast('กรุณาตรวจ: ' + u.slice(0, 4).join(', ') + (u.length > 4 ? ' และอีก ' + (u.length - 4) + ' จุด' : ''), 'err');
+    const first = $('#pfForm .req-field-err'); if (first) first.focus();
+    return false;
+  }
+  return true;
+}
+/** ข้อมูลที่ส่งไปบันทึก: ตัดแถวว่างออก · ใส่ยอดที่คำนวณของแถวในประเทศ */
+function pfPayload() {
+  const t = S.pfm.type, d = JSON.parse(JSON.stringify(pfReadForm()));
+  if (t === '026') {
+    d.rows = (d.rows || []).filter(pfRowUsed);
+    ['alD', 'loD'].forEach(g => (d.exp[g] || []).forEach(r => { const v = pf026RowAmt(g, r); r.amount = v > 0 ? String(v) : (r.amount || ''); }));
+  } else d.rows = (d.rows || []).filter(r => pfRowUsed(Object.assign({}, r, { date: '' })));
+  return d;
+}
+function pfOpen(type, id, data) {
+  S.pfm = { mode: 'edit', type, id: id || null, data: pfNormalize(type, data || pfDefaults(type)), q: S.pfm.q, ft: S.pfm.ft, touched: id ? { totalDays: true, signName: true } : {} };
+  render(); window.scrollTo(0, 0); setTimeout(pfRefreshOut, 0);
+}
+async function pfSave(andPrint) {
+  if (!pfValidate()) return;
+  if (!(await ask(ASK.save(!!S.pfm.id)))) return;
+  const type = S.pfm.type, d = pfPayload();
+  const btn = andPrint ? $('[data-action=pfSavePrint]') : null;
+  const win = andPrint ? openPrintWindow() : null;
+  if (btn) setBtnLoading(btn, true); else loader(true);
+  try {
+    const r = await api('savePrintForm', S.token, { id: S.pfm.id, formType: type, data: d });
+    S.pforms = r.list;
+    toast(S.pfm.id ? 'บันทึกการแก้ไขแล้ว' : 'บันทึกแบบฟอร์มแล้ว');
+    S.pfm = { mode: 'list', type: '', id: null, data: {}, q: S.pfm.q, ft: S.pfm.ft, touched: {} };
+    render();
+    if (andPrint) await pfPrint(type, d, win, true);
+  } catch (e) { if (win) win.close(); toast(e.message, 'err'); }
+  finally { if (btn) setBtnLoading(btn, false); loader(false); }
+}
+async function pfImport008() {
+  try { if (!S.requests || !S.requests.length) { loader(true); await loadRequests(); } } catch (e) { toast(e.message, 'err'); return; } finally { loader(false); }
+  const list = (S.requests || []).filter(r => r.userKind === 'user' || !isAdmin()).slice(0, 30);
+  if (!list.length) return toast('ยังไม่มีแบบขออนุมัติไปอบรม (FM-HRD-008) ที่บันทึกไว้', 'info');
+  openModal({
+    title: 'ดึงข้อมูลจากแบบขออนุมัติไปอบรม', icon: 'download', okText: 'ดึงข้อมูล',
+    body: `<p class="small muted" style="margin-top:0">ระบบจะเติม <b>วันที่ออกเดินทาง–กลับ</b> และ <b>เรื่อง/สถานที่</b> ในแถวแรกของรายละเอียดการเดินทาง (ไม่ดึงค่าใช้จ่าย)</p>
+      <div class="pf-pick">${list.map((r, i) => `<label class="check-field"><input type="radio" name="pf008" value="${esc(r.id)}"${i ? '' : ' checked'}><span><b>${esc(r.subject)}</b><small class="hint">${esc(thRange(r.startDate, r.endDate))} · ${esc(r.place || '-')}${isAdmin() ? ' · ' + esc(r.fullName) : ''}</small></span></label>`).join('')}</div>`,
+    onOk: () => {
+      const el = $('#mBody input[name=pf008]:checked'), r = el && list.find(x => x.id === el.value);
+      if (!r) return;
+      pfReadForm();
+      const d = S.pfm.data;
+      d.departDate = r.startDate || d.departDate; d.returnDate = r.endDate || r.startDate || d.returnDate;
+      d.totalDays = pfDaysBetween(d.departDate, d.returnDate); S.pfm.touched.totalDays = false;
+      const row = (d.rows[0] = d.rows[0] || {});
+      row.detail = [r.subject, r.place ? 'ณ ' + r.place : ''].filter(Boolean).join(' ');
+      row.fromDate = row.fromDate || r.startDate; row.toDate = row.toDate || r.startDate;
+      render(); setTimeout(pfRefreshOut, 0);
+      toast('ดึงข้อมูลแล้ว กรุณาตรวจและแก้ไขให้ถูกต้อง');
+    }
+  });
+}
+function pfLastAddr() {
+  const keys = ['addrNo', 'soi', 'road', 'subdistrict', 'district', 'province'];
+  const last = S.pforms.find(r => r.formType === '026' && r.mine && r.id !== S.pfm.id && keys.some(k => String((r.data || {})[k] || '').trim()));
+  if (!last) return toast('ยังไม่มีฉบับก่อนที่กรอกที่อยู่ไว้', 'info');
+  pfReadForm();
+  keys.forEach(k => { S.pfm.data[k] = last.data[k] || ''; const el = $('#pfForm [name=' + k + ']'); if (el) el.value = S.pfm.data[k]; });
+  toast('ใช้ที่อยู่จากฉบับวันที่ ' + (thDateShort(last.docDate) || '-') + ' แล้ว');
+}
+function pfAction(act, d) {
+  const find = () => S.pforms.find(x => x.id === d.id);
+  switch (act) {
+    case 'pfNew': return pfOpen(d.type);
+    case 'pfBlank': { const w = openPrintWindow(); return pfPrint(d.type, {}, w, false); }
+    case 'pfEdit': { const r = find(); if (r) pfOpen(r.formType, r.id, r.data); return; }
+    case 'pfCopy': {
+      const r = find(); if (!r) return;
+      const nd = JSON.parse(JSON.stringify(r.data || {}));
+      if (r.formType === '026') { nd.docDate = todayStr(); nd.signDate = ''; } else if (r.formType === '2144') nd.signDate = todayStr();
+      const me = pfMe();
+      if (!r.mine && r.formType !== '2318') { nd.fullName = me.name; nd.signName = me.name; nd.position = me.position; if (r.formType === '2144') nd.department = me.department; }
+      pfOpen(r.formType, null, nd); return toast('คัดลอกเป็นฉบับใหม่แล้ว ตรวจวันที่และรายการก่อนบันทึก', 'info');
+    }
+    case 'pfPrint': { const r = find(); if (!r) return; const w = openPrintWindow(); return pfPrint(r.formType, r.data, w, false); }
+    case 'pfDel': {
+      const r = find(); if (!r) return;
+      return (async () => {
+        if (!(await confirmBox('ลบแบบฟอร์ม "' + (r.title || PF_DEF[r.formType].name) + '" ?', 'ข้อมูลที่ลบแล้วกู้คืนไม่ได้'))) return;
+        loader(true);
+        try { S.pforms = await api('deletePrintForm', S.token, r.id); toast('ลบแบบฟอร์มแล้ว'); render(); } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+      })();
+    }
+    case 'pfCancel': return (async () => { if (!(await ask(ASK.cancel))) return; S.pfm.mode = 'list'; render(); })();
+    case 'pfPreview': { pfReadForm(); const w = openPrintWindow(); return pfPrint(S.pfm.type, pfPayload(), w, false); }
+    case 'pfSave': return pfSave(false);
+    case 'pfSavePrint': return pfSave(true);
+    case 'pfRowAdd': {
+      pfReadForm();
+      const rows = S.pfm.data.rows, max = PF_MAX[S.pfm.type];
+      if (rows.length >= max) return toast('เพิ่มได้สูงสุด ' + max + ' แถว', 'err');
+      const prev = rows[rows.length - 1] || {};
+      rows.push(S.pfm.type === '026' ? {} : { date: prev.date || todayStr() });
+      render(); setTimeout(() => { pfRefreshOut(); const el = $$('#pfForm .pf-rows tbody tr').pop(); if (el) { const i = el.querySelector('input:not([type=date])') || el.querySelector('input'); if (i) i.focus(); } }, 0);
+      return;
+    }
+    case 'pfRowDel': {
+      pfReadForm();
+      const rows = S.pfm.data.rows, i = +d.i;
+      if (rows.length <= 1) { rows[0] = S.pfm.type === '026' ? {} : { date: rows[0] && rows[0].date || todayStr() }; } else rows.splice(i, 1);
+      render(); setTimeout(pfRefreshOut, 0); return;
+    }
+    case 'pfImport008': return pfImport008();
+    case 'pfLastAddr': return pfLastAddr();
+  }
 }
 
 const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evalReview: ['รอ ผบ.ที่สูงขึ้นไปอนุมัติผล', 'b-amber', 'approval'], evaluated: ['อนุมัติผลแล้ว', 'b-green', 'task_alt'] };
@@ -5046,14 +5766,14 @@ function renderNav() {
   applyNavOrder();
   $$('#nav a[data-page]').forEach(a => a.classList.toggle('active', a.dataset.page === S.page));
 }
-const NAV_MAIN = ['dashboard', 'systems', 'documents', 'announcements', 'forms', 'checkin', 'pip'];
-const NAV_LABEL = { dashboard: 'หน้าแรก', systems: 'ระบบย่อย', documents: 'คลังข้อมูล', announcements: 'ประกาศ / ข่าวสาร', forms: 'ขออนุมัติไปอบรม/ประชุม', checkin: 'QR Code ของฉัน', pip: 'แผนพัฒนาการปฏิบัติงาน (PIP)' };
+const NAV_MAIN = ['dashboard', 'systems', 'documents', 'announcements', 'forms', 'checkin', 'pip', 'printforms'];
+const NAV_LABEL = { dashboard: 'หน้าแรก', systems: 'ระบบย่อย', documents: 'คลังข้อมูล', announcements: 'ประกาศ / ข่าวสาร', forms: 'ขออนุมัติไปอบรม/ประชุม', checkin: 'QR Code ของฉัน', pip: 'แผนพัฒนาการปฏิบัติงาน (PIP)', printforms: 'พิมพ์แบบฟอร์ม' };
 /* ---------- เมนูหลักที่ระบบสร้างขึ้น: ผู้ดูแลตั้งชื่อ / การเข้าถึงเองได้ (build 2569-11-18.2) ---------- */
 const NAV_DEF = Object.assign({}, NAV_LABEL);   // ชื่อเดิมของระบบ
 const PAGE_TITLE0 = {}; Object.keys(PAGES).forEach(k => { PAGE_TITLE0[k] = PAGES[k].title; });
-const NAV_ICON = { dashboard: 'space_dashboard', systems: 'apps', documents: 'folder_open', announcements: 'campaign', forms: 'assignment', checkin: 'qr_code_2', pip: 'trending_up' };
+const NAV_ICON = { dashboard: 'space_dashboard', systems: 'apps', documents: 'folder_open', announcements: 'campaign', forms: 'assignment', checkin: 'qr_code_2', pip: 'trending_up', printforms: 'print' };
 const NAV_DESC = { dashboard: 'หน้าสรุปหลังเข้าสู่ระบบ', systems: 'การ์ดลิงก์เข้าระบบงาน', documents: 'เอกสาร/ไฟล์ตามหมวดหมู่', announcements: 'ข่าวสารถึงบุคลากร',
-  forms: 'แบบฟอร์ม FM-HRD-008', checkin: 'QR สำหรับลงทะเบียนกิจกรรม (ผู้ใช้งาน)', pip: 'แผนพัฒนาการปฏิบัติงาน · ลงนามอิเล็กทรอนิกส์' };
+  forms: 'แบบฟอร์ม FM-HRD-008', checkin: 'QR สำหรับลงทะเบียนกิจกรรม (ผู้ใช้งาน)', pip: 'แผนพัฒนาการปฏิบัติงาน · ลงนามอิเล็กทรอนิกส์', printforms: 'ใบรับรองการจ่ายเงิน · ใบรับรองค่าพาหนะ · รายงานการเดินทาง' };
 function navCfgOf(k) { return (S.navCfg || {})[k] || {}; }
 function navName(k) { return navCfgOf(k).label || NAV_DEF[k] || k; }
 function applyNavLabels() {
@@ -6121,6 +6841,7 @@ function bindEvents() {
     if (d.syscat) { S.f.sysCat = d.syscat; return render(); }
     if (d.doccat) { S.f.docCat = d.doccat; return render(); }
     if (d.userst) { S.f.userSt = d.userst; return render(); }
+    if (d.action && d.action.indexOf('pf') === 0) return pfAction(d.action, d);
     switch (d.action) {
       case 'logout': return doLogout();
       case 'profile': return openProfile();
@@ -6240,6 +6961,7 @@ function bindEvents() {
   $('#content').addEventListener('keydown', e => {
     if (e.target.id === 'stScan' && e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.value = ''; stationScan(v); }
   });
+  $('#content').addEventListener('change', e => { if (e.target.id === 'pfFt') { S.pfm.ft = e.target.value; render(); return; } if (e.target.closest && e.target.closest('#pfForm') && (e.target.tagName === 'SELECT' || e.target.type === 'date' || e.target.type === 'time')) onPfInput(e); });
   $('#content').addEventListener('change', e => { if (e.target.id === 'stAuto' && S.station) { S.station.auto = e.target.checked; store.set('hrd_st_auto', e.target.checked ? '1' : '', true); } });
   const chatFileChange = e => {
     if (e.target.id === 'chatFileU' || e.target.id === 'chatFileA') {
@@ -6263,6 +6985,8 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden && S.token) chatTick(false); });
   $('#content').addEventListener('input', e => {
     if (e.target.closest && e.target.closest('#reqForm')) { onReqInput(e); return; }
+    if (e.target.closest && e.target.closest('#pfForm')) { onPfInput(e); return; }
+    if (e.target.id === 'pfQ') { S.pfm.q = e.target.value; const pos = e.target.selectionStart; render(); const i = $('#pfQ'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } return; }
     if (e.target.closest && e.target.closest('#pipForm')) { onPipInput(e); return; }
     if (e.target.closest && e.target.closest('#pipEvalForm')) { e.target.classList.remove('req-field-err'); const sg = e.target.closest('.seg'); if (sg) sg.classList.remove('req-field-err'); readPipEval(); return; }
     if (e.target.id === 'pipQ') { S.pv.q = e.target.value; const pos = e.target.selectionStart; render(); const i = $('#pipQ'); if (i) { i.focus(); i.setSelectionRange(pos, pos); } return; }
