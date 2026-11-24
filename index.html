@@ -796,6 +796,8 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .pf-words{color:#1e4b8f;font-size:14px}
 .pf-fixed{min-height:42px;display:flex;align-items:center;padding:8px 12px;border-radius:10px;background:#f4f7fb;border:1px dashed var(--line,#d6dee8);color:#334155}
 .pf-sub{margin:16px 0 8px;font-size:14.5px;color:#0b2545}
+.input.pf-over{border-color:#ea8a0c;background:#fff8ee;box-shadow:0 0 0 2px rgba(234,138,12,.18)}
+.pf-lines{margin-left:6px;color:var(--muted,#64748b)}.pf-lines.pf-lines-over{color:#b45309;font-weight:600}.pf-fitwarn{margin:14px 0 0}
 .pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
 .pf-pick{display:grid;gap:8px;max-height:52vh;overflow:auto}
 .pf-off{opacity:.78;border-style:dashed}
@@ -1084,8 +1086,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.12.0',
-  BUILD: '2569-11-24.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.12.1',
+  BUILD: '2569-11-24.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -3333,11 +3335,12 @@ function pfDraw(items) {
   return h;
 }
 /** ค่าที่กรอก (สีน้ำเงินเข้ม) ในกรอบ x0–x1 · y0–y1 · align l / c / r · ยาวเกินกรอบจะบีบแนวนอน (ไม่ต่ำกว่า 55%) */
-function pfText(x0, y0, x1, y1, size, text, align) {
+function pfText(x0, y0, x1, y1, size, text, align, key) {
   text = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
   if (!text) return '';
   const pad = 2, w = x1 - x0 - pad * 2, h = y1 - y0;
   const mw = fmWidth(text, size, false);
+  if (key && mw * PF_FIT_SX > w) pfFitMark(key);
   const sx = mw > w ? Math.max(0.55, w / mw) : 1;
   const tw = mw * sx;
   let left = x0 + pad;
@@ -3346,9 +3349,74 @@ function pfText(x0, y0, x1, y1, size, text, align) {
   return '<div class="r v" style="left:' + left.toFixed(2) + 'pt;top:' + (y0 - h * 0.12).toFixed(2) + 'pt;height:' + h + 'pt;line-height:' + h + 'pt;font-size:' + (size * FM_FONT.k).toFixed(2) + 'pt;transform:scaleX(' + sx.toFixed(3) + ')">' + fmEsc(text) + '</div>';
 }
 /** ค่าที่วางบนเส้นจุดไข่ปลาที่ระดับ y */
-function pfOn(x0, x1, y, size, text, align) { const h = size * 1.1; const top = y - 0.8 * h; return pfText(x0, top, x1, top + h, size, text, align); }
+function pfOn(x0, x1, y, size, text, align, key) { const h = size * 1.1; const top = y - 0.8 * h; return pfText(x0, top, x1, top + h, size, text, align, key); }
 /** ค่าในช่องตาราง (กึ่งกลางแนวตั้ง) */
-function pfCell(x0, x1, yT, yB, size, text, align) { const h = size * 1.1; const top = yT + (yB - yT - h) / 2 + h * 0.16; return pfText(x0, top, x1, top + h, size, text, align || 'c'); }
+function pfCell(x0, x1, yT, yB, size, text, align, key) { const h = size * 1.1; const top = yT + (yB - yT - h) / 2 + h * 0.16; return pfText(x0, top, x1, top + h, size, text, align || 'c', key); }
+
+/* ---------- ข้อความต้องอยู่ในช่องของแบบฟอร์ม (2144 · 2318 · 026) ----------
+ * ช่องบรรทัดเดียว: ยาวเกินช่อง (ต้องบีบเกิน 15%) = แจ้งเตือนและไม่ให้บันทึก
+ * ช่องข้อความในตาราง: ยาวเกินความกว้างช่อง = ขึ้นบรรทัดใหม่ในแถวถัดไปของแบบฟอร์ม (วันที่/เงินอยู่บรรทัดแรก) */
+const PF_FIT_SX = 0.85;   // บีบแนวนอนได้ไม่เกิน 15% (ยังอ่านง่าย) ถือว่าอยู่ในช่อง
+let PF_FIT = null, PF_FITI = null;   // ระหว่างตรวจ: { ชื่อช่อง: ข้อความเตือน } · ข้อมูลจำนวนบรรทัด
+function pfFitMark(key, msg) { if (PF_FIT && key && !PF_FIT[key]) PF_FIT[key] = msg || 'ข้อความยาวเกินช่องในแบบฟอร์ม'; }
+let pfSegW = null, pfSegG = null;
+function pfWords(s) {
+  if (pfSegW === null) pfSegW = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'word' }) : false;
+  return pfSegW ? Array.from(pfSegW.segment(s), x => x.segment) : s.split(/(\s+)/).filter(Boolean);
+}
+function pfGraphemes(s) {
+  if (pfSegG === null) pfSegG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'grapheme' }) : false;
+  return pfSegG ? Array.from(pfSegG.segment(s), x => x.segment) : Array.from(s);
+}
+/** ตัดข้อความเป็นบรรทัดตามความกว้าง (pt) · widths = ตัวเลขเดียว หรือความกว้างแต่ละบรรทัด (บรรทัดเกินใช้ค่าสุดท้าย) · คำที่ยาวกว่าบรรทัดตัดตามตัวอักษร */
+function pfBreak(text, widths, size, maxLines) {
+  widths = [].concat(widths);
+  const avail = i => widths[Math.min(i, widths.length - 1)] - 4;
+  const lines = [''];
+  String(text == null ? '' : text).replace(/\r/g, '').split('\n').map(p => p.replace(/\s+/g, ' ').trim()).forEach((para, pi) => {
+    if (pi && lines[lines.length - 1].trim()) lines.push('');
+    for (const w of pfWords(para)) {
+      let li = lines.length - 1;
+      if (fmWidth((lines[li] + w).trim(), size, false) <= avail(li)) { lines[li] += w; continue; }
+      if (!w.trim()) continue;
+      if (lines[li].trim()) { lines.push(''); li++; if (fmWidth(w, size, false) <= avail(li)) { lines[li] = w; continue; } }
+      for (const c of pfGraphemes(w)) {
+        li = lines.length - 1;
+        if (!lines[li] || fmWidth(lines[li] + c, size, false) <= avail(li)) lines[li] += c; else lines.push(c);
+      }
+    }
+  });
+  const out = lines.map(l => l.trim());
+  while (out.length > 1 && !out[out.length - 1]) out.pop();
+  return { lines: out, over: !!maxLines && out.length > maxLines };
+}
+/** รายการในตาราง → บรรทัดของแต่ละช่องข้อความ · cols = { ชื่อช่อง: [กว้าง pt, ขนาดตัวอักษร] } · e.n = จำนวนแถวของแบบฟอร์มที่ใช้ */
+function pfEntries(rows, cols) {
+  return (rows || []).map((r, i) => ({ r, i })).filter(e => pfRowUsed(e.r)).map(e => {
+    e.L = {}; e.n = 1;
+    Object.keys(cols).forEach(k => { const v = String(e.r[k] == null ? '' : e.r[k]).trim(); e.L[k] = v ? pfBreak(v, cols[k][0], cols[k][1]).lines : []; e.n = Math.max(e.n, e.L[k].length); });
+    return e;
+  });
+}
+/** จัดรายการลงหน้า ไม่ตัดรายการเดียวข้ามหน้า · caps(p) = จำนวนแถวของหน้า p · คืน [[{e, o: แถวเริ่ม}]] */
+function pfPack(ents, caps) {
+  const pages = [[]]; let used = 0;
+  ents.forEach(e => {
+    let cap = caps(pages.length - 1);
+    if (used && used + e.n > cap) { pages.push([]); used = 0; cap = caps(pages.length - 1); }
+    if (e.n > cap) { Object.keys(e.L).forEach(k => { if (e.L[k].length > cap) { pfFitMark('rows.' + e.i + '.' + k, 'ยาวเกิน 1 หน้าของแบบฟอร์ม'); e.L[k] = e.L[k].slice(0, cap); } }); e.n = cap; }
+    pages[pages.length - 1].push({ e, o: used }); used += e.n;
+  });
+  return pages;
+}
+/** ตรวจทั้งฉบับโดยวาดหน้าพิมพ์จริง (ไม่แสดงผล) · คืน { keys: { ชื่อช่อง: ข้อความ }, info: { lines, cap, pages } } */
+function pfFitCheck(type, d) {
+  if (!type || type === 'stc' || !PF_DEF[type]) return { keys: {}, info: null };
+  PF_FIT = {}; PF_FITI = null;
+  try { pfPages(type, d || {}); return { keys: PF_FIT, info: PF_FITI }; }
+  catch (e) { return { keys: {}, info: null }; }
+  finally { PF_FIT = null; }
+}
 /** ข้อความของแบบฟอร์ม (สีดำ) กึ่งกลางกรอบ */
 function pfLabel(xa, xb, ya, yb, size, bold, text, align) {
   const w = fmWidth(text, size, bold), h = size * 1.25;
@@ -3378,28 +3446,29 @@ const PF2144_Y = [264.2, 282.5, 301.0, 320.0, 338.5, 357.0, 375.5, 394.0, 412.5,
 const PF2144_X = [72.2, 135.8, 305.8, 391.2, 419.2, 523.2];
 function pf2144Pages(d) {
   d = d || {};
-  const rows = (d.rows || []).filter(pfRowUsed);
-  const per = PF2144_Y.length - 1, n = Math.max(1, Math.ceil(rows.length / per));
-  const total = pfR2(rows.reduce((a, r) => a + (pfNum(r.amount) || 0), 0));
-  const X = PF2144_X, Y = PF2144_Y, out = [];
+  const X = PF2144_X, Y = PF2144_Y, per = Y.length - 1;
+  const ents = pfEntries(d.rows, { item: [X[2] - X[1], 15], note: [X[5] - X[4], 14] });
+  const pages = pfPack(ents, () => per), n = pages.length;
+  PF_FITI = { lines: ents.reduce((a, e) => a + e.n, 0), cap: per, pages: n };
+  const total = pfR2(ents.reduce((a, e) => a + (pfNum(e.r.amount) || 0), 0));
+  const out = [];
   for (let p = 0; p < n; p++) {
     let x = pfDraw(PF_L2144[0]);
-    x += pfText(140.3, 131.6, 334.0, 147.5, 16, d.fullName);
-    x += pfText(369.4, 131.6, 521.0, 147.5, 16, d.position);
-    x += pfText(89.2, 159.2, 337.9, 175.1, 16, d.department);
-    rows.slice(p * per, p * per + per).forEach((r, i) => {
-      const yT = Y[i], yB = Y[i + 1], m = pfSplit(pfNum(r.amount));
-      x += pfCell(X[0], X[1], yT, yB, 15, thDateShort(r.date));
-      x += pfCell(X[1], X[2], yT, yB, 15, r.item, 'l');
-      x += pfCell(X[2], X[3], yT, yB, 15, m.b, 'r') + pfCell(X[3], X[4], yT, yB, 15, m.s);
-      x += pfCell(X[4], X[5], yT, yB, 14, r.note, 'l');
+    x += pfText(140.3, 131.6, 334.0, 147.5, 16, d.fullName, '', 'fullName');
+    x += pfText(369.4, 131.6, 521.0, 147.5, 16, d.position, '', 'position');
+    x += pfText(89.2, 159.2, 337.9, 175.1, 16, d.department, '', 'department');
+    pages[p].forEach(({ e, o }) => {
+      const yT = Y[o], yB = Y[o + 1], m = pfSplit(pfNum(e.r.amount)), k = 'rows.' + e.i + '.';
+      x += pfCell(X[0], X[1], yT, yB, 15, thDateShort(e.r.date));
+      x += pfCell(X[2], X[3], yT, yB, 15, m.b, 'r', k + 'amount') + pfCell(X[3], X[4], yT, yB, 15, m.s);
+      for (let j = 0; j < e.n; j++) x += pfCell(X[1], X[2], Y[o + j], Y[o + j + 1], 15, e.L.item[j], 'l') + pfCell(X[4], X[5], Y[o + j], Y[o + j + 1], 14, e.L.note[j], 'l');
     });
-    if (p === n - 1 && rows.length) {
+    if (p === n - 1 && ents.length) {
       const m = pfSplit(total);
       x += pfCell(X[2], X[3], 543.0, 561.2, 15, m.b, 'r') + pfCell(X[3], X[4], 543.0, 561.2, 15, m.s);
       x += pfText(167.7, 563.7, 413.1, 579.7, 16, total > 0 ? '(' + bahtText(total) + ')' : '', 'c');
     }
-    x += pfText(358.7, 647.2, 490.2, 663.1, 16, d.signName);
+    x += pfText(358.7, 647.2, 490.2, 663.1, 16, d.signName, '', 'signName');
     x += pfText(357.2, 666.7, 492.0, 682.7, 16, thDateLong(d.signDate));
     if (n > 1) x += pfLabel(430, 523.4, 40, 56, 13, 0, 'แผ่นที่ ' + (p + 1) + '/' + n, 'r');
     out.push(x);
@@ -3415,21 +3484,21 @@ function pf2318Pages(d) {
   const paper = d.paper === 'fs' ? 'fs' : 'a4', P = PF_PAPER[paper];
   const sx = P.w / PF2318.W, sy = P.h / PF2318.H, sf = Math.min(sx, sy);
   const X = x => +(x * sx).toFixed(2), Y = y => +(y * sy).toFixed(2), F = s => +(s * sf).toFixed(2);
-  const rows = (d.rows || []).filter(pfRowUsed);
+  const C = PF2318.X, fs = F(15);
+  const ents = pfEntries(d.rows, { purpose: [X(C[3]) - X(C[2]), fs], item: [X(C[4]) - X(C[3]), fs] });
+  const packed = pfPack(ents, p => (p ? PF2318.P2.n : PF2318.P1.n));
+  PF_FITI = { lines: ents.reduce((a, e) => a + e.n, 0), cap: PF2318.P1.n, pages: packed.length };
   const pages = [];
-  let left = rows.slice();
-  const yearOf = () => { const r = rows.find(r => thParts(r.date)); return r ? String(thParts(r.date).y) : ''; };
-  const yr = yearOf();
-  do {
-    const first = !pages.length, G = first ? PF2318.P1 : PF2318.P2, C = PF2318.X;
-    const take = left.slice(0, G.n); left = left.slice(G.n);
+  const yr = (() => { const e = ents.find(e => thParts(e.r.date)); return e ? String(thParts(e.r.date).y) : ''; })();
+  packed.forEach(take => {
+    const first = !pages.length, G = first ? PF2318.P1 : PF2318.P2;
     const bot = G.hb + G.n * PF2318.RH;
     let x = '';
     if (first) {
       x += pfImg(PF_LOGO2318, X(281.5), Y(37.9), X(86.2), Y(72.5));
       x += fmRun(X(216), Y(118), X(258), Y(136), F(16), 1, 0, 'สำนักงาน');
       x += fmDots(X(258.5), Y(118), X(426), Y(136));
-      x += pfText(X(259), Y(118), X(426), Y(136), F(15), d.office || PF_ORG);
+      x += pfText(X(259), Y(118), X(426), Y(136), F(15), d.office || PF_ORG, '', 'office');
       x += fmRun(X(149), Y(139), X(490), Y(158), F(16.5), 1, 0, 'ใบรับรองการจ่ายเงินค่าพาหนะที่ได้ไปกิจการต่าง ๆ ตามรายละเอียดต่อไปนี้ คือ');
       x += pfLabel(X(300), X(576), Y(941), Y(959), F(15), 1, '( แบบพิมพ์หมายเลข 2318 / 2547 )', 'r');
     }
@@ -3451,14 +3520,15 @@ function pf2318Pages(d) {
     x += pfLabel(X(C[4]), X(C[6]), Y(G.t2), Y(G.sp), F(15), 1, 'จำนวนเงิน');
     x += pfLabel(X(C[4]), X(C[5]), Y(G.sp), Y(G.hb), F(15), 1, 'บาท') + pfLabel(X(C[5]), X(C[6]), Y(G.sp), Y(G.hb), F(15), 1, 'สต.');
     x += pfLabel(X(C[6]), X(C[7]), Y(G.t2), Y(G.hb), F(15), 1, 'ลงนามผู้รับรอง');
-    take.forEach((r, i) => {
-      const yT = Y(G.hb + i * PF2318.RH), yB = Y(G.hb + (i + 1) * PF2318.RH), p = thParts(r.date), m = pfSplit(pfNum(r.amount)), fs = F(15);
+    const RY = i => Y(G.hb + i * PF2318.RH);
+    take.forEach(({ e, o }) => {
+      const r = e.r, yT = RY(o), yB = RY(o + 1), p = thParts(r.date), m = pfSplit(pfNum(r.amount));
       x += pfCell(X(C[0]), X(C[1]), yT, yB, fs, p ? TH_MON_S[p.m] : '') + pfCell(X(C[1]), X(C[2]), yT, yB, fs, p ? p.d : '');
-      x += pfCell(X(C[2]), X(C[3]), yT, yB, fs, r.purpose, 'l') + pfCell(X(C[3]), X(C[4]), yT, yB, fs, r.item, 'l');
-      x += pfCell(X(C[4]), X(C[5]), yT, yB, fs, m.b, 'r') + pfCell(X(C[5]), X(C[6]), yT, yB, fs, m.s);
+      x += pfCell(X(C[4]), X(C[5]), yT, yB, fs, m.b, 'r', 'rows.' + e.i + '.amount') + pfCell(X(C[5]), X(C[6]), yT, yB, fs, m.s);
+      for (let j = 0; j < e.n; j++) x += pfCell(X(C[2]), X(C[3]), RY(o + j), RY(o + j + 1), fs, e.L.purpose[j], 'l') + pfCell(X(C[3]), X(C[4]), RY(o + j), RY(o + j + 1), fs, e.L.item[j], 'l');
     });
     pages.push(x);
-  } while (left.length);
+  });
   return { pages, paper };
 }
 
@@ -3495,51 +3565,61 @@ function pf026Pages(d) {
   const ex = d.exp || {};
   let a = pfDraw(PF_L026[0]) + pfImg(PF_LOGO026, 36, 25.9, 126.2, 44.9);
   const dd = thParts(d.docDate), dep = thParts(d.departDate), ret = thParts(d.returnDate);
-  a += pfOn(450.0, 574.1, 96.8, 14, d.office);
+  a += pfOn(450.0, 574.1, 96.8, 14, d.office, '', 'office');
   if (dd) a += pfOn(342.9, 382.5, 116.2, 14, dd.d) + pfOn(405.5, 502.5, 116.2, 14, TH_MONTHS[dd.m]) + pfOn(523.3, 574.1, 116.2, 14, dd.y);
-  a += pfOn(108.5, 347.0, 145.2, 14, d.fullName) + pfOn(382.3, 574.1, 145.2, 14, d.position);
-  a += pfOn(156.0, 574.1, 164.8, 14, d.submitTo, 'l');
-  a += pfOn(118.1, 346.5, 184.2, 14, d.orderRef);
-  a += fmWrap(d.companions, [[418.1, 574.1, 184.2 - 12.3, 184.2 + 3.1, 14], [36.0, 574.1, 203.8 - 12.3, 203.8 + 3.1, 14], [36.0, 574.1, 223.0 - 12.3, 223.0 + 3.1, 14]], 14);
-  a += pfOn(105.8, 232.5, 242.2, 14, d.addrNo) + pfOn(252.9, 418.2, 242.2, 14, d.soi) + pfOn(438.4, 574.1, 242.2, 14, d.road);
-  a += pfOn(81.0, 232.5, 261.8, 14, d.subdistrict) + pfOn(279.0, 418.2, 261.8, 14, d.district) + pfOn(447.2, 574.1, 261.8, 14, d.province);
+  a += pfOn(108.5, 347.0, 145.2, 14, d.fullName, '', 'fullName') + pfOn(382.3, 574.1, 145.2, 14, d.position, '', 'position');
+  a += pfOn(156.0, 574.1, 164.8, 14, d.submitTo, 'l', 'submitTo');
+  a += pfOn(118.1, 346.5, 184.2, 14, d.orderRef, '', 'orderRef');
+  const CL = [[418.1, 574.1, 184.2], [36.0, 574.1, 203.8], [36.0, 574.1, 223.0]];   // ข้าพเจ้าพร้อมด้วย: 3 บรรทัด (บรรทัดแรกสั้น)
+  const cb = pfBreak(d.companions, CL.map(l => l[1] - l[0]), 14, CL.length);
+  if (cb.over) { pfFitMark('companions', 'ยาวเกิน 3 บรรทัดในแบบฟอร์ม'); cb.lines = cb.lines.slice(0, 2).concat(cb.lines.slice(2).join(' ')); }
+  cb.lines.forEach((t, i) => { a += pfText(CL[i][0], CL[i][2] - 12.3, CL[i][1], CL[i][2] + 3.1, 14, t, 'l'); });
+  a += pfOn(105.8, 232.5, 242.2, 14, d.addrNo, '', 'addrNo') + pfOn(252.9, 418.2, 242.2, 14, d.soi, '', 'soi') + pfOn(438.4, 574.1, 242.2, 14, d.road, '', 'road');
+  a += pfOn(81.0, 232.5, 261.8, 14, d.subdistrict, '', 'subdistrict') + pfOn(279.0, 418.2, 261.8, 14, d.district, '', 'district') + pfOn(447.2, 574.1, 261.8, 14, d.province, '', 'province');
   [[dep, d.departTime, 281.2], [ret, d.returnTime, 300.8]].forEach(t => {
     if (t[0]) a += pfOn(66.7, 120.5, t[2], 14, t[0].d) + pfOn(144.0, 232.5, t[2], 14, TH_MONTHS[t[0].m]) + pfOn(255.0, 325.5, t[2], 14, t[0].y);
     a += pfOn(348.0, 418.2, t[2], 14, pfTime(t[1]));
   });
-  a += pfOn(138.8, 232.5, 320.0, 14, d.totalDays);
-  const X = PF026_IT_X, Y = PF026_IT_Y;
-  (d.rows || []).slice(0, 23).forEach((r, i) => {
-    if (!pfRowUsed(r)) return;
-    const yT = Y[i], yB = Y[i + 1];
-    a += pfCell(X[0], X[1], yT, yB, 13, r.fromPlace);
+  a += pfOn(138.8, 232.5, 320.0, 14, d.totalDays, '', 'totalDays');
+  const X = PF026_IT_X, Y = PF026_IT_Y, cap = Y.length - 1;
+  const ents = pfEntries(d.rows, { fromPlace: [X[1] - X[0], 13], toPlace: [X[3] - X[2], 13], detail: [X[5] - X[4], 13] });
+  const packed = pfPack(ents, () => cap), lines = ents.reduce((s, e) => s + e.n, 0);
+  PF_FITI = { lines, cap, pages: 1 };
+  if (packed.length > 1) {
+    pfFitMark('_rows', 'รายละเอียดการเดินทางใช้ ' + lines + ' บรรทัด เกิน ' + cap + ' บรรทัดของแบบฟอร์ม');
+    packed.slice(1).forEach(pg => pg.forEach(({ e }) => pfFitMark('rows.' + e.i + '.detail', 'แถวนี้เกินพื้นที่ ' + cap + ' บรรทัดของแบบฟอร์ม')));
+  }
+  packed[0].forEach(({ e, o }) => {
+    const r = e.r, yT = Y[o], yB = Y[o + 1];
     a += pfCell(X[1], 158.0, yT, yB, 13, thDateShort(r.fromDate)) + pfCell(158.0, X[2], yT, yB, 13, pfTime(r.fromTime));
-    a += pfCell(X[2], X[3], yT, yB, 13, r.toPlace);
     a += pfCell(X[3], 333.0, yT, yB, 13, thDateShort(r.toDate)) + pfCell(333.0, X[4], yT, yB, 13, pfTime(r.toTime));
-    a += pfCell(X[4], X[5], yT, yB, 13, r.detail, 'l');
+    for (let j = 0; j < e.n; j++) {
+      const a0 = Y[o + j], a1 = Y[o + j + 1];
+      a += pfCell(X[0], X[1], a0, a1, 13, e.L.fromPlace[j]) + pfCell(X[2], X[3], a0, a1, 13, e.L.toPlace[j]) + pfCell(X[4], X[5], a0, a1, 13, e.L.detail[j], 'l');
+    }
   });
   let b = pfDraw(PF_L026[1]);
-  const amt = (y, v, note) => {
+  const amt = (y, v, note, kNote, kAmt) => {
     const m = pfSplit(v);
-    return pfOn(459.1, 496.5, y, 13, m.b, 'r') + pfOn(505.0, 524.0, y, 13, m.s) + pfOn(531.0, 574.1, y, 12, note, 'l');
+    return pfOn(459.1, 496.5, y, 13, m.b, 'r', kAmt) + pfOn(505.0, 524.0, y, 13, m.s) + pfOn(531.0, 574.1, y, 12, note, 'l', kNote);
   };
   Object.keys(PF026_EXP).forEach(g => {
     const G = PF026_EXP[g], rows = (ex[g] || []).slice(0, 3);
     if (rows.some(pfRowUsed)) b += fmCheck(G.box[0] + 5.9, G.box[1] + 9.2, 9);
     rows.forEach((r, i) => {
       if (!pfRowUsed(r)) return;
-      const y = G.y[i];
-      Object.keys(G.f).forEach(k => { b += pfOn(G.f[k][0], G.f[k][1], y, 13, r[k], k === 'level' ? 'l' : 'c'); });
-      b += amt(y, pf026RowAmt(g, r), r.note);
+      const y = G.y[i], p = 'exp.' + g + '.' + i + '.';
+      Object.keys(G.f).forEach(k => { b += pfOn(G.f[k][0], G.f[k][1], y, 13, r[k], k === 'level' ? 'l' : 'c', p + k); });
+      b += amt(y, pf026RowAmt(g, r), r.note, p + 'note', p + (g.slice(-1) === 'F' ? 'amount' : 'rate'));
     });
   });
   const veh = ex.veh || {}, oth = ex.oth || {};
-  b += pfOn(92.0, 439.4, 431.0, 13, veh.detail, 'l') + amt(431.0, pfNum(veh.amount), veh.note);
-  b += pfOn(101.0, 439.4, 449.0, 13, oth.detail, 'l') + amt(449.0, pfNum(oth.amount), oth.note);
+  b += pfOn(92.0, 439.4, 431.0, 13, veh.detail, 'l', 'exp.veh.detail') + amt(431.0, pfNum(veh.amount), veh.note, 'exp.veh.note', 'exp.veh.amount');
+  b += pfOn(101.0, 439.4, 449.0, 13, oth.detail, 'l', 'exp.oth.detail') + amt(449.0, pfNum(oth.amount), oth.note, 'exp.oth.note', 'exp.oth.amount');
   const total = pf026Total(d);
   if (total > 0) { b += pfOn(65.4, 389.9, 475.0, 13, '(' + bahtText(total) + ')') + amt(475.8, total, ''); }
-  b += pfOn(189.5, 254.0, 520.8, 14, d.evidence);
-  b += pfOn(387.0, 517.4, 598.5, 14, d.signName);
+  b += pfOn(189.5, 254.0, 520.8, 14, d.evidence, '', 'evidence');
+  b += pfOn(387.0, 517.4, 598.5, 14, d.signName, '', 'signName');
   const sd = thParts(d.signDate);
   if (sd) b += pfOn(384.0, 425.3, 618.0, 14, sd.d) + pfOn(427.9, 474.9, 618.0, 14, TH_MON_S[sd.m]) + pfOn(477.4, 517.4, 618.0, 14, sd.y);
   return { pages: [a, b], paper: 'a4' };
@@ -3683,7 +3763,7 @@ function pfRowsTable(cols, max, addLabel, wide) {
     <tbody>${rows.map((r, i) => `<tr><td class="muted">${i + 1}</td>${cols.map(c => `<td>${c.out ? `<span class="pf-out" data-out="${c.out}" data-i="${i}">${esc(c.show(i))}</span>` : pfCellIn('rows.' + i + '.' + c.k, c)}</td>`).join('')}
       <td><button type="button" class="icon-btn danger" data-action="pfRowDel" data-i="${i}" title="ลบแถวนี้"><span class="msr">close</span></button></td></tr>`).join('')}</tbody></table></div>
     <div class="pf-rows-foot"><button type="button" class="btn btn-light btn-sm" data-action="pfRowAdd"${rows.length >= max ? ' disabled' : ''}><span class="msr">add</span>${esc(addLabel || 'เพิ่มแถว')}</button>
-      <span class="muted small">${rows.length}/${max} แถว</span></div>`;
+      <span class="muted small">${rows.length}/${max} แถว</span><span class="small pf-lines" data-out="lines"></span></div>`;
 }
 function pfTotalBox() {
   return `<div class="pf-total"><div><small>รวมทั้งสิ้น</small><b data-out="total">0.00</b> บาท</div><div class="pf-words" data-out="words"></div></div>`;
@@ -3693,6 +3773,7 @@ function pfEditorHtml() {
   const head = `<div class="pf-ed-head" style="${cvar(f.color)}"><div class="doc-ic"><span class="msr">${f.icon}</span></div><div><b>${esc(f.name)}</b><small>${esc(f.code)} · ${S.pfm.id ? 'แก้ไขฉบับที่บันทึกไว้' : 'ฉบับใหม่'}</small></div></div>`;
   const body = t === '2144' ? pf2144Ed() : t === '2318' ? pf2318Ed() : t === 'stc' ? pfStcEd() : pf026Ed();
   return `${head}<form id="pfForm" onsubmit="return false" autocomplete="off">${body}</form>
+  <div class="pf-warn pf-fitwarn hidden" data-out="fit"><span class="msr">format_size</span><span></span></div>
   <div class="req-actions">
     <button class="btn btn-light" data-action="pfCancel">ยกเลิก</button>
     <button class="btn btn-light" data-action="pfPreview"><span class="msr">visibility</span>ดูตัวอย่างก่อนพิมพ์</button>
@@ -3700,13 +3781,14 @@ function pfEditorHtml() {
     <button class="btn btn-primary" data-action="pfSavePrint"><span class="spinner"></span><span class="msr">print</span><span class="btn-label">บันทึกและพิมพ์</span></button>
   </div>`;
 }
+const PF_WRAP_NOTE = 'ข้อความที่ยาวเกินช่องในแบบฟอร์ม ระบบขึ้นบรรทัดใหม่ให้ในแถวถัดไป (วันที่และจำนวนเงินอยู่บรรทัดแรก)';
 function pf2144Ed() {
   return pfSec('badge', 'ผู้รับรอง (ข้าพเจ้า)', `<div class="req-grid">
       ${pfIn('fullName', 'ชื่อ-นามสกุล', { cls: 'c2', req: true, max: 120 })}
       ${pfIn('position', 'ตำแหน่ง', { cls: 'c2', max: 120 })}
       ${pfIn('department', 'ฝ่าย', { cls: 'c2', max: 120 })}
       <div class="field c2"><span>สำนักงาน</span><div class="pf-fixed">${esc(PF_ORG)}</div></div></div>`) +
-    pfSec('receipt_long', 'รายการที่จ่ายเงิน', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>หมายเหตุ</b> ให้ระบุเหตุผลที่ไม่อาจเรียกใบเสร็จรับเงินได้ · หน้าละ 15 รายการ ถ้าเกินระบบจะพิมพ์หน้าต่อให้อัตโนมัติ (รวมทั้งสิ้นอยู่หน้าสุดท้าย)</p>` +
+    pfSec('receipt_long', 'รายการที่จ่ายเงิน', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>หมายเหตุ</b> ให้ระบุเหตุผลที่ไม่อาจเรียกใบเสร็จรับเงินได้ · หน้าละ 15 บรรทัด ถ้าเกินระบบจะพิมพ์หน้าต่อให้อัตโนมัติ (รวมทั้งสิ้นอยู่หน้าสุดท้าย) · ${PF_WRAP_NOTE}</p>` +
       pfRowsTable([{ k: 'date', label: 'วันที่จ่ายเงิน', type: 'date', w: '160px' }, { k: 'item', label: 'รายการ', max: 120 },
         { k: 'amount', label: 'จำนวนเงิน (บาท)', num: 1, mode: 'decimal', ph: '0.00', w: '140px' }, { k: 'note', label: 'หมายเหตุ*', max: 80, w: '24%' }], PF_MAX['2144'], 'เพิ่มรายการ') + pfTotalBox()) +
     pfSec('draw', 'ลงชื่อผู้รับรอง (ลงลายมือชื่อด้วยปากกาหลังพิมพ์)', `<div class="req-grid">
@@ -3720,7 +3802,7 @@ function pf2318Ed() {
       <label class="field"><span>ขนาดกระดาษ</span><select class="input" name="paper">${Object.keys(PF_PAPER).map(k => `<option value="${k}"${(d.paper || 'a4') === k ? ' selected' : ''}>${esc(PF_PAPER[k].label)}</option>`).join('')}</select></label>
       <div class="field"><span>พ.ศ. (ตามวันที่ในรายการ)</span><div class="pf-fixed" data-out="year">-</div></div></div>
       <div class="pf-warn hidden" data-out="yearWarn"><span class="msr">warning</span><span>มีรายการต่าง พ.ศ. กัน · แบบฟอร์มนี้มีช่อง พ.ศ. ช่องเดียว แนะนำให้แยกเป็นฉบับละ 1 ปี</span></div>`) +
-    pfSec('directions_bus', 'รายการค่าพาหนะ', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>ลงนามผู้รับรอง</b> ในแบบฟอร์มเว้นว่างไว้ลงนามด้วยปากกาทุกแถว · หน้าแรก 35 รายการ หน้าถัดไปหน้าละ 39 รายการ</p>` +
+    pfSec('directions_bus', 'รายการค่าพาหนะ', `<p class="small muted" style="margin:0 0 10px">ช่อง <b>ลงนามผู้รับรอง</b> ในแบบฟอร์มเว้นว่างไว้ลงนามด้วยปากกาทุกแถว · หน้าแรก 35 บรรทัด หน้าถัดไปหน้าละ 39 บรรทัด · ${PF_WRAP_NOTE}</p>` +
       pfRowsTable([{ k: 'date', label: 'วันที่', type: 'date', w: '160px' }, { k: 'purpose', label: 'ไปกิจการอย่างใด', max: 100 },
         { k: 'item', label: 'รายการ และ พาหนะที่จ้าง', max: 100 }, { k: 'amount', label: 'จำนวนเงิน (บาท)', num: 1, mode: 'decimal', ph: '0.00', w: '140px' }], PF_MAX['2318'], 'เพิ่มรายการ') + pfTotalBox().replace('รวมทั้งสิ้น', 'รวม (แสดงบนหน้าจอเท่านั้น · ต้นฉบับไม่มีแถวรวม)'));
 }
@@ -3744,7 +3826,7 @@ function pf026Ed() {
       ${pfIn('position', 'ตำแหน่ง', { cls: 'c2', max: 120 })}
       ${pfIn('submitTo', 'ขอทำรายงานการเดินทางยื่นต่อ', { cls: 'c4', max: 150 })}
       ${pfIn('orderRef', 'ตามคำสั่ง', { cls: 'c2', max: 120, ph: 'เช่น ที่ ... ลงวันที่ ...' })}
-      <label class="field c4"><span>ข้าพเจ้าพร้อมด้วย (ชื่อผู้ร่วมเดินทาง ถ้ามี)</span><textarea class="input" name="companions" rows="2" maxlength="400" style="min-height:64px">${esc(pfv('companions'))}</textarea><small class="hint">พื้นที่ในแบบฟอร์มประมาณ 2 บรรทัดครึ่ง</small></label>
+      <label class="field c4"><span>ข้าพเจ้าพร้อมด้วย (ชื่อผู้ร่วมเดินทาง ถ้ามี)</span><textarea class="input" name="companions" rows="2" maxlength="400" style="min-height:64px">${esc(pfv('companions'))}</textarea><small class="hint">พื้นที่ในแบบฟอร์ม 3 บรรทัด (บรรทัดแรกสั้น) · ยาวเกินขึ้นกรอบสีส้ม</small></label>
     </div>`, canImp ? '<button type="button" class="btn btn-light btn-sm" data-action="pfImport008"><span class="msr">download</span>ดึงจากแบบขออนุมัติไปอบรม (FM-HRD-008)</button>' : '') +
     pfSec('home', 'ออกจากที่พักและกลับถึงที่พัก', `<div class="req-grid">
       ${pfIn('addrNo', 'ที่พักเลขที่', { max: 40 })}${pfIn('soi', 'ซอย', { max: 60 })}${pfIn('road', 'ถนน', { cls: 'c2', max: 60 })}
@@ -3754,7 +3836,7 @@ function pf026Ed() {
       ${pfIn('totalDays', 'รวมเวลาไปปฏิบัติงานครั้งนี้ (วัน)', { mode: 'decimal', max: 10, hint: 'คำนวณจากวันที่ให้อัตโนมัติ แก้ได้' })}
     </div><p class="small muted" style="margin:10px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">lock</span> ที่อยู่เก็บไว้กับแบบฟอร์มฉบับนี้เท่านั้น (เจ้าของและผู้ดูแลระบบเห็น) ไม่บันทึกลงข้อมูลส่วนตัว</p>`,
       '<button type="button" class="btn btn-light btn-sm" data-action="pfLastAddr"><span class="msr">history</span>ใช้ที่อยู่จากฉบับก่อน</button>') +
-    pfSec('route', 'รายละเอียดการเดินทาง (สูงสุด 23 แถว ตามแบบฟอร์ม)', pfRowsTable([
+    pfSec('route', 'รายละเอียดการเดินทาง (สูงสุด 23 บรรทัด ตามแบบฟอร์ม)', `<p class="small muted" style="margin:0 0 10px">${PF_WRAP_NOTE}</p>` + pfRowsTable([
       { k: 'fromPlace', label: 'ออกจาก', max: 40, w: '140px' }, { k: 'fromDate', label: 'วัน', type: 'date', w: '150px' }, { k: 'fromTime', label: 'เวลา', type: 'time', w: '110px' },
       { k: 'toPlace', label: 'ถึง', max: 40, w: '140px' }, { k: 'toDate', label: 'วัน', type: 'date', w: '150px' }, { k: 'toTime', label: 'เวลา', type: 'time', w: '110px' },
       { k: 'detail', label: 'รายการเดินทางและปฏิบัติงานประจำวัน', max: 90, w: '280px' }], PF_MAX['026'], 'เพิ่มแถว', true)) +
@@ -3787,6 +3869,27 @@ function pfRefreshOut() {
     const y = $('[data-out=year]', f); if (y) y.textContent = ys.length ? ys.join(', ') : '-';
     const yw = $('[data-out=yearWarn]', f); if (yw) yw.classList.toggle('hidden', ys.length < 2);
   }
+  pfFitSoon();
+}
+/** ทำเครื่องหมายช่องที่ข้อความยาวเกินช่องของแบบฟอร์ม + จำนวนบรรทัดที่ใช้ (หน่วงเล็กน้อยระหว่างพิมพ์) */
+let pfFitT = 0;
+function pfFitSoon() { clearTimeout(pfFitT); pfFitT = setTimeout(pfFitRefresh, 120); }
+function pfFitRefresh() {
+  const f = $('#pfForm'); if (!f || S.pfm.mode !== 'edit' || S.pfm.type === 'stc') return null;
+  const r = pfFitCheck(S.pfm.type, S.pfm.data), ks = Object.keys(r.keys).filter(k => k[0] !== '_');
+  $$('.pf-over', f).forEach(el => { if (!r.keys[el.name]) { el.classList.remove('pf-over'); el.removeAttribute('title'); } });
+  ks.forEach(k => { const el = $('[name="' + k + '"]', f); if (el) { el.classList.add('pf-over'); el.title = r.keys[k]; } });
+  const box = $('[data-out=fit]');
+  if (box) {
+    const msg = [ks.length ? 'ข้อความยาวเกินช่องในแบบฟอร์ม ' + ks.length + ' ช่อง (กรอบสีส้ม) กรุณาย่อข้อความ' : '', r.keys._rows || ''].filter(Boolean);
+    box.classList.toggle('hidden', !msg.length); box.lastElementChild.textContent = msg.join(' · ') + (msg.length ? ' · ยังบันทึกไม่ได้จนกว่าจะแก้' : '');
+  }
+  const ln = $('[data-out=lines]', f), I = r.info;
+  if (ln && I) {
+    ln.textContent = S.pfm.type === '026' ? '· ใช้พื้นที่ ' + I.lines + '/' + I.cap + ' บรรทัด' : '· ใช้พื้นที่ ' + I.lines + ' บรรทัด · พิมพ์ ' + I.pages + ' แผ่น';
+    ln.classList.toggle('pf-lines-over', S.pfm.type === '026' && I.lines > I.cap);
+  }
+  return r;
 }
 function onPfInput(e) {
   const t = e.target; if (!t.name) return;
@@ -3834,6 +3937,13 @@ function pfValidate() {
     if (d.departDate && d.returnDate && d.returnDate < d.departDate) { mark('returnDate'); miss.push('วันที่กลับต้องไม่ก่อนวันที่ออกเดินทาง'); }
     $$('#pfForm .pf-num').forEach(el => { if (/amount|rate/.test(el.name) && !pfMoneyOk(el.value)) { el.classList.add('req-field-err'); miss.push('จำนวนเงินต้องเป็นตัวเลข'); } });
   }
+  if (t !== 'stc') {   // ข้อความต้องอยู่ในช่องของแบบฟอร์ม
+    const fr = pfFitCheck(t, d), ks = Object.keys(fr.keys).filter(k => k[0] !== '_');
+    ks.forEach(mark);
+    if (ks.length) miss.push('ข้อความยาวเกินช่องในแบบฟอร์ม ' + ks.length + ' ช่อง');
+    if (fr.keys._rows) miss.push(fr.keys._rows);
+    pfFitRefresh();
+  }
   if (miss.length) {
     const u = Array.from(new Set(miss));
     toast('กรุณาตรวจ: ' + u.slice(0, 4).join(', ') + (u.length > 4 ? ' และอีก ' + (u.length - 4) + ' จุด' : ''), 'err');
@@ -3855,8 +3965,10 @@ function pfPayload() {
 function pfOpen(type, id, data) {
   S.pfm = { mode: 'edit', type, id: id || null, data: pfNormalize(type, data || pfDefaults(type)), secret: {}, q: S.pfm.q, ft: S.pfm.ft, touched: id ? { totalDays: true, signName: true } : {} };
   render(); window.scrollTo(0, 0); setTimeout(pfRefreshOut, 0);
+  if (type !== 'stc') fmPrepareFont().then(pfFitRefresh, () => { });
 }
 async function pfSave(andPrint) {
+  try { await fmPrepareFont(); } catch (e) { }   // วัดความกว้างด้วยฟอนต์เดียวกับหน้าพิมพ์
   if (!pfValidate()) return;
   if (!(await ask(ASK.save(!!S.pfm.id)))) return;
   const type = S.pfm.type, d = pfPayload();
