@@ -798,6 +798,15 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .pf-sub{margin:16px 0 8px;font-size:14.5px;color:#0b2545}
 .pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
 .pf-pick{display:grid;gap:8px;max-height:52vh;overflow:auto}
+.pf-off{opacity:.78;border-style:dashed}
+.pf-vis{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#f6f8fb;font-size:13px;color:#334155}
+.pf-cks{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:4px 0 8px}.pf-cks b{font-size:13.5px;color:#0b2545;min-width:70px}
+.pf-ck{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}.pf-ck input{width:18px;height:18px;accent-color:#0e7c86}
+.pf-secret{margin-top:14px;padding:12px 14px;border-radius:12px;border:1.5px solid #f2c48d;background:#fffaf2}
+.pf-secret-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:8px}.pf-secret-h .msr{color:#c2410c}.pf-secret-h small{color:#9a3412;font-size:12.5px}
+.ann-new{display:inline-block;padding:1px 7px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;line-height:18px;vertical-align:1px}
+.nav-new{margin-left:auto;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:700;font-style:normal;line-height:16px}
+
 @media (max-width:560px){.pf-card-a{justify-content:stretch}.pf-card-a .btn{flex:1}}
 @media(max-width:560px){.mail-sum{grid-template-columns:1fr}.pip-sign-act{flex-wrap:wrap}}
 </style>
@@ -1075,8 +1084,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.11.0',
-  BUILD: '2569-11-23.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.12.0',
+  BUILD: '2569-11-24.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -1656,6 +1665,17 @@ function timeAgo(s) {
   if (sec < 604800) return Math.floor(sec / 86400) + ' วันที่แล้ว';
   return fmtDate(s);
 }
+/** ป้าย NEW (build 2569-11-24.1): ประกาศที่กำลังแสดง และวันประกาศ (วันเริ่มแสดง หรือวันที่สร้างถ้าไม่กำหนด) อยู่ใน 7 วันล่าสุด (นับวันประกาศเป็นวันที่ 1) */
+const ANN_NEW_DAYS = 7;
+function annIsNew(a) {
+  if (!a || annState(a) !== 'live') return false;
+  const base = /^[0-9]{4}-[0-9]{2}-[0-9]{2}/.test(String(a.startDate || '')) ? String(a.startDate).slice(0, 10) : String(a.createdAt || '').slice(0, 10);
+  const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(base), t = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(todayStr());
+  if (!m || !t) return false;
+  const diff = Math.round((Date.UTC(+t[1], +t[2] - 1, +t[3]) - Date.UTC(+m[1], +m[2] - 1, +m[3])) / 86400000);
+  return diff >= 0 && diff < ANN_NEW_DAYS;
+}
+const ANN_NEW = '<span class="ann-new" title="ประกาศใหม่ภายใน 7 วัน">NEW</span>';
 function annState(a) {
   if (a.status !== 'active') return 'off';
   const t = todayStr();
@@ -2180,6 +2200,7 @@ function applyBoot(d) {
   S.pip = d.pip || { count: 0, todo: 0 };
   S.me = d.me || null;
   S.navCfg = d.navCfg || {};
+  S.pfCfg = d.pfCfg || null;
   applyNavLabels();
   bootSave(d);
 }
@@ -2274,17 +2295,25 @@ function prefixFieldsHtml(val, req) {
   const known = TH_PREFIX.indexOf(val) > -1, other = !!val && !known;
   const st = req ? ' <span class="req">*</span>' : '';
   return `<label class="field"><span>คำนำหน้าชื่อ${st}</span><select class="input" name="prefixSel"${req ? ' required' : ''}><option value="">— เลือกคำนำหน้า —</option>${TH_PREFIX.map(p => `<option value="${p}"${p === val ? ' selected' : ''}>${p}</option>`).join('')}<option value="__other"${other ? ' selected' : ''}>อื่น ๆ (ระบุ)</option></select></label>
-    <label class="field pfx-other${other ? '' : ' hidden'}"><span>ระบุคำนำหน้า${st}</span><input class="input" name="prefixOther" value="${esc(other ? val : '')}" placeholder="เช่น ร.ต.อ., ดร., ภก." maxlength="30"></label>`;
+    <label class="field pfx-other${other ? '' : ' hidden'}"><span>ระบุคำนำหน้า${st}</span><input class="input" name="prefixOther" value="${esc(other ? val : '')}" placeholder="เช่น ร.ต.อ., ดร., นาง (พิเศษ)" maxlength="30"></label>`;
+}
+/** คำนำหน้าชื่อ (build 2569-11-24.1): ภาษาไทย จุด วงเล็บ ( ) และเว้นวรรคได้ เช่น "นาง (พิเศษ)" — ตรงกับ prefixOk_ ที่หลังบ้าน */
+function cleanPrefix(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').trim(); }
+function prefixOk(p) {
+  if (!p || p.length > 30 || !/^[\u0E00-\u0E7F.() ]+$/.test(p)) return false;
+  let depth = 0;
+  for (const ch of p) { if (ch === '(') depth++; else if (ch === ')' && --depth < 0) return false; }
+  return depth === 0 && p.indexOf('()') < 0 && /[\u0E00-\u0E7F]/.test(p);
 }
 function readPrefix(form, d) {
   const sel = d.prefixSel || '';
-  d.prefixTh = sel === '__other' ? String(d.prefixOther || '').replace(/\s/g, '') : sel;
+  d.prefixTh = sel === '__other' ? cleanPrefix(d.prefixOther) : sel;
   delete d.prefixSel; delete d.prefixOther;
   return d;
 }
 function prefixCheck(d, req) {
   if (req && !d.prefixTh) return 'กรุณาเลือกคำนำหน้าชื่อ' + (d.prefixSel === '__other' ? ' / ระบุคำนำหน้า' : '');
-  if (d.prefixTh && !/^[\u0E00-\u0E7F.]{1,30}$/.test(d.prefixTh)) return 'คำนำหน้าชื่อ (อื่น ๆ) ต้องเป็นภาษาไทย ไม่เกิน 30 ตัวอักษร';
+  if (d.prefixTh && !prefixOk(d.prefixTh)) return 'คำนำหน้าชื่อ (อื่น ๆ) ต้องเป็นภาษาไทย ใช้จุด วงเล็บ ( ) และเว้นวรรคได้ ไม่เกิน 30 ตัวอักษร';
   return '';
 }
 async function onForgot() {
@@ -2427,6 +2456,10 @@ function refreshCounts() {
   setN('cntSystems', (S.systems || []).length);
   setN('cntDocs', (S.documents || []).length);
   setN('cntAnn', (S.announcements || []).filter(a => annState(a) === 'live').length);
+  const annNav = $('#nav a[data-page="announcements"]');
+  if (annNav) { let nb = $('.nav-new', annNav); const has = (S.announcements || []).some(annIsNew);
+    if (has && !nb) { nb = document.createElement('em'); nb.className = 'nav-new'; nb.textContent = 'NEW'; nb.title = 'มีประกาศใหม่ภายใน 7 วัน'; annNav.insertBefore(nb, $('#cntAnn', annNav)); }
+    else if (!has && nb) nb.remove(); }
   const pend = (S.counts || {}).pendingUsers || 0;
   const cpd = setN('cntPending', pend); if (cpd) cpd.classList.toggle('hidden', !pend || !isAdmin());
   const pt = ((S.pip && S.pip.todo) || 0) + (!isAdmin() && S.pip ? S.pip.draft || 0 : 0), cp = $('#cntPip');
@@ -2542,7 +2575,7 @@ function renderDashboard() {
         <div class="card-b">${liveAnn.length ? liveAnn.slice(0, 4).map(a => {
           const p = PRIORITY[a.priority] || PRIORITY.normal;
           return `<div class="ann-item">${a.fileId ? thumbHtml('Announcements', a, 'sm') : `<span class="ann-dot" style="background:${col(p.color).main}"></span>`}
-            <div><b>${esc(a.title)}</b>${a.content ? `<p>${esc(a.content)}</p>` : ''}${isUrl(a.url) ? `<a class="link small" href="${esc(a.url)}" target="_blank" rel="noopener">เปิดลิงก์ ›</a>` : ''}</div></div>`;
+            <div><b>${annIsNew(a) ? ANN_NEW + ' ' : ''}${esc(a.title)}</b>${a.content ? `<p>${esc(a.content)}</p>` : ''}${isUrl(a.url) ? `<a class="link small" href="${esc(a.url)}" target="_blank" rel="noopener">เปิดลิงก์ ›</a>` : ''}</div></div>`;
         }).join('') : '<p class="muted small">ไม่มีประกาศที่กำลังแสดง</p>'}</div>
       </div>`;
   const logCardHtml = !A ? '' : `
@@ -2729,7 +2762,7 @@ function renderAnnouncements() {
     const p = PRIORITY[a.priority] || PRIORITY.normal; const st = ANN_STATE[annState(a)];
     return `<div class="card ann-card" style="${cvar(p.color)}">
       <div class="a-ic"><span class="msr">${p.icon}</span></div>
-      <div class="a-body"><h3>${esc(a.title)}</h3>${a.content ? `<p>${esc(a.content)}</p>` : ''}
+      <div class="a-body"><h3>${annIsNew(a) ? ANN_NEW + ' ' : ''}${esc(a.title)}</h3>${a.content ? `<p>${esc(a.content)}</p>` : ''}
         ${a.fileId ? thumbHtml('Announcements', a, 'poster') : ''}
         ${isUrl(a.url) ? `<div style="margin-top:10px"><a class="btn btn-soft btn-sm" style="${cvar(p.color)}" href="${esc(a.url)}" target="_blank" rel="noopener"><span class="msr">link</span>เปิดลิงก์<span class="msr">open_in_new</span></a></div>` : ''}
         <div class="ann-meta">${lockTag(a)}<span class="badge ${st.cls}">${st.label}</span><span class="badge" style="background:${col(p.color).soft};color:${col(p.color).main}">${p.label}</span>
@@ -2964,8 +2997,9 @@ function fm008Html(d, logo) {
 
 const ADMIN_POS_OPTS = ["ผู้อำนวยการ", "รองผู้อำนวยการ", "ผู้ช่วยผู้อำนวยการ", "หัวหน้าฝ่าย", "รองหัวหน้าฝ่าย", "หัวหน้าศูนย์", "หัวหน้างาน", "หัวหน้าหอผู้ป่วย", "หัวหน้าหน่วย"];
 const ACAD_POS_OPTS = ["ผู้ช่วยศาสตราจารย์", "รองศาสตราจารย์", "ศาสตราจารย์", "อาจารย์"];
-const F_ACAD = { k: 'academicPosition', label: 'ตำแหน่งทางวิชาการ (ถ้ามี)', type: 'datalist', options: ACAD_POS_OPTS.concat(['ไม่มี']) };
-const F_ADMIN = { k: 'adminPosition', label: 'ตำแหน่งทางบริหาร (ถ้ามี)', type: 'datalist', options: ADMIN_POS_OPTS.concat(['ไม่มี']) };
+// build 2569-11-24.1: พิมพ์เองได้อิสระ ไม่มีรายการเลื่อนลง (เจ้าของระบบขอ)
+const F_ACAD = { k: 'academicPosition', label: 'ตำแหน่งทางวิชาการ (ถ้ามี)', type: 'text', ph: 'เช่น ผู้ชำนาญการ', auto: 'off' };
+const F_ADMIN = { k: 'adminPosition', label: 'ตำแหน่งทางบริหาร (ถ้ามี)', type: 'text', ph: 'เช่น หัวหน้าฝ่าย', auto: 'off' };
 const F_LEVEL = { k: 'level', label: 'ระดับ (ตัวเลข ถ้ามี)', type: 'level' };
 const EXTRA_FIELDS = [F_ACAD, F_ADMIN, F_LEVEL];
 function joinPosLevel(p, l) { p = String(p || ''); l = String(l || '').trim(); if (!l) return p; return /^[0-9]+$/.test(l) ? (p ? p + ' ระดับ ' + l : 'ระดับ ' + l) : (p.indexOf(l) < 0 ? p + l : p); }
@@ -3216,14 +3250,19 @@ const PF_DEF = {
   '2318': { name: 'ใบรับรองการจ่ายเงินค่าพาหนะ', code: 'แบบพิมพ์หมายเลข 2318/2547', icon: 'directions_bus', color: 'blue',
     desc: 'ค่าพาหนะที่ได้ไปกิจการต่าง ๆ · A4 หรือฟุลสแก๊ป · หน้าแรก 35 รายการ หน้าถัดไป 39 รายการ' },
   '026': { name: 'แบบรายงานการเดินทางไปปฏิบัติงาน', code: 'FM-HRM-026/01', icon: 'luggage', color: 'violet',
-    desc: 'รายงานการเดินทางและขอเบิกค่าใช้จ่ายในการเดินทางไปปฏิบัติงาน · กระดาษ A4 · 2 หน้า' }
+    desc: 'รายงานการเดินทางและขอเบิกค่าใช้จ่ายในการเดินทางไปปฏิบัติงาน · กระดาษ A4 · 2 หน้า' },
+  'stc': { name: 'สัญญาอนุญาตให้บุคลากรไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย', code: 'สัญญาอนุญาต + สัญญาค้ำประกัน', icon: 'school', color: 'red',
+    desc: 'ภายในประเทศหรือต่างประเทศ ในเวลาหรือนอกเวลาปฏิบัติงาน · พร้อมหนังสือคู่สมรสและสัญญาค้ำประกัน · A4 สูงสุด 10 หน้า · ข้อมูลส่วนบุคคลใช้พิมพ์เท่านั้น ไม่บันทึก' }
 };
 const PF_ORG = 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา';
 const PF_ORG_S = 'รพ.สมเด็จพระบรมราชเทวี ณ ศรีราชา';
 const PF_TO = 'ผู้อำนวยการโรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา';
 const PF_PAPER = { a4: { w: 595.32, h: 841.92, css: 'A4', label: 'A4' }, fs: { w: 612, h: 936, css: '8.5in 13in', label: 'ฟุลสแก๊ป 8.5 × 13 นิ้ว' } };
-const PF_MAX = { '2144': 150, '2318': 296, '026': 23 };
-S.pforms = []; S.pfm = { mode: 'list', type: '', id: null, data: {}, q: '', ft: '', touched: {} };
+const PF_MAX = { '2144': 150, '2318': 296, '026': 23, 'stc': 0 };
+S.pforms = []; S.pfCfg = null; S.pfm = { mode: 'list', type: '', id: null, data: {}, secret: {}, q: '', ft: '', touched: {} };
+/** ผู้ดูแลกำหนดให้แต่ละแบบฟอร์มแสดงให้ผู้ใช้เห็นหรือไม่ (build 2569-11-24.1) · ผู้ดูแลเห็นทุกแบบเสมอ */
+function pfShown(k) { const c = S.pfCfg && S.pfCfg.show; return !c || c[k] !== false; }
+function pfCanUse(k) { return isAdmin() || pfShown(k); }
 
 /* ---------- ตัวเลข / เงิน / วันที่ ---------- */
 function pfNum(v) { const s = String(v == null ? '' : v).replace(/[,\s]/g, ''); if (!s) return NaN; const n = Number(s); return isFinite(n) ? n : NaN; }
@@ -3328,7 +3367,7 @@ function pfPageCss(paper) {
     '.r{position:absolute;white-space:nowrap;transform-origin:0 50%}.r.b{font-weight:700}.r.v{color:#0b2a6b}' +
     '.dl{position:absolute;overflow:visible}.ln{position:absolute;height:0;border-top:solid #000}.lv{position:absolute;width:0;border-left:solid #000}.rf{position:absolute}' +
     '.sb{position:absolute;border:0.75pt solid #000}.sb::after{content:"";position:absolute;left:0.6pt;top:0.6pt;right:-1.75pt;bottom:-1.75pt;border-right:1pt solid #000;border-bottom:1pt solid #000}' +
-    '.ck{position:absolute;overflow:visible}.logo{position:absolute;object-fit:contain}' +
+    '.ck{position:absolute;overflow:visible}.logo{position:absolute;object-fit:contain}.sq{position:absolute;border:0.8pt solid #000}' +
     '.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:10px;background:#0b2545;color:#fff;font:14px sans-serif}' +
     '.bar button{font:inherit;padding:8px 16px;border-radius:8px;border:none;cursor:pointer}.bar .pr{background:#13a3a9;color:#fff;font-weight:600}' +
     '@media print{html,body{background:#fff}.bar{display:none}.page{margin:0;box-shadow:none;page-break-after:always;break-after:page}.page:last-child{page-break-after:auto;break-after:auto}}';
@@ -3505,7 +3544,7 @@ function pf026Pages(d) {
   if (sd) b += pfOn(384.0, 425.3, 618.0, 14, sd.d) + pfOn(427.9, 474.9, 618.0, 14, TH_MON_S[sd.m]) + pfOn(477.4, 517.4, 618.0, 14, sd.y);
   return { pages: [a, b], paper: 'a4' };
 }
-function pfPages(type, d) { return type === '2144' ? pf2144Pages(d) : type === '2318' ? pf2318Pages(d) : pf026Pages(d); }
+function pfPages(type, d) { return type === '2144' ? pf2144Pages(d) : type === '2318' ? pf2318Pages(d) : type === 'stc' ? pfStcPages(d) : pf026Pages(d); }
 
 /** เปิดหน้าพิมพ์ (หน้าต่างใหม่ · ถ้าถูกบล็อกพิมพ์ผ่าน iframe) */
 async function pfPrint(type, d, win, auto) {
@@ -3542,6 +3581,11 @@ function pfDefaults(type) {
   const me = pfMe();
   if (type === '2144') return { fullName: me.name, position: me.position, department: me.department, rows: pfBlankRows(3, () => ({ date: todayStr(), item: '', amount: '', note: '' })), signName: me.name, signDate: todayStr() };
   if (type === '2318') return { office: PF_ORG, paper: 'a4', rows: pfBlankRows(3, () => ({ date: todayStr(), purpose: '', item: '', amount: '' })) };
+  if (type === 'stc') {
+    const u = (isAdmin() && S.me) ? S.me : S.user || {};
+    return { secA: '1', secB: '1', secC: '1', contractNo: '', contractDate: '', fullName: me.name, empCode: u.employeeId || '', position: u.position || '',
+      level: u.level || '', unit: u.unit || '', department: u.department || '', org: PF_ORG, orgPhone: '', gPlace: PF_ORG };
+  }
   const ex = {};
   ['alD', 'alF', 'loD', 'loF'].forEach(g => { ex[g] = pfBlankRows(3, () => ({})); });
   ex.veh = {}; ex.oth = {};
@@ -3558,7 +3602,8 @@ function pfNormalize(type, d) {
     ['alD', 'alF', 'loD', 'loF'].forEach(g => { const a = Array.isArray(d.exp[g]) ? d.exp[g].slice(0, 3) : []; while (a.length < 3) a.push({}); d.exp[g] = a; });
     ['veh', 'oth'].forEach(g => { if (!d.exp[g] || typeof d.exp[g] !== 'object') d.exp[g] = {}; });
     if (!d.rows.length) d.rows = pfBlankRows(4, () => ({}));
-  } else if (!d.rows.length) d.rows = [{}];
+  } else if (type === 'stc') delete d.rows;
+  else if (!d.rows.length) d.rows = [{}];
   return d;
 }
 
@@ -3569,10 +3614,12 @@ function pfTotalOf(r) { return r.formType === '026' ? pf026Total(r.data) : Numbe
 function pfListHtml() {
   const A = isAdmin(), q = S.pfm.q, ft = S.pfm.ft;
   const list = S.pforms.filter(r => (!ft || r.formType === ft) && match(q, r.title, r.fullName, r.username, (PF_DEF[r.formType] || {}).name, thDateShort(r.docDate)));
-  const cards = Object.keys(PF_DEF).map(k => { const f = PF_DEF[k]; return `
-    <div class="pf-card" style="${cvar(f.color)}">
+  const cards = Object.keys(PF_DEF).filter(pfCanUse).map(k => { const f = PF_DEF[k], shown = pfShown(k); return `
+    <div class="pf-card${shown ? '' : ' pf-off'}" style="${cvar(f.color)}" data-pf="${k}">
       <div class="pf-card-h"><div class="doc-ic"><span class="msr">${f.icon}</span></div><div><b>${esc(f.name)}</b><small>${esc(f.code)}</small></div></div>
       <p>${esc(f.desc)}</p>
+      ${A ? `<div class="pf-vis"><label class="switch" title="แสดงแบบฟอร์มนี้ให้ผู้ใช้เห็น"><input type="checkbox" data-pfshow="${k}"${shown ? ' checked' : ''}><i></i></label>
+        <span>${shown ? 'แสดงให้ผู้ใช้เห็น' : '<b>ซ่อนจากผู้ใช้</b> (ผู้ดูแลยังเห็น)'}</span>${k === 'stc' ? '<button class="btn btn-light btn-sm" data-action="pfSigner" style="margin-left:auto"><span class="msr">settings</span>ผู้รับสัญญา</button>' : ''}</div>` : ''}
       <div class="pf-card-a"><button class="btn btn-light btn-sm" data-action="pfBlank" data-type="${k}"><span class="msr">print</span>พิมพ์แบบเปล่า</button>
         <button class="btn btn-primary btn-sm" data-action="pfNew" data-type="${k}"><span class="msr">edit_document</span>กรอกแบบฟอร์ม</button></div>
     </div>`; }).join('') + (canSee('forms') ? `
@@ -3586,7 +3633,7 @@ function pfListHtml() {
   <div class="pf-cards">${cards}</div>
   <div class="toolbar" style="margin-top:22px">
     <div class="search"><span class="msr">search</span><input id="pfQ" placeholder="ค้นหารายการ ${A ? 'ชื่อผู้กรอก ' : ''}..." value="${esc(q)}"></div>
-    <select class="input" id="pfFt" style="max-width:260px"><option value="">ทุกแบบฟอร์ม</option>${Object.keys(PF_DEF).map(k => `<option value="${k}"${ft === k ? ' selected' : ''}>${esc(PF_DEF[k].name)}</option>`).join('')}</select>
+    <select class="input" id="pfFt" style="max-width:260px"><option value="">ทุกแบบฟอร์ม</option>${Object.keys(PF_DEF).filter(k => pfCanUse(k) || S.pforms.some(r => r.formType === k)).map(k => `<option value="${k}"${ft === k ? ' selected' : ''}>${esc(PF_DEF[k].name)}</option>`).join('')}</select>
   </div>
   <div class="card"><div class="card-h"><h3><span class="msr">folder_open</span>แบบฟอร์มที่บันทึกไว้${A ? ' (ทุกคน)' : ''}</h3><span class="muted small">${list.length} ฉบับ</span></div>
   ${list.length ? `<div class="table-wrap"><table class="tbl" id="pfTable">
@@ -3600,18 +3647,22 @@ function pfListHtml() {
       <td class="muted small">${timeAgo(r.updatedAt)}</td>
       <td><div class="actions">
         <button class="icon-btn" data-action="pfPrint" data-id="${esc(r.id)}" title="พิมพ์ / บันทึกเป็น PDF"><span class="msr">print</span></button>
-        <button class="icon-btn" data-action="pfEdit" data-id="${esc(r.id)}" title="แก้ไข"><span class="msr">edit</span></button>
-        <button class="icon-btn" data-action="pfCopy" data-id="${esc(r.id)}" title="คัดลอกเป็นฉบับใหม่"><span class="msr">content_copy</span></button>
+        ${pfCanUse(r.formType) ? `<button class="icon-btn" data-action="pfEdit" data-id="${esc(r.id)}" title="แก้ไข"><span class="msr">edit</span></button>
+        <button class="icon-btn" data-action="pfCopy" data-id="${esc(r.id)}" title="คัดลอกเป็นฉบับใหม่"><span class="msr">content_copy</span></button>` : '<span class="badge" title="ผู้ดูแลซ่อนแบบฟอร์มนี้ไว้ จึงแก้ไขไม่ได้ แต่ยังพิมพ์ได้">ปิดแก้ไข</span>'}
         <button class="icon-btn danger" data-action="pfDel" data-id="${esc(r.id)}" title="ลบ"><span class="msr">delete</span></button>
       </div></td></tr>`; }).join('')}</tbody></table></div>`
     : emptyState('print', S.pforms.length ? 'ไม่พบแบบฟอร์ม' : 'ยังไม่มีแบบฟอร์มที่บันทึกไว้', S.pforms.length ? 'ลองเปลี่ยนคำค้นหาหรือชนิดแบบฟอร์ม' : 'เลือกแบบฟอร์มด้านบนแล้วกด "กรอกแบบฟอร์ม"')}</div>`;
 }
 
 /* ---------- หน้ากรอก ---------- */
-function pfGet(path) { return String(path).split('.').reduce((o, k) => (o == null ? undefined : o[k]), S.pfm.data); }
+/** ชื่อช่องขึ้นต้น "sec." = ข้อมูลอ่อนไหวของแบบสัญญา เก็บใน S.pfm.secret (หน้าจอเท่านั้น ไม่ส่งไปบันทึก) */
+function pfGet(path) { path = String(path); const sec = path.indexOf('sec.') === 0; return (sec ? path.slice(4) : path).split('.').reduce((o, k) => (o == null ? undefined : o[k]), sec ? S.pfm.secret : S.pfm.data); }
 function pfSet(path, v) {
-  const ks = String(path).split('.');
-  let o = S.pfm.data;
+  path = String(path);
+  const sec = path.indexOf('sec.') === 0;
+  if (sec) { S.pfm.secret = S.pfm.secret || {}; path = path.slice(4); }
+  const ks = path.split('.');
+  let o = sec ? S.pfm.secret : S.pfm.data;
   ks.slice(0, -1).forEach((k, i) => { if (o[k] == null || typeof o[k] !== 'object') o[k] = /^[0-9]+$/.test(ks[i + 1]) ? [] : {}; o = o[k]; });
   o[ks[ks.length - 1]] = v;
 }
@@ -3640,7 +3691,7 @@ function pfTotalBox() {
 function pfEditorHtml() {
   const t = S.pfm.type, f = PF_DEF[t];
   const head = `<div class="pf-ed-head" style="${cvar(f.color)}"><div class="doc-ic"><span class="msr">${f.icon}</span></div><div><b>${esc(f.name)}</b><small>${esc(f.code)} · ${S.pfm.id ? 'แก้ไขฉบับที่บันทึกไว้' : 'ฉบับใหม่'}</small></div></div>`;
-  const body = t === '2144' ? pf2144Ed() : t === '2318' ? pf2318Ed() : pf026Ed();
+  const body = t === '2144' ? pf2144Ed() : t === '2318' ? pf2318Ed() : t === 'stc' ? pfStcEd() : pf026Ed();
   return `${head}<form id="pfForm" onsubmit="return false" autocomplete="off">${body}</form>
   <div class="req-actions">
     <button class="btn btn-light" data-action="pfCancel">ยกเลิก</button>
@@ -3741,7 +3792,8 @@ function onPfInput(e) {
   const t = e.target; if (!t.name) return;
   const d = S.pfm.data;
   const before = pfv(t.name);
-  pfSet(t.name, t.value);
+  pfSet(t.name, t.type === 'checkbox' ? (t.checked ? '1' : '') : t.value);
+  if (S.pfm.type === 'stc') { t.classList.remove('req-field-err'); return; }
   t.classList.remove('req-field-err');
   if (t.name === 'fullName' && (d.signName || '') === before) { d.signName = t.value; const s = $('#pfForm [name=signName]'); if (s) s.value = t.value; }
   if (t.name === 'signName') S.pfm.touched.signName = true;
@@ -3756,15 +3808,20 @@ function onPfInput(e) {
   pfRefreshOut();
 }
 function pfReadForm() {
-  $$('#pfForm input[name],#pfForm select[name],#pfForm textarea[name]').forEach(el => pfSet(el.name, el.value));
+  $$('#pfForm input[name],#pfForm select[name],#pfForm textarea[name]').forEach(el => pfSet(el.name, el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value));
   return S.pfm.data;
 }
 function pfValidate() {
   const t = S.pfm.type, d = pfReadForm(), miss = [];
   $$('#pfForm .req-field-err').forEach(el => el.classList.remove('req-field-err'));
   const mark = n => { const el = $('#pfForm [name="' + n + '"]'); if (el) el.classList.add('req-field-err'); };
-  if ((t === '2144' || t === '026') && !String(d.fullName || '').trim()) { miss.push('ชื่อ-นามสกุล'); mark('fullName'); }
-  if (t !== '026') {
+  if ((t === '2144' || t === '026' || t === 'stc') && !String(d.fullName || '').trim()) { miss.push('ชื่อ-นามสกุล'); mark('fullName'); }
+  if (t === 'stc') {
+    const sc = S.pfm.secret || {};
+    if (!d.secA && !d.secB && !d.secC) miss.push('เลือกส่วนที่จะพิมพ์อย่างน้อย 1 ส่วน');
+    if (d.startDate && d.endDate && d.endDate < d.startDate) { mark('endDate'); miss.push('ถึงวันที่ต้องไม่ก่อนวันเริ่มต้น'); }
+    [['idNo', 'เลขประจำตัวประชาชนของผู้ให้สัญญา'], ['gId', 'เลขประจำตัวประชาชนของผู้ค้ำประกัน']].forEach(x => { const v = String(sc[x[0]] || '').replace(/[\s-]/g, ''); if (v && !/^[0-9]{13}$/.test(v)) { mark('sec.' + x[0]); miss.push(x[1] + ' ต้องเป็นตัวเลข 13 หลัก'); } });
+  } else if (t !== '026') {
     const used = (d.rows || []).map((r, i) => ({ r, i })).filter(x => pfRowUsed(Object.assign({}, x.r, { date: '' })));
     if (!used.length) miss.push('รายการอย่างน้อย 1 รายการ');
     used.forEach(x => {
@@ -3788,6 +3845,7 @@ function pfValidate() {
 /** ข้อมูลที่ส่งไปบันทึก: ตัดแถวว่างออก · ใส่ยอดที่คำนวณของแถวในประเทศ */
 function pfPayload() {
   const t = S.pfm.type, d = JSON.parse(JSON.stringify(pfReadForm()));
+  if (t === 'stc') { delete d.rows; return d; }
   if (t === '026') {
     d.rows = (d.rows || []).filter(pfRowUsed);
     ['alD', 'loD'].forEach(g => (d.exp[g] || []).forEach(r => { const v = pf026RowAmt(g, r); r.amount = v > 0 ? String(v) : (r.amount || ''); }));
@@ -3795,7 +3853,7 @@ function pfPayload() {
   return d;
 }
 function pfOpen(type, id, data) {
-  S.pfm = { mode: 'edit', type, id: id || null, data: pfNormalize(type, data || pfDefaults(type)), q: S.pfm.q, ft: S.pfm.ft, touched: id ? { totalDays: true, signName: true } : {} };
+  S.pfm = { mode: 'edit', type, id: id || null, data: pfNormalize(type, data || pfDefaults(type)), secret: {}, q: S.pfm.q, ft: S.pfm.ft, touched: id ? { totalDays: true, signName: true } : {} };
   render(); window.scrollTo(0, 0); setTimeout(pfRefreshOut, 0);
 }
 async function pfSave(andPrint) {
@@ -3808,8 +3866,16 @@ async function pfSave(andPrint) {
   try {
     const r = await api('savePrintForm', S.token, { id: S.pfm.id, formType: type, data: d });
     S.pforms = r.list;
+    if (type === 'stc') {   // ข้อมูลอ่อนไหวไม่ถูกบันทึก: เปิดหน้ากรอกค้างไว้ให้พิมพ์ซ้ำได้จนกว่าจะปิดหน้า
+      const sec = Object.assign({}, S.pfm.secret);
+      toast((S.pfm.id ? 'บันทึกการแก้ไขแล้ว' : 'บันทึกแล้ว') + ' · ข้อมูลส่วนบุคคลไม่ถูกบันทึก');
+      S.pfm.id = r.id;
+      render();
+      if (andPrint) await pfPrint(type, Object.assign({}, d, sec), win, true);
+      return;
+    }
     toast(S.pfm.id ? 'บันทึกการแก้ไขแล้ว' : 'บันทึกแบบฟอร์มแล้ว');
-    S.pfm = { mode: 'list', type: '', id: null, data: {}, q: S.pfm.q, ft: S.pfm.ft, touched: {} };
+    S.pfm = { mode: 'list', type: '', id: null, data: {}, secret: {}, q: S.pfm.q, ft: S.pfm.ft, touched: {} };
     render();
     if (andPrint) await pfPrint(type, d, win, true);
   } catch (e) { if (win) win.close(); toast(e.message, 'err'); }
@@ -3849,18 +3915,29 @@ function pfLastAddr() {
 function pfAction(act, d) {
   const find = () => S.pforms.find(x => x.id === d.id);
   switch (act) {
-    case 'pfNew': return pfOpen(d.type);
-    case 'pfBlank': { const w = openPrintWindow(); return pfPrint(d.type, {}, w, false); }
-    case 'pfEdit': { const r = find(); if (r) pfOpen(r.formType, r.id, r.data); return; }
+    case 'pfNew': if (!pfCanUse(d.type)) return toast('แบบฟอร์มนี้ปิดให้บริการอยู่', 'err'); return pfOpen(d.type);
+    case 'pfBlank': { if (!pfCanUse(d.type)) return toast('แบบฟอร์มนี้ปิดให้บริการอยู่', 'err'); const w = openPrintWindow(); return pfPrint(d.type, {}, w, false); }
+    case 'pfEdit': { const r = find(); if (!r) return; if (!pfCanUse(r.formType)) return toast('ผู้ดูแลซ่อนแบบฟอร์มนี้ไว้ จึงแก้ไขไม่ได้ (ยังพิมพ์ได้)', 'err'); pfOpen(r.formType, r.id, r.data); return; }
+    case 'pfSigner': return pfSignerEdit();
+    case 'pfCopyAddr': {
+      pfReadForm();
+      PF_STC_ADDR.forEach(a => { const v = pfv('sec.' + d.from + a[0]); pfSet('sec.' + d.to + a[0], v); const el = $('#pfForm [name="sec.' + d.to + a[0] + '"]'); if (el) el.value = v; });
+      return toast('คัดลอกที่อยู่แล้ว');
+    }
     case 'pfCopy': {
       const r = find(); if (!r) return;
+      if (!pfCanUse(r.formType)) return toast('แบบฟอร์มนี้ปิดให้บริการอยู่', 'err');
       const nd = JSON.parse(JSON.stringify(r.data || {}));
       if (r.formType === '026') { nd.docDate = todayStr(); nd.signDate = ''; } else if (r.formType === '2144') nd.signDate = todayStr();
       const me = pfMe();
       if (!r.mine && r.formType !== '2318') { nd.fullName = me.name; nd.signName = me.name; nd.position = me.position; if (r.formType === '2144') nd.department = me.department; }
       pfOpen(r.formType, null, nd); return toast('คัดลอกเป็นฉบับใหม่แล้ว ตรวจวันที่และรายการก่อนบันทึก', 'info');
     }
-    case 'pfPrint': { const r = find(); if (!r) return; const w = openPrintWindow(); return pfPrint(r.formType, r.data, w, false); }
+    case 'pfPrint': {
+      const r = find(); if (!r) return;
+      if (r.formType === 'stc') toast('ข้อมูลส่วนบุคคลไม่ได้บันทึกไว้ ช่องเหล่านั้นจะว่าง · ถ้าต้องการพิมพ์พร้อมข้อมูล ให้กดแก้ไขแล้วกรอกใหม่', 'info');
+      const w = openPrintWindow(); return pfPrint(r.formType, r.data, w, false);
+    }
     case 'pfDel': {
       const r = find(); if (!r) return;
       return (async () => {
@@ -3870,7 +3947,7 @@ function pfAction(act, d) {
       })();
     }
     case 'pfCancel': return (async () => { if (!(await ask(ASK.cancel))) return; S.pfm.mode = 'list'; render(); })();
-    case 'pfPreview': { pfReadForm(); const w = openPrintWindow(); return pfPrint(S.pfm.type, pfPayload(), w, false); }
+    case 'pfPreview': { pfReadForm(); const w = openPrintWindow(); return pfPrint(S.pfm.type, Object.assign({}, pfPayload(), S.pfm.type === 'stc' ? S.pfm.secret : {}), w, false); }
     case 'pfSave': return pfSave(false);
     case 'pfSavePrint': return pfSave(true);
     case 'pfRowAdd': {
@@ -3891,6 +3968,234 @@ function pfAction(act, d) {
     case 'pfImport008': return pfImport008();
     case 'pfLastAddr': return pfLastAddr();
   }
+}
+
+/* ผังสัญญาอนุญาตไปศึกษา 10 หน้า: ถอดพิกัดจากไฟล์ต้นฉบับที่เจ้าของระบบส่งให้ 24 พ.ย. 69 (Word → PDF) */
+const PF_LSTC = [[["hd",432.9,177.2,538.1,0.5],["hd",218.6,219.8,438.9,0.5],["hd",461.7,219.8,538.1,0.5],["hd",90.4,245.2,198.4,0.5],["hd",220.6,245.2,296.9,0.5],["hd",313.3,245.2,397.0,0.5],["hd",426.1,245.2,538.8,0.5],["hd",127.6,271.0,227.0,0.5],["hd",261.8,271.0,297.8,0.5],["hd",320.2,271.0,439.5,0.5],["hd",458.1,271.0,537.3,0.5],["hd",136.2,296.8,324.9,0.5],["hd",423.4,296.8,538.8,0.5],["hd",121.2,322.2,156.0,0.5],["hd",178.3,322.2,283.5,0.5],["hd",302.2,322.2,381.4,0.5],["hd",400.0,322.2,446.6,0.5],["hd",213.1,347.8,283.6,0.5],["hd",319.1,347.8,538.8,0.5],["hd",94.8,373.2,127.6,0.5],["hd",144.0,373.2,311.9,0.5],["hd",329.1,373.2,537.9,0.5],["hd",148.5,398.8,382.9,0.5],["hd",418.9,398.8,538.4,0.5],["hd",187.5,424.2,283.6,0.5],["hd",303.6,424.2,339.7,0.5],["hd",386.6,424.2,537.8,0.5],["hd",90.4,449.8,198.4,0.5],["hd",249.2,449.8,361.6,0.5],["hd",408.8,449.8,538.8,0.5],["hd",100.0,475.2,227.0,0.5],["hd",282.5,475.2,381.9,0.5],["hd",418.9,475.2,538.4,0.5],["hd",253.2,500.8,326.1,0.5],["hd",346.1,500.8,382.1,0.5],["hd",429.1,500.8,538.8,0.5],["hd",90.4,526.8,198.4,0.5],["hd",249.2,526.8,361.6,0.5],["hd",408.8,526.8,538.8,0.5],["hd",100.0,552.2,227.0,0.5],["hd",282.5,552.2,381.9,0.5],["hd",418.9,552.2,538.4,0.5],["hd",386.1,577.8,537.3,0.5],["hd",106.5,603.2,297.8,0.5],["hd",382.9,791.8,493.8,0.5],["t",112.7,95.4,496.9,113.4,18.0,1,0,"สัญญาอนุญาตให้บุคลากรสภากาชาดไทยไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",125.2,119.2,484.6,137.2,18.0,1,0,"ภายในประเทศหรือต่างประเทศ ในเวลาปฏิบัติงานหรือนอกเวลาปฏิบัติงาน"],["t",382.9,164.3,432.8,180.3,16.0,0,0,"สัญญาเลขที่"],["t",127.6,207.0,218.6,223.0,16.0,0,0,"สัญญาฉบับนี้ทำขึ้น ณ"],["t",439.5,207.0,461.7,223.0,16.0,0,0,"เลขที่"],["t",70.9,232.6,90.4,248.6,16.0,0,0,"ถนน"],["t",198.5,232.6,220.6,248.6,16.0,0,0,"แขวง"],["t",297.8,232.6,313.3,248.6,16.0,0,0,"เขต"],["t",397.0,232.6,426.1,248.6,16.0,0,0,"จังหวัด"],["t",70.9,258.2,126.5,274.2,16.0,0,0,"รหัสไปรษณีย์"],["t",227.0,258.2,261.6,274.2,16.0,0,0,"เมื่อวันที่"],["t",297.8,258.2,320.1,274.2,16.0,0,0,"เดือน"],["t",439.5,258.2,458.1,274.2,16.0,0,0,"พ.ศ."],["t",70.9,283.8,136.1,299.7,16.0,0,0,"ระหว่างข้าพเจ้า"],["t",326.1,283.8,423.3,299.7,16.0,0,0,"เลขประจำตัวประชาชน"],["t",70.9,309.3,121.2,325.3,16.0,0,0,"เกิดเมื่อวันที่"],["t",156.0,309.3,178.3,325.3,16.0,0,0,"เดือน"],["t",283.6,309.3,302.2,325.3,16.0,0,0,"พ.ศ."],["t",382.9,309.3,400.0,325.3,16.0,0,0,"อายุ"],["t",446.6,309.3,538.6,325.3,16.0,0,0,"ปี เป็นบุคลากรประจำ"],["t",70.9,334.9,212.9,350.8,16.0,0,0,"ของสภากาชาดไทย รหัสประจำตัว"],["t",283.6,334.9,319.1,350.8,16.0,0,0,"ตำแหน่ง"],["t",70.9,360.4,94.9,376.4,16.0,0,0,"ระดับ"],["t",127.6,360.4,144.0,376.4,16.0,0,0,"งาน"],["t",311.9,360.4,329.0,376.4,16.0,0,0,"ฝ่าย"],["t",70.9,385.9,148.4,401.9,16.0,0,0,"หน่วยงานต้นสังกัด"],["t",382.9,385.9,422.3,401.9,16.0,0,0,"โทรศัพท์"],["t",70.9,411.5,187.5,427.4,16.0,0,0,"ที่อยู่ตามทะเบียนบ้าน เลขที่"],["t",283.6,411.5,307.1,427.4,16.0,0,0,"หมู่ที่"],["t",340.4,411.5,386.6,427.4,16.0,0,0,"ตรอก/ซอย"],["t",70.9,437.0,90.4,453.0,16.0,0,0,"ถนน"],["t",198.5,437.0,249.1,453.0,16.0,0,0,"ตำบล/แขวง"],["t",361.6,437.0,408.8,453.0,16.0,0,0,"อำเภอ/เขต"],["t",70.9,462.6,100.0,478.5,16.0,0,0,"จังหวัด"],["t",227.0,462.6,282.5,478.5,16.0,0,0,"รหัสไปรษณีย์"],["t",382.9,462.6,422.3,478.5,16.0,0,0,"โทรศัพท์"],["t",70.9,488.1,253.2,504.1,16.0,0,0,"ที่อยู่ปัจจุบันซึ่งสามารถติดต่อได้สะดวกเลขที่"],["t",326.1,488.1,349.6,504.1,16.0,0,0,"หมู่ที่"],["t",382.9,488.1,429.1,504.1,16.0,0,0,"ตรอก/ซอย"],["t",70.9,513.7,90.4,529.7,16.0,0,0,"ถนน"],["t",198.5,513.7,249.1,529.7,16.0,0,0,"ตำบล/แขวง"],["t",361.6,513.7,408.8,529.7,16.0,0,0,"อำเภอ/เขต"],["t",70.9,539.3,100.0,555.2,16.0,0,0,"จังหวัด"],["t",227.0,539.3,286.0,555.2,16.0,0,0,"รหัสไปรษณีย์"],["t",382.9,539.3,422.3,555.2,16.0,0,0,"โทรศัพท์"],["t",70.9,564.8,386.1,580.8,16.0,0,0,"ซึ่งต่อไปในสัญญานี้ เรียกว่า “ผู้ให้สัญญา” ฝ่ายหนึ่ง กับ สภากาชาดไทย โดย"],["v",403.5,564.8,513.7,580.8,16.0,"signerName",386.1,537.3],["t",70.9,590.4,106.5,606.4,16.0,0,0,"ตำแหน่ง"],["v",141.5,590.4,242.7,606.4,16.0,"signerPos",106.5,297.8],["t",297.8,590.4,520.0,606.4,16.0,0,0,"ซึ่งต่อไปในสัญญานี้เรียกว่า “ผู้รับสัญญา” อีกฝ่ายหนึ่ง"],["t",127.6,624.9,428.7,641.5,16.0,0,0,"โดยที่ผู้ให้สัญญาเป็นผู้ได้รับอนุญาตจากผู้รับสัญญา ให้ไป (ทำเครื่องหมาย"],["ck",438.4,633.4],["t",448.1,624.9,486.3,641.5,16.0,0,0,"ลงในช่อง"],["t",501.1,624.9,504.1,641.5,16.0,0,0,")"],["t",85.8,650.4,110.0,667.1,16.0,0,0,"ศึกษา"],["t",135.4,650.4,171.8,667.1,16.0,0,0,"ฝึกอบรม"],["t",197.3,650.4,257.4,667.1,16.0,0,0,"ปฏิบัติการวิจัย"],["t",370.8,650.4,433.0,667.1,16.0,0,0,"ภายในประเทศ"],["t",458.4,650.4,508.1,667.1,16.0,0,0,"ต่างประเทศ"],["t",283.6,651.1,345.2,667.1,16.0,0,0,"และเป็นการไป"],["t",85.8,676.0,159.1,692.6,16.0,0,0,"ในเวลาปฏิบัติงาน"],["t",184.5,676.0,266.1,692.6,16.0,0,0,"นอกเวลาปฏิบัติงาน"],["t",365.7,676.0,431.2,692.6,16.0,0,0,"สภากาชาดไทย"],["t",457.7,676.0,538.5,692.6,16.0,0,0,"หน่วยงานต้นสังกัด"],["t",283.6,676.7,339.3,692.6,16.0,0,0,"และได้รับทุน"],["t",70.9,702.3,468.2,718.2,16.0,0,0,"ตามประกาศสภากาชาดไทย เรื่อง หลักเกณฑ์การลาไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",472.9,702.3,538.8,718.2,16.0,0,0,"ภายในประเทศ"],["t",70.9,727.8,282.8,743.8,16.0,0,0,"และต่างประเทศของบุคลากรประจำสภากาชาดไทย"],["t",495.2,778.9,539.0,794.9,16.0,0,0,"ผู้ให้สัญญา"],["sq",491.3,629.2,8.4],["sq",72.3,654.7,8.4],["sq",121.9,654.7,8.4],["sq",183.8,654.7,8.4],["sq",357.3,654.7,8.4],["sq",444.9,654.7,8.4],["sq",72.3,680.3,8.4],["sq",171.0,680.3,8.4],["sq",352.2,680.3,8.4],["sq",444.2,680.3,8.4],["pv",218.6,438.9,219.8,16,"โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา"],["pv",461.7,538.1,219.8,16,"290"],["pv",90.4,198.4,245.2,16,"เจิมจอมพล"],["pv",220.6,296.9,245.2,16,"ศรีราชา"],["pv",313.3,397.0,245.2,16,"ศรีราชา"],["pv",426.1,538.8,245.2,16,"ชลบุรี"],["pv",127.6,227.0,271.0,16,"20110"]],[["hd",377.4,169.2,538.8,0.5],["hd",70.9,194.8,538.8,0.5],["hd",109.7,220.2,537.5,0.5],["hd",91.5,247.8,538.8,0.5],["hd",188.1,273.8,538.1,0.5],["hd",192.8,301.0,538.8,0.5],["hd",171.7,328.8,354.6,0.5],["hd",365.2,328.8,538.8,0.5],["hd",104.9,356.2,269.4,0.5],["hd",430.9,356.2,489.2,0.5],["hd",108.3,383.8,144.3,0.5],["hd",152.2,383.8,184.3,0.5],["hd",206.7,383.8,239.8,0.5],["hd",312.4,383.8,339.8,0.5],["hd",362.7,383.8,473.6,0.5],["hd",493.7,383.8,538.3,0.5],["hd",99.9,411.2,127.2,0.5],["hd",148.8,411.2,241.1,0.5],["hd",258.3,411.2,297.2,0.5],["hd",200.0,464.2,227.0,0.5],["hd",233.8,464.2,265.8,0.5],["hd",288.2,464.2,311.9,0.5],["hd",70.9,491.8,538.8,0.5],["hd",70.9,519.8,538.8,0.5],["hd",208.5,547.2,237.5,0.5],["hd",244.4,547.2,280.0,0.5],["hd",302.3,547.2,332.6,0.5],["hd",70.9,574.8,538.8,0.5],["hd",70.9,602.2,538.8,0.5],["hd",382.9,772.2,493.8,0.5],["t",298.7,44.7,310.9,60.6,16.0,0,0,"-2-"],["t",127.6,95.8,346.2,111.8,16.0,0,0,"คู่สัญญาทั้งสองฝ่ายจึงได้ตกลงกันมีข้อความดังต่อไปนี้"],["t",127.6,130.8,149.1,146.8,16.0,0,0,"ข้อ 1"],["t",156.0,130.8,537.4,146.8,16.0,0,0,"ผู้ให้สัญญาเป็นผู้ได้รับอนุญาตจากผู้รับสัญญาให้ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",70.9,156.4,124.3,172.4,16.0,0,0,"และได้รับทุน"],["t",146.3,155.7,209.3,172.4,16.0,0,0,"สภากาชาดไทย"],["t",231.3,155.7,377.4,172.4,16.0,0,0,"หน่วยงานต้นสังกัด หลักสูตร/หัวข้อ"],["t",70.9,207.5,109.7,223.5,16.0,0,0,"สาขาวิชา"],["t",70.9,235.2,91.5,251.1,16.0,0,0,"คณะ"],["t",70.9,260.7,188.0,276.7,16.0,0,0,"สถาบันการศึกษา/หน่วยงาน"],["t",85.8,287.5,192.7,304.2,16.0,0,0,"ภายในประเทศ ณ จังหวัด"],["t",85.6,315.8,171.7,331.8,16.0,0,0,"ต่างประเทศ ณ เมือง"],["t",354.6,315.8,365.2,331.8,16.0,0,0,"รัฐ"],["t",70.9,343.4,104.9,359.4,16.0,0,0,"ประเทศ"],["t",269.4,343.4,430.8,359.4,16.0,0,0,"ระยะเวลาการศึกษาตามกรอบหลักสูตร"],["t",489.2,343.4,536.7,359.4,16.0,0,0,"ปีการศึกษา"],["t",70.9,370.9,108.3,386.9,16.0,0,0,"มีกำหนด"],["t",145.3,370.9,152.2,386.9,16.0,0,0,"ปี"],["t",184.3,370.9,206.6,386.9,16.0,0,0,"เดือน"],["t",241.1,370.9,312.4,386.9,16.0,0,0,"วัน นับตั้งแต่วันที่"],["t",340.4,370.9,362.7,386.9,16.0,0,0,"เดือน"],["t",475.1,370.9,482.2,386.9,16.0,0,0,"พ"],["t",482.1,370.9,493.6,386.9,16.0,0,0,".ศ."],["t",70.9,398.5,103.3,414.5,16.0,0,0,"ถึงวันที่"],["t",127.6,398.5,149.2,414.5,16.0,0,0,"เดือน"],["t",241.1,398.5,248.3,414.5,16.0,0,0,"พ"],["t",247.8,398.5,250.4,414.5,16.0,0,0,"."],["t",250.1,398.5,256.4,414.5,16.0,0,0,"ศ"],["t",256.0,398.5,258.6,414.5,16.0,0,0,"."],["t",297.8,398.5,354.5,414.5,16.0,0,0,"โดยเป็นการไป"],["t",372.9,397.8,442.3,414.5,16.0,0,0,"ในเวลาปฏิบัติงาน"],["t",460.8,397.8,538.9,414.5,16.0,0,0,"นอกเวลาปฏิบัติงาน"],["t",70.9,424.1,123.4,440.0,16.0,0,0,"หรือแบ่งเป็น"],["t",85.8,450.9,199.9,467.6,16.0,0,0,"ในเวลาปฏิบัติงาน มีกำหนด"],["t",227.0,451.7,233.8,467.6,16.0,0,0,"ปี"],["t",265.9,451.7,288.1,467.6,16.0,0,0,"เดือน"],["t",311.9,451.7,405.1,467.6,16.0,0,0,"วัน ตามระยะเวลาดังนี้"],["t",85.8,533.5,208.4,550.2,16.0,0,0,"นอกเวลาปฏิบัติงาน มีกำหนด"],["t",237.5,534.2,244.4,550.2,16.0,0,0,"ปี"],["t",280.0,534.2,302.3,550.2,16.0,0,0,"เดือน"],["t",333.2,534.2,426.3,550.2,16.0,0,0,"วัน ตามระยะเวลาดังนี้"],["t",127.6,631.7,538.6,647.6,16.0,0,0,"ในกรณีที่ผู้รับสัญญาอนุญาตให้ผู้ให้สัญญาขยายระยะเวลาการไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",70.9,657.2,538.7,673.2,16.0,0,0,"ต่อเนื่องจากระยะเวลาตามวรรคหนึ่ง ให้ถือว่าสัญญาฉบับนี้มีผลครอบคลุมระยะเวลาที่ได้รับอนุมัติให้ขยายระยะเวลา"],["t",70.9,682.8,122.1,698.8,16.0,0,0,"ดังกล่าวด้วย"],["t",495.2,759.5,539.0,775.5,16.0,0,0,"ผู้ให้สัญญา"],["sq",132.8,160.0,8.4],["sq",217.8,160.0,8.4],["sq",72.3,291.8,8.4],["sq",72.3,319.4,8.4],["sq",359.4,402.1,8.4],["sq",447.3,402.1,8.4],["sq",72.3,455.2,8.4],["sq",72.3,537.8,8.4]],[["hd",382.9,782.2,493.8,0.5],["t",298.5,44.7,311.2,60.6,16.0,0,0,"-3-"],["t",127.6,95.8,149.1,111.8,16.0,0,0,"ข้อ 2"],["t",156.0,95.8,538.7,111.8,16.0,0,0,"ในระหว่างเวลาที่ผู้ให้สัญญาได้รับอนุญาตให้ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ตามข้อ 1"],["t",70.9,121.2,405.0,137.2,16.0,0,0,"ดังกล่าว ผู้ให้สัญญาต้องรักษาวินัยและประพฤติปฏิบัติตามข้อตกลงในสัญญานี้"],["t",409.6,121.2,538.6,137.2,16.0,0,0,"ตลอดจนข้อบังคับ ข้อระเบียบ"],["t",70.9,146.8,538.5,162.8,16.0,0,0,"ระเบียบ ประกาศ หรือคำสั่งของสภากาชาดไทยหรือหน่วยงานต้นสังกัด ทั้งที่ได้ออกใช้บังคับอยู่แล้วในวันทำสัญญานี้"],["t",70.9,172.4,538.7,188.3,16.0,0,0,"และที่จะออกใช้บังคับต่อไปโดยเคร่งครัด และให้ถือว่าข้อบังคับ ข้อระเบียบ ระเบียบ ประกาศ หรือคำสั่งดังกล่าว"],["t",70.9,197.9,538.8,213.9,16.0,0,0,"ตลอดจนข้อบังคับ ข้อระเบียบ ระเบียบ ประกาศ หรือคำสั่งของสถาบันหรือหน่วยงานที่ผู้ให้สัญญาไปศึกษา ฝึกอบรม"],["t",70.9,223.5,311.6,239.5,16.0,0,0,"หรือปฏิบัติการวิจัย นั้น เป็นส่วนหนึ่งของสัญญาฉบับนี้ด้วย"],["t",127.6,249.1,537.4,265.0,16.0,0,0,"ผู้ให้สัญญาต้องไม่ประพฤติตนไปในทางที่เป็นปฏิปักษ์ต่อการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",70.9,274.6,285.8,290.6,16.0,0,0,"และต้องตั้งใจศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",290.9,274.6,538.6,290.6,16.0,0,0,"ด้วยความวิริยะอุตสาหะเพื่อให้สำเร็จการศึกษา ฝึกอบรม"],["t",70.9,300.2,182.7,316.2,16.0,0,0,"หรือปฏิบัติการวิจัย โดยเร็ว"],["t",127.6,325.8,537.5,341.7,16.0,0,0,"ในกรณีที่ผู้ให้สัญญามีกิจธุระจำเป็น หรือเจ็บป่วย หรือมีกรณีอื่นใดที่ผู้ให้สัญญาไม่อาจทำการศึกษา"],["t",70.9,351.3,538.3,367.3,16.0,0,0,"ฝึกอบรม หรือปฏิบัติการวิจัย ตามปกติได้ ผู้ให้สัญญาต้องยื่นใบลาต่อสถาบันหรือหน่วยงาน และในกรณีที่ลาเกินกว่า"],["t",70.9,376.9,307.9,392.9,16.0,0,0,"15 (สิบห้า) วัน ผู้ให้สัญญาต้องยื่นใบลาต่อผู้รับสัญญาด้วย"],["t",127.6,402.5,538.1,418.4,16.0,0,0,"ผู้ให้สัญญาต้องไม่พักหรือยุติการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย หรือลาออกจากสถาบันหรือ"],["t",70.9,428.0,538.6,444.0,16.0,0,0,"หน่วยงาน หรือเปลี่ยนสถาบันหรือหน่วยงานที่ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย หรือกระทำการอื่นใดอันมีผลให้"],["t",70.9,453.2,538.1,469.2,16.0,0,0,"การศึกษาต้องหยุดชะงักลง ก่อนสำเร็จการศึกษาตามหลักสูตร เว้นแต่มีเหตุจำเป็น และจะต้องได้รับอนุญาตจาก"],["t",70.9,478.8,538.8,494.7,16.0,0,0,"ผู้รับสัญญาก่อน ทั้งนี้ ผู้ให้สัญญาจะต้องรายงานผลการศึกษาและความคืบหน้าในการศึกษาให้ทราบทุกภาคการศึกษา"],["t",70.9,504.3,171.3,520.3,16.0,0,0,"หรือเมื่อได้รับการร้องขอ"],["t",127.6,539.5,149.1,555.5,16.0,0,0,"ข้อ 3"],["t",156.0,539.5,539.0,555.5,16.0,0,0,"ในกรณีที่ผู้ให้สัญญาประพฤติผิดสัญญาที่ได้ให้ไว้ในข้อ 2 ก็ดี หรือในกรณีที่ผู้รับสัญญาพิจารณา"],["t",70.9,565.1,539.0,581.0,16.0,0,0,"เห็นว่า ผู้ให้สัญญาไม่อาจสำเร็จการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัยได้ภายในระยะเวลาที่กำหนด หรือการไปศึกษา"],["t",70.9,590.6,537.4,606.6,16.0,0,0,"ฝึกอบรม หรือปฏิบัติการวิจัยของผู้ให้สัญญาต้องยุติลงด้วยประการใด ๆ หรือผู้รับสัญญาไม่อนุญาตให้ผู้ให้สัญญา"],["t",70.9,616.2,538.4,632.2,16.0,0,0,"ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัยต่อไม่ว่ากรณีใด ๆ หรือมีความจำเป็นต้องเรียกผู้ให้สัญญากลับมาปฏิบัติงาน"],["t",70.9,641.8,537.8,657.7,16.0,0,0,"ตามหน้าที่ในสภากาชาดไทยหรือหน่วยงานต้นสังกัด ผู้รับสัญญามีสิทธิเพิกถอนการอนุญาตตามสัญญานี้ได้ทันที"],["t",70.9,667.3,538.6,683.3,16.0,0,0,"และมีสิทธิระงับซึ่งทุน หรือเงินเดือน หรือค่าจ้าง หรือค่าตอบแทน หรือเงินค่าใช้จ่ายต่าง ๆ (แล้วแต่กรณี) ที่ทาง"],["t",70.9,692.9,412.3,708.9,16.0,0,0,"สภากาชาดไทยหรือหน่วยงานต้นสังกัดจ่ายช่วยเหลือ โดยผู้ให้สัญญาต้องปฏิบัติดังนี้"],["t",495.2,769.6,539.0,785.5,16.0,0,0,"ผู้ให้สัญญา"]],[["hd",382.9,782.8,493.8,0.5],["t",298.5,44.7,311.2,60.6,16.0,0,0,"-4-"],["t",156.0,95.8,170.2,111.8,16.0,0,0,"3.1"],["t",177.3,95.8,537.8,111.8,16.0,0,0,"รายงานตัวกลับเข้าปฏิบัติงานในหน้าที่ โดยยื่นเป็นหนังสือต่อผู้บังคับบัญชาตามลำดับชั้น"],["t",156.0,121.2,170.2,137.2,16.0,0,0,"3.2"],["t",177.3,121.2,538.5,137.2,16.0,0,0,"เข้าปฏิบัติงานในหน้าที่เพื่อชดใช้ทุนเป็นระยะเวลาสองเท่าของ ระยะเวลาที่ได้ใช้ไป"],["t",70.9,146.8,538.8,162.8,16.0,0,0,"ในการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ในเวลาปฏิบัติงาน หรือชดใช้ทุนเป็นระยะเวลาเท่ากับระยะเวลา"],["t",70.9,172.4,538.8,188.3,16.0,0,0,"ที่ได้ใช้ไปในการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย นอกเวลาปฏิบัติงาน นับตั้งแต่วันรายงานตัวกลับเข้าปฏิบัติงาน"],["t",70.9,197.9,118.4,213.9,16.0,0,0,"ตามข้อ 3.1"],["t",156.0,223.5,170.2,239.5,16.0,0,0,"3.3"],["t",177.3,223.5,422.7,239.5,16.0,0,0,"ในกรณีที่ผู้ให้สัญญาเคยได้รับอนุญาตให้ไปศึกษา ฝึกอบรม"],["t",427.6,223.5,538.2,239.5,16.0,0,0,"หรือปฏิบัติการวิจัยมาแล้ว"],["t",70.9,249.1,538.4,265.0,16.0,0,0,"ก่อนหน้านี้หรือมีพันธะผูกพันเกี่ยวกับการปฏิบัติงานเพื่อชดใช้ทุนให้สภากาชาดไทย หรือหน่วยงานต้นสังกัด"],["t",70.9,274.6,537.3,290.6,16.0,0,0,"และยังปฏิบัติงานไม่ครบระยะเวลาตามสัญญาหรือตามพันธะผูกพันดังกล่าว ผู้ให้สัญญาต้องปฏิบัติงานโดยนับ"],["t",70.9,300.2,538.4,316.2,16.0,0,0,"ระยะเวลาเดิมที่ยังขาดอยู่ต่อกับระยะเวลาที่ต้องปฏิบัติงานตามสัญญานี้ด้วย สำหรับการปฏิบัติงานเพื่อชดใช้ทุน"],["t",70.9,325.8,493.6,341.7,16.0,0,0,"ตามสัญญานี้ให้เริ่มต้นนับเป็นวันชดใช้ทุนตั้งแต่วันถัดจากวันที่ครบกำหนดระยะเวลาตามสัญญาเดิมแล้ว"],["t",127.6,360.9,149.1,376.9,16.0,0,0,"ข้อ 4"],["t",156.0,360.9,538.7,376.9,16.0,0,0,"เมื่อผู้ให้สัญญาเสร็จหรือสำเร็จการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ทั้งนี้ ไม่ว่าจะเสร็จ"],["t",70.9,386.5,538.8,402.5,16.0,0,0,"หรือสำเร็จการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ภายในระยะเวลาตามข้อ 1 หรือไม่ก็ตาม ผู้ให้สัญญาต้องกลับมา"],["t",70.9,412.1,334.2,428.0,16.0,0,0,"ปฏิบัติงานในหน้าที่ให้สภากาชาดไทยหรือหน่วยงานต้นสังกัด"],["t",339.1,412.1,538.4,428.0,16.0,0,0,"เป็นระยะเวลาสองเท่าของระยะเวลาที่ได้ใช้ไป"],["t",70.9,437.6,538.8,453.6,16.0,0,0,"ในการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ในเวลาปฏิบัติงาน หรือชดใช้ทุนเป็นระยะเวลาเท่ากับระยะเวลา"],["t",70.9,463.2,538.5,479.1,16.0,0,0,"ที่ได้ใช้ไปในการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย นอกเวลาปฏิบัติงาน นับตั้งแต่วันถัดจากวันที่เสร็จหรือสำเร็จ"],["t",70.9,488.7,538.1,504.7,16.0,0,0,"การศึกษาแล้วและรายงานตัวกลับเข้าปฏิบัติงาน หรือวันถัดจากวันที่ครบกำหนดระยะเวลาการศึกษาตามกรอบ"],["t",70.9,514.3,263.6,530.3,16.0,0,0,"หลักสูตรแล้วและรายงานตัวกลับเข้าปฏิบัติงาน"],["t",127.6,539.9,537.2,555.8,16.0,0,0,"ในกรณีที่ผู้ให้สัญญาเคยได้รับอนุญาตให้ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัยมาแล้วก่อนหน้านี้"],["t",70.9,565.4,538.6,581.4,16.0,0,0,"หรือมีพันธะผูกพันเกี่ยวกับการปฏิบัติงานเพื่อชดใช้ทุนให้สภากาชาดไทยหรือหน่วยงานต้นสังกัด และยังปฏิบัติงาน"],["t",70.9,591.0,538.4,607.0,16.0,0,0,"ไม่ครบระยะเวลาตามสัญญาหรือตามพันธะผูกพันดังกล่าว ผู้ให้สัญญาต้องปฏิบัติงานโดยนับระยะเวลาเดิมที่ยังขาดอยู่"],["t",70.9,616.6,538.1,632.5,16.0,0,0,"ต่อกับระยะเวลาที่ต้องปฏิบัติงานตามสัญญานี้ด้วย สำหรับการปฏิบัติงานเพื่อชดใช้ทุนตามสัญญานี้ให้เริ่มต้น"],["t",70.9,642.1,402.9,658.1,16.0,0,0,"นับเป็นวันชดใช้ทุนตั้งแต่วันถัดจากวันที่ครบกำหนดระยะเวลาตามสัญญาเดิมแล้ว"],["t",495.2,769.8,539.0,785.8,16.0,0,0,"ผู้ให้สัญญา"]],[["hd",382.9,792.2,493.8,0.5],["t",298.5,44.7,311.2,60.6,16.0,0,0,"-5-"],["t",127.6,95.8,149.1,111.8,16.0,0,0,"ข้อ 5"],["t",156.0,95.8,366.3,111.8,16.0,0,0,"ถ้าผู้ให้สัญญาประพฤติผิดสัญญาดังกล่าวไว้ในข้อ"],["t",371.6,95.8,538.5,111.8,16.0,0,0,"3 หรือข้อ 4 แล้วแต่กรณี โดยเมื่อเสร็จ"],["t",70.9,121.2,538.3,137.2,16.0,0,0,"หรือสำเร็จการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย หรือไม่ก็ดี หรือการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัยของ"],["t",70.9,146.8,538.5,162.8,16.0,0,0,"ผู้ให้สัญญายุติลงด้วยประการใด ๆ ก็ดี แล้วไม่กลับมาปฏิบัติงานหรือปฏิบัติงานไม่ครบกำหนดระยะเวลา"],["t",70.9,172.4,537.8,188.3,16.0,0,0,"ให้สภากาชาดไทยหรือหน่วยงานต้นสังกัดตามที่กล่าวข้างต้น ผู้ให้สัญญาตกลงยินยอมคืนเงินทุน หรือเงินเดือน"],["t",70.9,197.9,538.6,213.9,16.0,0,0,"หรือค่าจ้าง หรือค่าตอบแทน หรือค่าใช้จ่ายต่าง ๆ (แล้วแต่กรณี) ที่ทางสภากาชาดไทยหรือหน่วยงานต้นสังกัด"],["t",70.9,223.5,538.1,239.5,16.0,0,0,"จ่ายช่วยเหลือคืนให้กับสภากาชาดไทยหรือหน่วยงานต้นสังกัด และผู้ให้สัญญายังต้องชดใช้เงินอีกจำนวนหนึ่ง"],["t",70.9,249.1,538.6,265.0,16.0,0,0,"เท่ากับจำนวนเงินทุน หรือเงินเดือน หรือค่าจ้าง หรือค่าตอบแทน หรือเงินค่าใช้จ่ายต่าง ๆ (แล้วแต่กรณี) ที่ทาง"],["t",70.9,274.6,538.7,290.6,16.0,0,0,"สภากาชาดไทยหรือหน่วยงานต้นสังกัดจ่ายช่วยเหลือดังกล่าว ให้เป็นเบี้ยปรับแก่สภากาชาดไทยหรือหน่วยงาน"],["t",70.9,300.2,173.3,316.2,16.0,0,0,"ต้นสังกัดอีกส่วนหนึ่งด้วย"],["t",127.6,325.8,537.2,341.7,16.0,0,0,"ในกรณีที่ผู้ให้สัญญากลับมาปฏิบัติงานแต่ไม่ครบกำหนดตามสัญญานี้ เงินที่ต้องคืนและเบี้ยปรับ"],["t",70.9,351.3,458.6,367.3,16.0,0,0,"ที่ต้องชดใช้ตามวรรคก่อนจะลดลงตามส่วนของระยะเวลาที่ผู้ให้สัญญากลับมาปฏิบัติงานไปแล้ว"],["t",127.6,386.5,149.1,402.5,16.0,0,0,"ข้อ 6"],["t",156.0,386.5,538.4,402.5,16.0,0,0,"เงินที่ต้องคืนและเบี้ยปรับที่ต้องชดใช้ตามข้อ 5 ในสัญญานี้ ผู้ให้สัญญาต้องชำระให้แก่"],["t",70.9,412.1,538.7,428.0,16.0,0,0,"สภากาชาดไทยหรือหน่วยงานต้นสังกัดจนครบถ้วนในคราวเดียวกันภายในกำหนดระยะเวลา 30 (สามสิบ) วัน"],["t",70.9,437.6,538.3,453.6,16.0,0,0,"นับแต่วันที่ได้รับแจ้งจากสภากาชาดไทยหรือหน่วยงานต้นสังกัด หากผู้ให้สัญญาไม่ชำระภายในกำหนดระยะเวลา"],["t",70.9,463.2,538.5,479.1,16.0,0,0,"ดังกล่าว หรือชำระไม่ครบถ้วน ทั้งนี้จะโดยความยินยอมของผู้รับสัญญาหรือไม่ก็ตาม ผู้ให้สัญญาต้องชำระดอกเบี้ย"],["t",70.9,488.7,538.7,504.7,16.0,0,0,"ในอัตราร้อยละ 5 (ห้า) ต่อปี ของจำนวนเงินที่ยังมิได้ชำระ นับแต่วันครบกำหนดระยะเวลาดังกล่าวจนกว่าจะชำระ"],["t",70.9,514.3,104.1,530.3,16.0,0,0,"เสร็จสิ้น"],["t",127.6,549.5,149.1,565.5,16.0,0,0,"ข้อ 7"],["t",156.0,549.5,537.2,565.5,16.0,0,0,"ผู้ให้สัญญาไม่ต้องรับผิดในกรณีที่ประพฤติผิดสัญญาข้อใดข้อหนึ่งหรือหลายข้อตามที่ระบุไว้"],["t",70.9,574.9,318.5,590.9,16.0,0,0,"ในข้อ 3 ข้อ 4 ข้อ 5 และข้อ 6 ในกรณีใดกรณีหนึ่งดังต่อไปนี้"],["t",156.0,600.5,167.8,616.4,16.0,0,0,"(1)"],["t",177.3,600.5,194.5,616.4,16.0,0,0,"ตาย"],["t",156.0,626.0,167.8,642.0,16.0,0,0,"(2)"],["t",177.3,626.0,311.7,642.0,16.0,0,0,"ศาลสั่งให้เป็นคนไร้ความสามารถ"],["t",156.0,651.6,167.8,667.6,16.0,0,0,"(3)"],["t",177.3,651.6,538.6,667.6,16.0,0,0,"เจ็บป่วยทุพพลภาพ หรือเป็นบุคคลวิกลจริต หรือจิตฟั่นเฟือนไม่สมประกอบ ทั้งนี้ โดยมี"],["t",70.9,677.2,539.1,693.1,16.0,0,0,"หลักฐานทางการแพทย์ของสภากาชาดไทยหรือแพทย์ในสังกัดของรัฐไม่น้อยกว่า 3 (สาม) นาย ซึ่งร่วมกันบ่งชี้ว่า"],["t",70.9,702.8,406.4,718.7,16.0,0,0,"การเจ็บป่วยทุพพลภาพ หรือเป็นบุคคลวิกลจริต หรือจิตฟั่นเฟือนไม่สมประกอบ"],["t",411.9,702.8,538.2,718.7,16.0,0,0,"นั้น เป็นอุปสรรคต่อการศึกษา"],["t",70.9,728.3,538.9,744.3,16.0,0,0,"ฝึกอบรม หรือปฏิบัติการวิจัย หรือเป็นอุปสรรคจนไม่สามารถปฏิบั ติงานตามหน้าที่ในสภากาชาดไทยหรือ"],["t",70.9,753.9,162.0,769.8,16.0,0,0,"หน่วยงานต้นสังกัดได้"],["t",495.2,779.4,539.0,795.4,16.0,0,0,"ผู้ให้สัญญา"]],[["hd",302.4,211.2,538.8,0.5],["hd",221.6,551.8,381.4,0.5],["hd",222.8,577.8,382.6,0.5],["hd",221.6,630.8,381.4,0.5],["hd",222.8,656.2,382.6,0.5],["hd",94.0,733.8,233.7,0.5],["hd",363.4,733.8,513.9,0.5],["hd",95.3,761.2,234.0,0.5],["hd",364.6,761.2,517.5,0.5],["t",298.5,44.7,311.2,60.6,16.0,0,0,"-6-"],["t",127.6,95.8,149.1,111.8,16.0,0,0,"ข้อ 8"],["t",156.0,95.8,538.6,111.8,16.0,0,0,"ในกรณีที่ผู้ให้สัญญามีพันธะต้องชดใช้เงินให้แก่สภากาชาดไทยหรือหน่วยงานต้นสังกัด"],["t",70.9,119.2,538.5,135.2,16.0,0,0,"ตามสัญญานี้ ผู้ให้สัญญายินยอมให้สภากาชาดไทยหรือหน่วยงานต้นสังกัดหักเงินบำเหน็จบำนาญหรือเงินอื่นใด"],["t",70.9,142.6,538.0,158.6,16.0,0,0,"ที่ผู้ให้สัญญาจะพึงได้รับจากสภากาชาดไทยหรือหน่วยงานต้นสังกัด เพื่อชดใช้เงินที่ผู้ให้สัญญาต้องรับผิดชอบ"],["t",70.9,166.0,136.5,182.0,16.0,0,0,"ตามสัญญานี้ได้"],["t",127.6,198.3,149.1,214.2,16.0,0,0,"ข้อ 9"],["t",156.0,198.3,302.4,214.2,16.0,0,0,"ในวันทำสัญญานี้ผู้ให้สัญญาได้จัดให้"],["t",70.9,221.7,409.1,237.7,16.0,0,0,"ทำสัญญาค้ำประกันการปฏิบัติและความรับผิดตามสัญญานี้ของผู้ให้สัญญาด้วยแล้ว"],["t",127.6,245.1,537.4,261.1,16.0,0,0,"ในกรณีผู้ค้ำประกันถึงแก่ความตาย หรือถูกศาลมีคำสั่งให้พิทักษ์ทรัพย์เด็ดขาด หรือมีคำพิพากษา"],["t",70.9,268.5,538.7,284.5,16.0,0,0,"ให้ล้มละลาย หรือผู้รับสัญญาเห็นสมควรให้ผู้ให้สัญญาเปลี่ยนผู้ค้ำประกัน ผู้ให้สัญญาต้องจัดให้มีผู้ค้ำประกันรายใหม่"],["t",70.9,291.9,538.8,307.9,16.0,0,0,"มาทำสัญญาค้ำประกันแทนภายในกำหนด 30 (สามสิบ) วัน นับแต่วันที่ผู้ค้ำประกันเดิมถึงแก่ความตาย หรือ"],["t",70.9,315.4,538.4,331.4,16.0,0,0,"ถูกศาลมีคำสั่งพิทักษ์ทรัพย์เด็ดขาด หรือมีคำพิพากษาให้ล้มละลาย หรือวันที่ผู้ให้สัญญาได้รับแจ้งจากผู้รับสัญญา"],["t",70.9,338.8,538.9,354.8,16.0,0,0,"ให้เปลี่ยนผู้ค้ำประกัน แล้วแต่กรณี หากผู้ให้สัญญาไม่สามารถจัดให้มีผู้ค้ำประกันรายใหม่มาทำสัญญาค้ำประกันแทน"],["t",70.9,362.2,538.4,378.2,16.0,0,0,"ภายในกำหนดระยะเวลาดังกล่าว ผู้รับสัญญามีสิทธิเพิกถอนการอนุญาตตามสัญญานี้ได้ เว้นแต่ผู้รับสัญญาได้ตั้ง"],["t",70.9,385.7,538.8,401.6,16.0,0,0,"คณะกรรมการขึ้นตรวจสอบแล้วเห็นว่า ผู้ให้สัญญาเป็นผู้มีศักยภาพสูงยิ่งในการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย"],["t",70.9,409.1,511.2,425.0,16.0,0,0,"ผู้รับสัญญาจะอนุญาตให้ผู้ให้สัญญาทำการศึกษา ฝึกอบรม หรือปฏิบัติการวิจัยต่อไปโดยไม่มีผู้ค้ำประกันก็ได้"],["t",127.6,441.3,538.5,457.3,16.0,0,0,"สัญญานี้ทำขึ้นไว้ 2 (สอง) ฉบับ มีข้อความถูกต้องตรงกัน คู่สัญญาได้อ่านและเข้าใจข้อความในสัญญา"],["t",70.9,464.7,538.9,480.7,16.0,0,0,"ฉบับนี้โดยละเอียดตลอดแล้ว จึงได้ลงลายมือชื่อไว้เป็นสำคัญต่อหน้าพยานและคู่สัญญา ตลอดจนหน่วยงานที่เกี่ยวข้อง"],["t",70.9,488.1,249.1,504.1,16.0,0,0,"ของสภากาชาดไทยต่างยึดถือไว้ฝ่ายละฉบับ"],["t",198.5,539.2,221.6,555.1,16.0,0,0,"ลงชื่อ"],["t",382.9,539.2,427.4,555.1,16.0,0,0,"ผู้ให้สัญญา"],["t",219.8,564.7,222.8,580.7,16.0,0,0,"("],["t",382.9,564.7,385.9,580.7,16.0,0,0,")"],["t",198.5,617.9,221.6,633.8,16.0,0,0,"ลงชื่อ"],["t",382.9,617.9,428.7,633.8,16.0,0,0,"ผู้รับสัญญา"],["t",219.8,643.4,222.8,659.4,16.0,0,0,"("],["v",244.5,643.4,354.7,659.4,16.0,"signerName",222.8,382.6],["t",382.9,643.4,385.9,659.4,16.0,0,0,")"],["v",248.0,669.0,349.1,685.0,16.0,"signerPos",200.0,400.0],["t",70.9,721.0,94.0,736.9,16.0,0,0,"ลงชื่อ"],["t",234.1,721.0,258.9,736.9,16.0,0,0,"พยาน"],["t",340.4,721.0,363.5,736.9,16.0,0,0,"ลงชื่อ"],["t",513.9,721.0,538.8,736.9,16.0,0,0,"พยาน"],["t",92.3,748.6,95.3,764.5,16.0,0,0,"("],["t",234.1,748.6,237.1,764.5,16.0,0,0,")"],["t",361.6,748.6,364.7,764.5,16.0,0,0,"("],["t",517.5,748.6,520.6,764.5,16.0,0,0,")"]],[["hd",160.0,100.2,325.6,0.5],["hd",389.9,100.2,538.3,0.5],["hd",112.8,126.5,338.9,0.5],["hd",120.9,175.2,234.1,0.5],["hd",263.8,175.2,304.9,0.5],["hd",327.2,175.2,425.3,0.5],["hd",444.0,175.2,522.0,0.5],["hd",221.6,238.0,381.4,0.5],["hd",222.8,271.8,382.6,0.5],["hd",221.6,341.8,381.4,0.5],["hd",222.8,375.8,382.6,0.5],["hd",221.6,445.8,381.4,0.5],["hd",222.8,479.8,382.6,0.5],["hd",221.6,659.8,381.4,0.5],["hd",222.8,693.8,382.6,0.5],["t",298.5,44.5,311.2,60.5,16.0,0,0,"-7-"],["t",127.6,87.3,159.8,103.2,16.0,0,0,"ข้าพเจ้า"],["t",326.1,87.3,389.8,103.2,16.0,0,0,"เป็นคู่สมรสของ"],["t",70.9,113.7,112.8,129.6,16.0,0,0,"ยินยอมให้"],["t",340.4,113.7,538.2,129.6,16.0,0,0,"ทำสัญญาอนุญาตให้บุคลากรสภากาชาดไทย"],["t",70.9,138.2,538.9,154.1,16.0,0,0,"ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ภายในประเทศหรือต่างประเทศ ในเวลาปฏิบัติงานหรือนอกเวลาปฏิบัติงาน"],["t",70.9,162.6,124.3,178.6,16.0,0,0,"สัญญาเลขที่"],["t",234.1,162.6,263.8,178.6,16.0,0,0,"ลงวันที่"],["t",304.9,162.6,327.1,178.6,16.0,0,0,"เดือน"],["t",425.4,162.6,432.5,178.6,16.0,0,0,"พ"],["t",432.4,162.6,443.9,178.6,16.0,0,0,".ศ."],["t",522.0,162.6,542.2,178.6,16.0,0,0,"นี้ได้"],["t",198.5,225.2,221.6,241.2,16.0,0,0,"ลงชื่อ"],["t",382.9,225.2,474.2,241.2,16.0,0,0,"คู่สมรสของผู้ให้สัญญา"],["t",219.8,259.2,222.8,275.1,16.0,0,0,"("],["t",382.9,259.2,385.9,275.1,16.0,0,0,")"],["t",198.5,329.0,221.6,345.0,16.0,0,0,"ลงชื่อ"],["t",382.9,329.0,407.7,345.0,16.0,0,0,"พยาน"],["t",219.8,363.0,222.8,378.9,16.0,0,0,"("],["t",382.9,363.0,385.9,378.9,16.0,0,0,")"],["t",198.5,432.8,221.6,448.8,16.0,0,0,"ลงชื่อ"],["t",382.9,432.8,407.7,448.8,16.0,0,0,"พยาน"],["t",219.8,466.8,222.8,482.7,16.0,0,0,"("],["t",382.9,466.8,385.9,482.7,16.0,0,0,")"],["t",166.3,547.3,367.8,563.3,16.0,0,0,"ข้าพเจ้าขอรับรองว่า ไม่มีคู่สมรส (ทำเครื่องหมาย"],["t",387.1,547.3,425.4,563.3,16.0,0,0,"ลงในช่อง"],["t",443.8,546.6,443.2,563.3,16.0,0,0,")"],["t",140.8,573.8,178.6,589.8,16.0,0,0,"เนื่องจาก"],["t",212.1,573.8,245.0,589.8,16.0,0,0,"เป็นโสด"],["t",277.1,573.8,324.3,589.8,16.0,0,0,"คู่สมรสตาย"],["t",356.4,573.8,374.2,589.8,16.0,0,0,"หย่า"],["t",384.5,573.8,468.7,589.8,16.0,0,0,"ในขณะที่ทำสัญญานี้"],["t",198.5,646.9,221.6,662.9,16.0,0,0,"ลงชื่อ"],["t",382.9,646.9,427.4,662.9,16.0,0,0,"ผู้ให้สัญญา"],["t",219.8,680.9,222.8,696.9,16.0,0,0,"("],["t",382.9,680.9,385.9,696.9,16.0,0,0,")"],["sq",430.3,550.9,8.4],["sq",198.8,577.4,8.4],["sq",263.9,577.4,8.4],["sq",343.1,577.4,8.4],["ck",377.5,555.1]],[["hd",344.9,132.2,538.8,0.5],["hd",345.1,158.2,382.9,0.5],["hd",405.3,158.2,481.7,0.5],["hd",500.7,158.2,538.8,0.5],["hd",418.1,184.8,537.7,0.5],["hd",355.9,211.2,382.9,0.5],["hd",405.3,211.2,481.7,0.5],["hd",500.7,211.2,538.8,0.5],["hd",152.1,259.2,368.7,0.5],["hd",243.5,283.8,538.8,0.5],["hd",104.7,308.2,368.2,0.5],["hd",138.5,357.2,255.2,0.5],["hd",285.1,357.2,525.3,0.5],["hd",160.0,381.8,340.0,0.5],["hd",437.7,381.8,538.8,0.5],["hd",88.2,409.2,127.1,0.5],["hd",162.4,409.2,304.8,0.5],["hd",340.5,409.2,537.8,0.5],["hd",94.1,436.8,319.2,0.5],["hd",423.4,436.8,482.1,0.5],["hd",502.2,436.8,537.3,0.5],["hd",117.1,464.2,319.2,0.5],["hd",338.6,464.2,535.9,0.5],["hd",121.6,491.8,297.8,0.5],["hd",344.9,491.8,536.5,0.5],["hd",100.0,519.2,233.9,0.5],["hd",289.6,519.2,368.7,0.5],["hd",404.7,519.2,537.3,0.5],["hd",187.5,546.8,255.2,0.5],["hd",275.3,546.8,319.2,0.5],["hd",365.4,546.8,536.7,0.5],["hd",90.4,574.2,218.6,0.5],["hd",270.4,574.2,382.9,0.5],["hd",430.0,574.2,537.3,0.5],["hd",100.0,601.8,219.5,0.5],["hd",275.3,601.8,368.7,0.5],["hd",404.7,601.8,537.3,0.5],["hd",257.2,629.2,297.8,0.5],["hd",317.8,629.2,353.8,0.5],["hd",400.8,629.2,537.3,0.5],["hd",90.4,656.8,218.6,0.5],["hd",270.4,656.8,382.9,0.5],["hd",430.0,656.8,537.3,0.5],["hd",100.0,684.2,219.5,0.5],["hd",275.3,684.2,368.7,0.5],["hd",404.7,684.2,537.3,0.5],["hd",476.6,722.8,537.3,0.5],["hd",70.9,747.0,155.9,0.5],["hd",382.9,790.2,490.9,0.5],["t",259.4,71.6,350.3,91.7,20.0,1,0,"สัญญาค้ำประกัน"],["t",326.1,119.2,344.9,135.2,16.0,0,0,"ทำที่"],["t",326.1,145.6,345.1,161.6,16.0,0,0,"วันที่"],["t",382.9,145.6,405.2,161.6,16.0,0,0,"เดือน"],["t",482.1,145.6,489.3,161.6,16.0,0,0,"พ"],["t",489.2,145.6,500.7,161.6,16.0,0,0,".ศ."],["t",326.1,172.1,418.0,188.1,16.0,0,0,"ค้ำประกันสัญญาเลขที่"],["t",326.1,198.6,355.9,214.6,16.0,0,0,"ลงวันที่"],["t",382.9,198.6,405.2,214.6,16.0,0,0,"เดือน"],["t",482.1,198.6,489.3,214.6,16.0,0,0,"พ"],["t",489.2,198.6,500.7,214.6,16.0,0,0,".ศ."],["t",127.6,246.4,155.5,262.4,16.0,0,0,"ตามที่"],["t",368.7,246.4,538.8,262.4,16.0,0,0,"ซึ่งต่อไปในสัญญาเรียกว่า “ผู้ให้สัญญา”"],["t",70.9,270.9,243.5,286.9,16.0,0,0,"และได้รับอนุญาตจากสภากาชาดไทย โดย"],["v",283.6,270.9,393.8,286.9,16.0,"signerName",243.5,538.8],["t",70.9,295.4,105.0,311.4,16.0,0,0,"ตำแหน่ง"],["v",162.3,295.4,259.0,311.4,16.0,"signerPos",104.7,368.2],["t",368.7,295.4,539.0,311.4,16.0,0,0,"ซึ่งต่อไปในสัญญานี้เรียกว่า “ผู้รับสัญญา”"],["t",70.9,319.9,539.1,335.8,16.0,0,0,"ให้ไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ภายในประเทศหรือต่างประเทศ ในเวลาปฏิบัติงานหรือนอกเวลาปฏิบัติงาน"],["t",70.9,344.5,141.9,360.4,16.0,0,0,"ตามสัญญาเลขที่"],["t",255.3,344.5,285.0,360.4,16.0,0,0,"ลงวันที่"],["t",525.3,344.5,538.7,360.4,16.0,0,0,"นั้น"],["t",127.6,369.0,159.8,384.9,16.0,0,0,"ข้าพเจ้า"],["t",340.4,369.0,437.5,384.9,16.0,0,0,"เลขประจำตัวประชาชน"],["t",70.9,396.5,88.1,412.4,16.0,0,0,"อายุ"],["t",127.6,396.5,162.3,412.4,16.0,0,0,"ปี อาชีพ"],["t",304.9,396.5,340.4,412.4,16.0,0,0,"ตำแหน่ง"],["t",70.9,423.9,94.1,439.9,16.0,0,0,"สังกัด"],["t",319.1,423.9,423.5,439.9,16.0,0,0,"สถานที่ทำงานตั้งอยู่เลขที่"],["t",482.1,423.9,505.6,439.9,16.0,0,0,"หมู่ที่"],["t",70.9,451.4,117.1,467.4,16.0,0,0,"ตรอก/ซอย"],["t",319.1,451.4,338.6,467.4,16.0,0,0,"ถนน"],["t",70.9,478.9,121.6,494.9,16.0,0,0,"ตำบล/แขวง"],["t",297.8,478.9,345.0,494.9,16.0,0,0,"อำเภอ/เขต"],["t",70.9,506.4,100.0,522.3,16.0,0,0,"จังหวัด"],["t",234.1,506.4,289.6,522.3,16.0,0,0,"รหัสไปรษณีย์"],["t",368.7,506.4,408.2,522.3,16.0,0,0,"โทรศัพท์"],["t",70.9,533.9,187.5,549.8,16.0,0,0,"ที่อยู่ตามทะเบียนบ้าน เลขที่"],["t",255.3,533.9,278.8,549.8,16.0,0,0,"หมู่ที่"],["t",319.1,533.9,365.3,549.8,16.0,0,0,"ตรอก/ซอย"],["t",70.9,561.4,90.4,577.3,16.0,0,0,"ถนน"],["t",219.8,561.4,270.4,577.3,16.0,0,0,"ตำบล/แขวง"],["t",382.9,561.4,430.0,577.3,16.0,0,0,"อำเภอ/เขต"],["t",70.9,588.8,100.0,604.8,16.0,0,0,"จังหวัด"],["t",219.8,588.8,275.3,604.8,16.0,0,0,"รหัสไปรษณีย์"],["t",368.7,588.8,408.2,604.8,16.0,0,0,"โทรศัพท์"],["t",70.9,616.3,260.7,632.3,16.0,0,0,"ที่อยู่ปัจจุบันซึ่งสามารถติดต่อได้สะดวก เลขที่"],["t",297.8,616.3,321.3,632.3,16.0,0,0,"หมู่ที่"],["t",354.6,616.3,400.7,632.3,16.0,0,0,"ตรอก/ซอย"],["t",70.9,643.8,90.4,659.8,16.0,0,0,"ถนน"],["t",219.8,643.8,270.4,659.8,16.0,0,0,"ตำบล/แขวง"],["t",382.9,643.8,430.0,659.8,16.0,0,0,"อำเภอ/เขต"],["t",70.9,671.4,100.0,687.4,16.0,0,0,"จังหวัด"],["t",219.8,671.4,275.3,687.4,16.0,0,0,"รหัสไปรษณีย์"],["t",368.7,671.4,408.2,687.4,16.0,0,0,"โทรศัพท์"],["t",127.6,709.8,476.5,725.8,16.0,0,0,"ซึ่งต่อไปในสัญญานี้เรียกว่า “ผู้ค้ำประกัน” และมีความเกี่ยวพันกับผู้ให้สัญญาโดยเป็น"],["t",156.0,734.2,457.4,750.1,16.0,0,0,"ได้ตกลงทำสัญญาค้ำประกันฉบับนี้ให้ไว้แก่ผู้รับสัญญาดังมีข้อความต่อไปนี้"],["t",490.9,777.4,538.8,793.3,16.0,0,0,"ผู้ค้ำประกัน"]],[["hd",221.6,647.2,381.4,0.5],["hd",222.8,673.8,382.6,0.5],["hd",94.0,723.2,233.7,0.5],["hd",363.4,723.2,513.9,0.5],["hd",95.3,750.0,234.0,0.5],["hd",364.6,750.0,517.5,0.5],["t",298.5,44.7,311.2,60.6,16.0,0,0,"-2-"],["t",127.6,93.2,149.1,109.1,16.0,0,0,"ข้อ 1"],["t",156.0,93.2,538.3,109.1,16.0,0,0,"ผู้ค้ำประกันยอมตกลงผูกพันตนเข้าค้ำประกันผู้ให้สัญญาต่อผู้รับสัญญา กล่าวคือ ถ้าผู้ให้สัญญา"],["t",70.9,114.4,537.3,130.4,16.0,0,0,"ปฏิบัติผิดสัญญาอนุญาตไม่ว่าข้อหนึ่งข้อใดด้วยประการใด ๆ ผู้ค้ำประกันยินยอมชำระหนี้ไม่เกินกว่าจำนวนเงินที่"],["t",70.9,135.6,538.7,151.6,16.0,0,0,"ผู้ให้สัญญาต้องรับผิดตามข้อผูกพันที่ระบุไว้ในสัญญาอนุญาตให้บุคลากรสภากาชาดไทยไปศึกษา ฝึกอบรม หรื อ"],["t",70.9,157.0,538.6,173.0,16.0,0,0,"ปฏิบัติการวิจัย ภายในประเทศหรือต่างประเทศ ในเวลาปฏิบัติงานหรือนอกเวลาปฏิบัติงาน ดังกล่าวนั้น ให้แก่"],["t",70.9,178.2,538.0,194.2,16.0,0,0,"ผู้รับสัญญาทันทีที่ได้รับแจ้งเป็นหนังสือจากผู้รับสัญญาและผู้ค้ำประกันจะรับผิดตามสัญญานี้จนกว่าจะมีการชำระหนี้"],["t",70.9,199.6,305.3,215.6,16.0,0,0,"พร้อมดอกเบี้ยและค่าเสียหาย (ถ้าหากมี) ครบเต็มจำนวน"],["t",127.6,220.9,537.9,236.8,16.0,0,0,"ในกรณีที่ผู้ให้สัญญาได้รับอนุญาตจากผู้รับสัญญาให้ขยายระยะเวลาการไปศึกษา ฝึกอบรม หรือ"],["t",70.9,242.2,538.2,258.2,16.0,0,0,"ปฏิบัติการวิจัยต่อ ด้วยทุนหรือเงินอื่นใดก็ตาม แม้การขยายระยะเวลาต่อนั้นจะเป็นการเปลี่ยนแปลงสาขาวิชา"],["t",70.9,263.5,537.9,279.4,16.0,0,0,"ระดับการศึกษา หรือสถานศึกษาไปจากเดิม และผู้รับสัญญาได้แจ้งให้ผู้ค้ำประกันทราบแล้ว ให้ถือว่าผู้ค้ำประกัน"],["t",70.9,284.8,538.3,300.8,16.0,0,0,"ตกลงรับเป็นผู้ค้ำประกันผู้ให้สัญญาต่อไปอีกตลอดระยะเวลาที่ผู้ให้สัญญาได้ขยาย ระยะเวลาอยู่ศึกษา ฝึกอบรม"],["t",70.9,306.1,212.9,322.0,16.0,0,0,"หรือปฏิบัติการวิจัยต่อดังกล่าวด้วย"],["t",127.6,337.4,149.1,353.4,16.0,0,0,"ข้อ 2"],["t",156.0,337.4,538.8,353.4,16.0,0,0,"ในกรณีที่ผู้รับสัญญาผ่อนเวลาหรือผ่อนจำนวนเงินในการชำระหนี้ตามสัญญาอนุญาตให้บุคลากร"],["t",70.9,358.6,538.4,374.6,16.0,0,0,"สภากาชาดไทยไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย ภายในประเทศหรือต่างประเทศ ในเวลาปฏิบัติงาน"],["t",70.9,380.0,537.9,396.0,16.0,0,0,"หรือนอกเวลาปฏิบัติงาน ให้แก่ผู้ให้สัญญา โดยได้แจ้งให้ผู้ค้ำประกันทราบและผู้ค้ำประกันได้ตกลงยินยอมในการ"],["t",70.9,401.3,537.0,417.2,16.0,0,0,"ผ่อนเวลาหรือผ่อนจำนวนเงินในการชำระหนี้นั้น ให้ถือว่าผู้ค้ำประกันตกลงมิให้ถือเอาการผ่อนเวลาหรือผ่อน"],["t",70.9,422.6,539.0,438.6,16.0,0,0,"จำนวนเงินในการชำระหนี้ดังกล่าว เป็นเหตุปลดเปลื้องความรับผิดของผู้ค้ำประกันและจะรับผิดในฐานะผู้ค้ำประกัน"],["t",70.9,443.9,477.5,459.8,16.0,0,0,"ตามสัญญานี้ตลอดไป จนกว่าจะมีการชำระหนี้พร้อมดอกเบี้ยและค่าเสียหาย (ถ้ามี) ครบเต็มจำนวน"],["t",127.6,475.2,149.1,491.1,16.0,0,0,"ข้อ 3"],["t",156.0,475.2,538.2,491.1,16.0,0,0,"ผู้ค้ำประกันจะไม่เพิกถอนการค้ำประกันไม่ว่ากรณีใด ๆ ตราบเท่าที่ผู้ให้สัญญายังต้องรับผิดชอบอยู่"],["t",70.9,496.4,384.2,512.4,16.0,0,0,"ตามเงื่อนไขในสัญญาอนุญาตให้บุคลากรสภากาชาดไทยไปศึกษา ฝึกอบรม"],["t",389.4,496.4,538.5,512.4,16.0,0,0,"หรือปฏิบัติการวิจัย ภายในประเทศ"],["t",70.9,517.8,234.5,533.7,16.0,0,0,"หรอืต่างประเทศ ในเวลาปฏิบัติงานหรอื"],["t",234.4,517.8,316.4,533.7,16.0,0,0,"นอกเวลาปฏิบัติงาน"],["t",127.6,549.0,538.7,565.0,16.0,0,0,"สัญญานี้ทำขึ้น 2 (สอง) ฉบับ มีข้อความถูกต้องตรงกัน ผู้ค้ำประกันได้อ่านและเข้าใจข้อความในสัญญา"],["t",70.9,570.4,538.9,586.3,16.0,0,0,"ฉบับนี้โดยละเอียดตลอดแล้ว จึงได้ลงลายมือชื่อไว้เป็นสำคัญต่อหน้าพยานและคู่สัญญา ตลอดจนหน่วยงานที่เกี่ยวข้อง"],["t",70.9,591.6,249.1,607.6,16.0,0,0,"ของสภากาชาดไทยต่างยึดถือไว้ฝ่ายละฉบับ"],["t",198.5,634.3,221.6,650.3,16.0,0,0,"ลงชื่อ"],["t",382.9,634.3,430.7,650.3,16.0,0,0,"ผู้ค้ำประกัน"],["t",219.8,660.8,222.8,676.8,16.0,0,0,"("],["t",382.9,660.8,385.9,676.8,16.0,0,0,")"],["t",70.9,710.7,94.0,726.6,16.0,0,0,"ลงชื่อ"],["t",234.1,710.7,258.9,726.6,16.0,0,0,"พยาน"],["t",340.4,710.7,363.5,726.6,16.0,0,0,"ลงชื่อ"],["t",513.9,710.7,538.8,726.6,16.0,0,0,"พยาน"],["t",92.3,737.2,95.3,753.1,16.0,0,0,"("],["t",234.1,737.2,237.1,753.1,16.0,0,0,")"],["t",361.6,737.2,364.7,753.1,16.0,0,0,"("],["t",517.5,737.2,520.6,753.1,16.0,0,0,")"]],[["hd",160.0,100.2,325.6,0.5],["hd",389.9,100.2,538.3,0.5],["hd",112.9,126.5,324.7,0.5],["hd",457.9,126.5,538.8,0.5],["hd",100.7,153.2,127.6,0.5],["hd",150.0,153.2,219.8,0.5],["hd",238.4,153.2,297.4,0.5],["hd",221.6,226.2,381.4,0.5],["hd",222.8,252.8,382.6,0.5],["hd",221.6,325.8,381.4,0.5],["hd",222.8,352.2,382.6,0.5],["hd",221.6,425.2,381.4,0.5],["hd",222.8,451.8,382.6,0.5],["hd",221.6,601.2,381.4,0.5],["hd",222.8,627.8,382.6,0.5],["t",298.5,44.5,311.2,60.5,16.0,0,0,"-3-"],["t",127.6,87.3,159.8,103.2,16.0,0,0,"ข้าพเจ้า"],["t",326.1,87.3,389.8,103.2,16.0,0,0,"เป็นคู่สมรสของ"],["t",70.9,113.7,112.8,129.6,16.0,0,0,"ยินยอมให้"],["t",326.1,113.7,457.7,129.6,16.0,0,0,"ทำสัญญาค้ำประกันสัญญาเลขที่"],["t",70.9,140.2,100.7,156.2,16.0,0,0,"ลงวันที่"],["t",127.6,140.2,149.9,156.2,16.0,0,0,"เดือน"],["t",219.8,140.2,238.3,156.2,16.0,0,0,"พ.ศ."],["t",297.8,140.2,314.6,156.2,16.0,0,0,"นี้ได้"],["t",198.5,213.3,221.6,229.2,16.0,0,0,"ลงชื่อ"],["t",382.9,213.3,477.8,229.2,16.0,0,0,"คู่สมรสของผู้ค้ำประกัน"],["t",219.8,239.8,222.8,255.8,16.0,0,0,"("],["t",382.9,239.8,385.9,255.8,16.0,0,0,")"],["t",198.5,312.9,221.6,328.9,16.0,0,0,"ลงชื่อ"],["t",382.9,312.9,407.7,328.9,16.0,0,0,"พยาน"],["t",219.8,339.4,222.8,355.4,16.0,0,0,"("],["t",382.9,339.4,385.9,355.4,16.0,0,0,")"],["t",198.5,412.5,221.6,428.5,16.0,0,0,"ลงชื่อ"],["t",382.9,412.5,407.7,428.5,16.0,0,0,"พยาน"],["t",219.8,438.9,222.8,454.9,16.0,0,0,"("],["t",382.9,438.9,385.9,454.9,16.0,0,0,")"],["t",166.3,511.3,367.8,528.0,16.0,0,0,"ข้าพเจ้าขอรับรองว่า ไม่มีคู่สมรส (ทำเครื่องหมาย"],["ck",377.5,519.8],["t",387.2,511.3,425.3,528.0,16.0,0,0,"ลงในช่อง"],["t",440.1,511.3,443.2,528.0,16.0,0,0,")"],["t",212.3,537.9,245.0,554.5,16.0,0,0,"เป็นโสด"],["t",277.4,537.9,324.3,554.5,16.0,0,0,"คู่สมรสตาย"],["t",356.6,537.9,374.2,554.5,16.0,0,0,"หย่า"],["t",140.8,538.6,178.6,554.5,16.0,0,0,"เนื่องจาก"],["t",384.5,538.6,468.7,554.5,16.0,0,0,"ในขณะที่ทำสัญญานี้"],["t",198.5,588.4,221.6,604.3,16.0,0,0,"ลงชื่อ"],["t",382.9,588.4,430.8,604.3,16.0,0,0,"ผู้ค้ำประกัน"],["t",219.8,614.9,222.8,630.8,16.0,0,0,"("],["t",382.9,614.9,385.9,630.8,16.0,0,0,")"],["sq",430.3,515.6,8.4],["sq",198.8,542.2,8.4],["sq",263.9,542.2,8.4],["sq",343.1,542.2,8.4]]];
+const PF_LOGO_STC = 'data:image/png;base64,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';
+
+/* ---------- สัญญาอนุญาตให้บุคลากรสภากาชาดไทยไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย (build 2569-11-24.1) ----------
+ * ส่วน ก = สัญญาอนุญาต หน้า 1–6 · ส่วน ข = หนังสือคู่สมรส / รับรองไม่มีคู่สมรส หน้า 7 · ส่วน ค = สัญญาค้ำประกัน หน้า 8–10
+ * ข้อมูลอ่อนไหว (ชื่อช่องขึ้นต้น sec.) อยู่ในหน้าจอเท่านั้น ไม่ส่งไปบันทึก (หลังบ้านก็ตัดทิ้งอีกชั้น) */
+const PF_STC_SECRET_NOTE = 'ข้อมูลในกรอบนี้ใช้พิมพ์เท่านั้น ระบบไม่บันทึก เมื่อปิดหน้าจะหายไป';
+const PF_STC_ADDR = [['No', 'เลขที่', 30], ['Moo', 'หมู่ที่', 10], ['Soi', 'ตรอก/ซอย', 60], ['Road', 'ถนน', 60], ['Sub', 'ตำบล/แขวง', 60], ['Dist', 'อำเภอ/เขต', 60], ['Prov', 'จังหวัด', 60], ['Zip', 'รหัสไปรษณีย์', 5], ['Phone', 'โทรศัพท์', 30]];
+/** ช่องที่อยู่บนหน้าพิมพ์: [ชื่อช่อง, x0, x1, แถว 0/1/2] โดยแถวคือเส้น y ของชุดนั้น */
+function pfStcAddr(d, pre, rowsY, cols) {
+  let h = '';
+  cols.forEach(c => { h += pfOn(c[1], c[2], rowsY[c[3]], 15, d[pre + c[0]]); });
+  return h;
+}
+const PF_STC_ADDR_P1 = [['No', 0, 0, 0], ['Moo', 0, 0, 0], ['Soi', 0, 0, 0], ['Road', 90.4, 198.4, 1], ['Sub', 249.2, 361.6, 1], ['Dist', 408.8, 538.8, 1], ['Prov', 100.0, 227.0, 2], ['Zip', 282.5, 381.9, 2], ['Phone', 418.9, 538.4, 2]];
+function pfStcDate(iso, y, xs, size) {
+  const p = thParts(iso); if (!p) return '';
+  return pfOn(xs[0], xs[1], y, size || 15, p.d) + pfOn(xs[2], xs[3], y, size || 15, TH_MONTHS[p.m]) + pfOn(xs[4], xs[5], y, size || 15, p.y);
+}
+function pfStcAge(birth, at) {
+  const a = thParts(birth); if (!a) return '';
+  const b = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(at || todayStr()) || [];
+  const by = +birth.slice(0, 4), bm = +birth.slice(5, 7), bd = +birth.slice(8, 10);
+  let age = (+b[1]) - by; if ((+b[2]) < bm || ((+b[2]) === bm && (+b[3]) < bd)) age--;
+  return age > 0 && age < 120 ? String(age) : '';
+}
+const pfOnSq = (x0, top) => fmCheck(+(x0 + 5.6).toFixed(1), +(top + 8.6).toFixed(1), 9);
+function pfStcDraw(items, cfg) {
+  let h = '';
+  items.forEach(it => {
+    if (it[0] === 'sq') h += '<div class="sq" style="left:' + it[1] + 'pt;top:' + it[2] + 'pt;width:' + it[3] + 'pt;height:' + it[3] + 'pt"></div>';
+    else if (it[0] === 'ck') h += fmCheck(it[1], it[2], 9);
+    else if (it[0] === 'pv') h += pfOn(it[1], it[2], it[3], it[4], it[5]).replace('class="r v"', 'class="r"');
+    else if (it[0] === 'v') {
+      const txt = String((cfg || {})[it[6]] || '').trim(); if (!txt) return;
+      const c = (it[1] + it[3]) / 2, w = fmWidth(txt, it[5], false), half = Math.max(w / 2, (it[3] - it[1]) / 2);
+      const a = Math.max(it[7], c - half), b = Math.min(it[8], c + half);
+      h += pfText(a, it[2], b, it[4], it[5], txt, 'c').replace('class="r v"', 'class="r"');
+    } else h += pfDraw([it]);
+  });
+  return h;
+}
+function pfStcPages(d, cfg) {
+  d = d || {}; cfg = cfg || S.pfCfg || {};
+  const on = k => d[k] === true || d[k] === '1' || d[k] === 'Y';
+  const L = PF_LSTC, pages = [];
+  const secs = ['secA', 'secB', 'secC'].filter(on);
+  const want = secs.length ? secs : ['secA', 'secB', 'secC'];
+  const has = k => want.indexOf(k) > -1;
+  const sp = (d.spouseMode || ''), gsp = (d.gSpouseMode || '');
+  if (has('secA')) {
+    // หน้า 1
+    let x = pfStcDraw(L[0], cfg) + pfImg(PF_LOGO_STC, 265.9, 16.3, 77.0, 62.4);
+    x += pfOn(432.9, 538.1, 177.2, 15, d.contractNo);
+    x += pfStcDate(d.contractDate, 271.0, [261.8, 297.8, 320.2, 439.5, 458.1, 537.3]);
+    x += pfOn(136.2, 324.9, 296.8, 15, d.fullName) + pfOn(423.4, 538.8, 296.8, 15, d.idNo);
+    x += pfStcDate(d.birthDate, 322.2, [121.2, 156.0, 178.3, 283.5, 302.2, 381.4]) + pfOn(400.0, 446.6, 322.2, 15, pfStcAge(d.birthDate, d.contractDate));
+    x += pfOn(213.1, 283.6, 347.8, 15, d.empCode) + pfOn(319.1, 538.8, 347.8, 15, d.position);
+    x += pfOn(94.8, 127.6, 373.2, 15, d.level) + pfOn(144.0, 311.9, 373.2, 15, d.unit) + pfOn(329.1, 537.9, 373.2, 15, d.department);
+    x += pfOn(148.5, 382.9, 398.8, 15, d.org) + pfOn(418.9, 538.4, 398.8, 15, d.orgPhone);
+    x += pfOn(187.5, 283.6, 424.2, 15, d.hNo) + pfOn(303.6, 339.7, 424.2, 15, d.hMoo) + pfOn(386.6, 537.8, 424.2, 15, d.hSoi);
+    x += pfStcAddr(d, 'h', [0, 449.8, 475.2], PF_STC_ADDR_P1.slice(3));
+    x += pfOn(253.2, 326.1, 500.8, 15, d.cNo) + pfOn(346.1, 382.1, 500.8, 15, d.cMoo) + pfOn(429.1, 538.8, 500.8, 15, d.cSoi);
+    x += pfStcAddr(d, 'c', [0, 526.8, 552.2], PF_STC_ADDR_P1.slice(3));
+    [['kStudy', 70.9, 650.4], ['kTrain', 120.5, 650.4], ['kResearch', 182.4, 650.4], ['wDom', 355.9, 650.4], ['wAbroad', 443.5, 650.4],
+      ['tIn', 70.9, 676.0], ['tOut', 169.6, 676.0], ['fTrc', 350.8, 676.0], ['fOrg', 442.8, 676.0]].forEach(c => { if (on(c[0])) x += pfOnSq(c[1], c[2]); });
+    pages.push(x);
+    // หน้า 2
+    let y = pfStcDraw(L[1], cfg);
+    if (on('fTrc')) y += pfOnSq(131.4, 155.7);
+    if (on('fOrg')) y += pfOnSq(216.4, 155.7);
+    y += fmWrap(d.course, [[379.4, 538.8, 169.2 - 13.2, 169.2 + 3.3, 15], [72.9, 538.8, 194.8 - 13.2, 194.8 + 3.3, 15]], 15);
+    y += pfOn(109.7, 537.5, 220.2, 15, d.major, 'l') + pfOn(91.5, 538.8, 247.8, 15, d.faculty, 'l') + pfOn(188.1, 538.1, 273.8, 15, d.institute, 'l');
+    if (on('wDom')) y += pfOnSq(70.9, 287.5);
+    y += pfOn(192.8, 538.8, 301.0, 15, d.domProvince, 'l');
+    if (on('wAbroad')) y += pfOnSq(70.9, 315.1);
+    y += pfOn(171.7, 354.6, 328.8, 15, d.abCity) + pfOn(365.2, 538.8, 328.8, 15, d.abState);
+    y += pfOn(104.9, 269.4, 356.2, 15, d.abCountry) + pfOn(430.9, 489.2, 356.2, 15, d.frameYears);
+    y += pfOn(108.3, 144.3, 383.8, 15, d.durY) + pfOn(152.2, 184.3, 383.8, 15, d.durM) + pfOn(206.7, 239.8, 383.8, 15, d.durD);
+    y += pfStcDate(d.startDate, 383.8, [312.4, 339.8, 362.7, 473.6, 493.7, 538.3]);
+    y += pfStcDate(d.endDate, 411.2, [99.9, 127.2, 148.8, 241.1, 258.3, 297.2]);
+    if (on('tIn')) y += pfOnSq(358.0, 397.8);
+    if (on('tOut')) y += pfOnSq(445.9, 397.8);
+    if (d.inY || d.inM || d.inD || d.inDetail) y += pfOnSq(70.9, 450.9);
+    y += pfOn(200.0, 227.0, 464.2, 15, d.inY) + pfOn(233.8, 265.8, 464.2, 15, d.inM) + pfOn(288.2, 311.9, 464.2, 15, d.inD);
+    y += fmWrap(d.inDetail, [[72.9, 538.8, 491.8 - 13.2, 491.8 + 3.3, 15], [72.9, 538.8, 519.8 - 13.2, 519.8 + 3.3, 15]], 15);
+    if (d.outY || d.outM || d.outD || d.outDetail) y += pfOnSq(70.9, 533.5);
+    y += pfOn(208.5, 237.5, 547.2, 15, d.outY) + pfOn(244.4, 280.0, 547.2, 15, d.outM) + pfOn(302.3, 332.6, 547.2, 15, d.outD);
+    y += fmWrap(d.outDetail, [[72.9, 538.8, 574.8 - 13.2, 574.8 + 3.3, 15], [72.9, 538.8, 602.2 - 13.2, 602.2 + 3.3, 15]], 15);
+    pages.push(y);
+    pages.push(pfStcDraw(L[2], cfg), pfStcDraw(L[3], cfg), pfStcDraw(L[4], cfg));
+    // หน้า 6
+    let z = pfStcDraw(L[5], cfg) + pfOn(302.4, 538.8, 211.2, 15, d.gName) + pfOn(222.8, 382.6, 577.8, 15, d.fullName);
+    pages.push(z);
+  }
+  if (has('secB')) {   // หน้า 7: คู่สมรสยินยอม หรือ รับรองว่าไม่มีคู่สมรส
+    let x = pfStcDraw(L[6], cfg);
+    if (sp === 'consent') {
+      x += pfOn(160.0, 325.6, 100.2, 15, d.spouseName) + pfOn(389.9, 538.3, 100.2, 15, d.fullName) + pfOn(112.8, 338.9, 126.5, 15, d.fullName);
+      x += pfOn(120.9, 234.1, 175.2, 15, d.contractNo) + pfStcDate(d.contractDate, 175.2, [263.8, 304.9, 327.2, 425.3, 444.0, 522.0]);
+      x += pfOn(222.8, 382.6, 271.8, 15, d.spouseName);
+    } else if (sp === 'none') {
+      const b = { single: 197.4, widowed: 262.5, divorced: 341.7 }[d.noSpouse];
+      if (b) x += pfOnSq(b, 573.1);
+      x += pfOn(222.8, 382.6, 693.8, 15, d.fullName);
+    }
+    pages.push(x);
+  }
+  if (has('secC')) {   // หน้า 8–10 สัญญาค้ำประกัน
+    let x = pfStcDraw(L[7], cfg);
+    x += pfOn(344.9, 538.8, 132.2, 15, d.gPlace) + pfStcDate(d.gDate, 158.2, [345.1, 382.9, 405.3, 481.7, 500.7, 538.8]);
+    x += pfOn(418.1, 537.7, 184.8, 15, d.contractNo) + pfStcDate(d.contractDate, 211.2, [355.9, 382.9, 405.3, 481.7, 500.7, 538.8]);
+    x += pfOn(152.1, 368.7, 259.2, 15, d.fullName);
+    x += pfOn(138.5, 255.2, 357.2, 15, d.contractNo) + pfOn(285.1, 525.3, 357.2, 15, thDateLong(d.contractDate));
+    x += pfOn(160.0, 340.0, 381.8, 15, d.gName) + pfOn(437.7, 538.8, 381.8, 15, d.gId);
+    x += pfOn(88.2, 127.1, 409.2, 15, d.gAge) + pfOn(162.4, 304.8, 409.2, 15, d.gJob) + pfOn(340.5, 537.8, 409.2, 15, d.gPos);
+    x += pfOn(94.1, 319.2, 436.8, 15, d.gOrg) + pfOn(423.4, 482.1, 436.8, 15, d.gwNo) + pfOn(502.2, 537.3, 436.8, 15, d.gwMoo);
+    x += pfOn(117.1, 319.2, 464.2, 15, d.gwSoi) + pfOn(338.6, 535.9, 464.2, 15, d.gwRoad);
+    x += pfOn(121.6, 297.8, 491.8, 15, d.gwSub) + pfOn(344.9, 536.5, 491.8, 15, d.gwDist);
+    x += pfOn(100.0, 233.9, 519.2, 15, d.gwProv) + pfOn(289.6, 368.7, 519.2, 15, d.gwZip) + pfOn(404.7, 537.3, 519.2, 15, d.gwPhone);
+    x += pfOn(187.5, 255.2, 546.8, 15, d.ghNo) + pfOn(275.3, 319.2, 546.8, 15, d.ghMoo) + pfOn(365.4, 536.7, 546.8, 15, d.ghSoi);
+    const G = [['Road', 90.4, 218.6, 1], ['Sub', 270.4, 382.9, 1], ['Dist', 430.0, 537.3, 1], ['Prov', 100.0, 219.5, 2], ['Zip', 275.3, 368.7, 2], ['Phone', 404.7, 537.3, 2]];
+    x += pfStcAddr(d, 'gh', [0, 574.2, 601.8], G);
+    x += pfOn(257.2, 297.8, 629.2, 15, d.gcNo) + pfOn(317.8, 353.8, 629.2, 15, d.gcMoo) + pfOn(400.8, 537.3, 629.2, 15, d.gcSoi);
+    x += pfStcAddr(d, 'gc', [0, 656.8, 684.2], G);
+    x += fmWrap(d.gRel, [[478.6, 537.3, 722.8 - 13.2, 722.8 + 3.3, 15], [72.9, 155.9, 747.0 - 13.2, 747.0 + 3.3, 15]], 15);
+    pages.push(x);
+    pages.push(pfStcDraw(L[8], cfg) + pfOn(222.8, 382.6, 673.8, 15, d.gName));
+    let z = pfStcDraw(L[9], cfg);
+    if (gsp === 'consent') {
+      z += pfOn(160.0, 325.6, 100.2, 15, d.gSpouseName) + pfOn(389.9, 538.3, 100.2, 15, d.gName) + pfOn(112.9, 324.7, 126.5, 15, d.gName);
+      z += pfOn(457.9, 538.8, 126.5, 15, d.contractNo) + pfStcDate(d.contractDate, 153.2, [100.7, 127.6, 150.0, 219.8, 238.4, 297.4]);
+      z += pfOn(222.8, 382.6, 252.8, 15, d.gSpouseName);
+    } else if (gsp === 'none') {
+      const b = { single: 197.4, widowed: 262.5, divorced: 341.7 }[d.gNoSpouse];
+      if (b) z += pfOnSq(b, 537.9);
+      z += pfOn(222.8, 382.6, 627.8, 15, d.gName);
+    }
+    pages.push(z);
+  }
+  return { pages, paper: 'a4' };
+}
+
+/* ---------- หน้ากรอกแบบสัญญา ---------- */
+function pfCk(path, label) {
+  const v = pfv(path);
+  return `<label class="pf-ck"><input type="checkbox" name="${path}" value="1"${v === '1' || v === true ? ' checked' : ''}><span>${esc(label)}</span></label>`;
+}
+function pfSel(path, label, opts, o) {
+  o = o || {};
+  const v = pfv(path);
+  return `<label class="field ${o.cls || ''}"><span>${esc(label)}</span><select class="input" name="${path}">${opts.map(x => `<option value="${esc(x[0])}"${String(v) === x[0] ? ' selected' : ''}>${esc(x[1])}</option>`).join('')}</select></label>`;
+}
+function pfAddrIn(pre, title) {
+  return `<h4 class="pf-sub">${esc(title)}</h4><div class="req-grid">${PF_STC_ADDR.map(a => pfIn('sec.' + pre + a[0], a[1], { max: a[2], mode: a[0] === 'Zip' ? 'numeric' : (a[0] === 'Phone' ? 'tel' : '') })).join('')}</div>`;
+}
+function pfSecBox(title, body) {
+  return `<div class="pf-secret"><div class="pf-secret-h"><span class="msr">lock</span><b>${esc(title)}</b><small>${esc(PF_STC_SECRET_NOTE)}</small></div>${body}</div>`;
+}
+function pfStcEd() {
+  const cfg = S.pfCfg || {};
+  const NOS = [['', '— เลือก —'], ['single', 'เป็นโสด'], ['widowed', 'คู่สมรสตาย'], ['divorced', 'หย่า']];
+  const SPM = [['', 'ไม่พิมพ์ส่วนนี้ (เว้นว่างไว้)'], ['consent', 'มีคู่สมรส · คู่สมรสยินยอม'], ['none', 'ไม่มีคู่สมรส · รับรองตนเอง']];
+  return `<div class="req-note"><span class="msr">shield_lock</span><div>ช่องในกรอบสีส้ม <b>(เลขประจำตัวประชาชน วันเกิด ที่อยู่ โทรศัพท์ส่วนตัว ข้อมูลคู่สมรสและผู้ค้ำประกัน)</b> ใช้พิมพ์เท่านั้น <b>ระบบไม่บันทึก</b> · เมื่อบันทึกแล้วหน้านี้ยังเปิดค้างไว้ให้พิมพ์ได้ ถ้าปิดหน้าแล้วต้องการพิมพ์ใหม่ ต้องกรอกช่องเหล่านี้อีกครั้ง</div></div>` +
+    pfSec('print', 'ส่วนที่จะพิมพ์', `<div class="pf-cks">${pfCk('secA', 'ก. สัญญาอนุญาต (หน้า 1–6)')}${pfCk('secB', 'ข. คู่สมรสยินยอม / รับรองไม่มีคู่สมรส (หน้า 7)')}${pfCk('secC', 'ค. สัญญาค้ำประกัน (3 หน้า)')}</div>`) +
+    pfSec('description', 'ข้อมูลสัญญา', `<div class="req-grid">
+      ${pfIn('contractNo', 'สัญญาเลขที่', { max: 40, hint: 'เว้นว่างได้ ให้เจ้าหน้าที่เขียน' })}${pfIn('contractDate', 'วันที่ทำสัญญา', { type: 'date', hint: 'เว้นว่างได้' })}
+      <div class="field c2"><span>ผู้รับสัญญา (ผู้ดูแลระบบตั้งค่าได้)</span><div class="pf-fixed">${esc(cfg.signerName || '-')} · ${esc(cfg.signerPos || '-')}</div></div></div>`) +
+    pfSec('badge', 'ผู้ให้สัญญา (ข้าพเจ้า)', `<div class="req-grid">
+      ${pfIn('fullName', 'ชื่อ-นามสกุล', { cls: 'c2', req: true, max: 120 })}${pfIn('empCode', 'รหัสประจำตัว', { max: 20, mode: 'numeric' })}${pfIn('level', 'ระดับ', { max: 20 })}
+      ${pfIn('position', 'ตำแหน่ง', { cls: 'c2', max: 120 })}${pfIn('unit', 'งาน', { max: 100 })}${pfIn('department', 'ฝ่าย', { max: 100 })}
+      ${pfIn('org', 'หน่วยงานต้นสังกัด', { cls: 'c2', max: 120 })}${pfIn('orgPhone', 'โทรศัพท์หน่วยงาน', { max: 30, mode: 'tel' })}</div>` +
+      pfSecBox('ข้อมูลส่วนบุคคลของผู้ให้สัญญา', `<div class="req-grid">${pfIn('sec.idNo', 'เลขประจำตัวประชาชน (13 หลัก)', { cls: 'c2', max: 13, mode: 'numeric' })}${pfIn('sec.birthDate', 'วันเกิด', { type: 'date', hint: 'ระบบคำนวณอายุให้' })}</div>` +
+        pfAddrIn('h', 'ที่อยู่ตามทะเบียนบ้าน') + pfAddrIn('c', 'ที่อยู่ปัจจุบันซึ่งสามารถติดต่อได้สะดวก') +
+        '<div class="pf-rows-foot"><button type="button" class="btn btn-light btn-sm" data-action="pfCopyAddr" data-from="h" data-to="c"><span class="msr">content_copy</span>ที่อยู่ปัจจุบันเหมือนตามทะเบียนบ้าน</button></div>')) +
+    pfSec('school', 'การไปศึกษา ฝึกอบรม หรือปฏิบัติการวิจัย (ทำเครื่องหมาย ✓)', `<div class="pf-cks"><b>ให้ไป</b>${pfCk('kStudy', 'ศึกษา')}${pfCk('kTrain', 'ฝึกอบรม')}${pfCk('kResearch', 'ปฏิบัติการวิจัย')}</div>
+      <div class="pf-cks"><b>เป็นการไป</b>${pfCk('wDom', 'ภายในประเทศ')}${pfCk('wAbroad', 'ต่างประเทศ')}<b style="margin-left:12px">ช่วงเวลา</b>${pfCk('tIn', 'ในเวลาปฏิบัติงาน')}${pfCk('tOut', 'นอกเวลาปฏิบัติงาน')}</div>
+      <div class="pf-cks"><b>ได้รับทุน</b>${pfCk('fTrc', 'สภากาชาดไทย')}${pfCk('fOrg', 'หน่วยงานต้นสังกัด')}</div>
+      <div class="req-grid" style="margin-top:10px">
+      <label class="field c4"><span>หลักสูตร/หัวข้อ</span><textarea class="input" name="course" rows="2" maxlength="220" style="min-height:60px">${esc(pfv('course'))}</textarea><small class="hint">พื้นที่ในสัญญาประมาณ 1 บรรทัดครึ่ง</small></label>
+      ${pfIn('major', 'สาขาวิชา', { cls: 'c2', max: 120 })}${pfIn('faculty', 'คณะ', { cls: 'c2', max: 120 })}
+      ${pfIn('institute', 'สถาบันการศึกษา/หน่วยงาน', { cls: 'c4', max: 150 })}
+      ${pfIn('domProvince', 'ภายในประเทศ ณ จังหวัด', { cls: 'c2', max: 100 })}${pfIn('abCity', 'ต่างประเทศ ณ เมือง', { max: 60 })}${pfIn('abState', 'รัฐ', { max: 60 })}
+      ${pfIn('abCountry', 'ประเทศ', { max: 60 })}${pfIn('frameYears', 'ระยะเวลาตามกรอบหลักสูตร (ปีการศึกษา)', { max: 10 })}
+      ${pfIn('durY', 'มีกำหนด (ปี)', { max: 4, mode: 'numeric' })}${pfIn('durM', '(เดือน)', { max: 4, mode: 'numeric' })}${pfIn('durD', '(วัน)', { max: 4, mode: 'numeric' })}
+      ${pfIn('startDate', 'นับตั้งแต่วันที่', { type: 'date' })}${pfIn('endDate', 'ถึงวันที่', { type: 'date' })}</div>
+      <h4 class="pf-sub">หรือแบ่งเป็น (ถ้ามี)</h4><div class="req-grid">
+      ${pfIn('inY', 'ในเวลาปฏิบัติงาน (ปี)', { max: 4, mode: 'numeric' })}${pfIn('inM', '(เดือน)', { max: 4, mode: 'numeric' })}${pfIn('inD', '(วัน)', { max: 4, mode: 'numeric' })}
+      <label class="field c4"><span>ในเวลาปฏิบัติงาน ตามระยะเวลาดังนี้</span><textarea class="input" name="inDetail" rows="2" maxlength="260" style="min-height:56px">${esc(pfv('inDetail'))}</textarea></label>
+      ${pfIn('outY', 'นอกเวลาปฏิบัติงาน (ปี)', { max: 4, mode: 'numeric' })}${pfIn('outM', '(เดือน)', { max: 4, mode: 'numeric' })}${pfIn('outD', '(วัน)', { max: 4, mode: 'numeric' })}
+      <label class="field c4"><span>นอกเวลาปฏิบัติงาน ตามระยะเวลาดังนี้</span><textarea class="input" name="outDetail" rows="2" maxlength="260" style="min-height:56px">${esc(pfv('outDetail'))}</textarea></label></div>`) +
+    pfSec('favorite', 'ข. คู่สมรส (หน้า 7)', pfSecBox('คู่สมรสของผู้ให้สัญญา', `<div class="req-grid">${pfSel('sec.spouseMode', 'กรอกส่วนใด', SPM, { cls: 'c2' })}
+      ${pfIn('sec.spouseName', 'ชื่อ-นามสกุลคู่สมรส (ถ้ามีคู่สมรส)', { max: 120 })}${pfSel('sec.noSpouse', 'ไม่มีคู่สมรส เนื่องจาก', NOS)}</div>`)) +
+    pfSec('handshake', 'ค. สัญญาค้ำประกัน', `<div class="req-grid">${pfIn('gPlace', 'ทำที่', { cls: 'c2', max: 100 })}${pfIn('gDate', 'วันที่ทำสัญญาค้ำประกัน', { type: 'date', hint: 'เว้นว่างได้' })}</div>` +
+      pfSecBox('ข้อมูลผู้ค้ำประกัน', `<div class="req-grid">
+        ${pfIn('sec.gName', 'ชื่อ-นามสกุลผู้ค้ำประกัน', { cls: 'c2', max: 120, hint: 'พิมพ์ในข้อ 9 ของสัญญาอนุญาตด้วย' })}${pfIn('sec.gId', 'เลขประจำตัวประชาชน', { max: 13, mode: 'numeric' })}${pfIn('sec.gAge', 'อายุ (ปี)', { max: 3, mode: 'numeric' })}
+        ${pfIn('sec.gJob', 'อาชีพ', { max: 80 })}${pfIn('sec.gPos', 'ตำแหน่ง', { max: 100 })}${pfIn('sec.gOrg', 'สังกัด', { cls: 'c2', max: 120 })}
+        ${pfIn('sec.gRel', 'ความเกี่ยวพันกับผู้ให้สัญญา', { cls: 'c2', max: 60, ph: 'เช่น พี่ชาย · เพื่อนร่วมงาน' })}</div>` +
+        pfAddrIn('gw', 'สถานที่ทำงาน') + pfAddrIn('gh', 'ที่อยู่ตามทะเบียนบ้าน') + pfAddrIn('gc', 'ที่อยู่ปัจจุบันซึ่งสามารถติดต่อได้สะดวก') +
+        `<div class="pf-rows-foot"><button type="button" class="btn btn-light btn-sm" data-action="pfCopyAddr" data-from="gh" data-to="gc"><span class="msr">content_copy</span>ที่อยู่ปัจจุบันเหมือนตามทะเบียนบ้าน</button></div>
+        <h4 class="pf-sub">คู่สมรสของผู้ค้ำประกัน</h4><div class="req-grid">${pfSel('sec.gSpouseMode', 'กรอกส่วนใด', SPM, { cls: 'c2' })}
+        ${pfIn('sec.gSpouseName', 'ชื่อ-นามสกุลคู่สมรส (ถ้ามี)', { max: 120 })}${pfSel('sec.gNoSpouse', 'ไม่มีคู่สมรส เนื่องจาก', NOS)}</div>`)) +
+    `<p class="small muted" style="margin:6px 2px 0">ลายมือชื่อผู้ให้สัญญา ผู้รับสัญญา ผู้ค้ำประกัน คู่สมรส และพยาน เว้นว่างไว้ลงนามด้วยปากกา · ชื่อพยานเขียนด้วยมือ</p>`;
+}
+
+/** ผู้ดูแล: เปิด/ปิดการแสดงแบบฟอร์มให้ผู้ใช้ */
+async function pfToggleShow(k, on, el) {
+  el.disabled = true;
+  try { S.pfCfg = await api('savePrintFormCfg', S.token, { show: { [k]: on } }); toast((on ? 'แสดง' : 'ซ่อน') + ' "' + PF_DEF[k].name + '" แล้ว'); render(); }
+  catch (e) { el.checked = !on; toast(e.message, 'err'); } finally { el.disabled = false; }
+}
+/** ผู้ดูแล: ชื่อและตำแหน่งผู้รับสัญญาในแบบสัญญา (ว่าง = ตามต้นฉบับ) */
+function pfSignerEdit() {
+  const c = S.pfCfg || {};
+  openModal({
+    title: 'ผู้รับสัญญา (แบบสัญญาอนุญาตไปศึกษา)', icon: 'settings', okText: 'บันทึก',
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">
+      <label class="field col-2"><span>ชื่อผู้รับสัญญา (ลงนามแทนสภากาชาดไทย)</span><input class="input" name="signerName" maxlength="100" value="${esc(c.signerName || '')}"></label>
+      <label class="field col-2"><span>ตำแหน่ง</span><input class="input" name="signerPos" maxlength="100" value="${esc(c.signerPos || '')}"><small class="hint">ใช้ในหน้า 1 หน้า 6 และสัญญาค้ำประกัน · ลบให้ว่างแล้วบันทึก = กลับเป็นค่าตามต้นฉบับ</small></label></form>`,
+    onOk: async () => {
+      const f = $('#mForm');
+      try { S.pfCfg = await api('savePrintFormCfg', S.token, { signerName: $('[name=signerName]', f).value, signerPos: $('[name=signerPos]', f).value }); toast('บันทึกผู้รับสัญญาแล้ว'); render(); }
+      catch (e) { toast(e.message, 'err'); return false; }
+    }
+  });
 }
 
 const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evalReview: ['รอ ผบ.ที่สูงขึ้นไปอนุมัติผล', 'b-amber', 'approval'], evaluated: ['อนุมัติผลแล้ว', 'b-green', 'task_alt'] };
@@ -6114,7 +6419,7 @@ function validateImport(rows) {
   return rows.map((d, i) => {
     const err = [];
     IMP_FIELDS.forEach(f => { if (!d[f[0]] && !/ไม่บังคับ/.test(f[1])) err.push('ไม่มี' + f[1].replace(/ [(].*$/, '')); });
-    if (d.prefixTh) { d.prefixTh = d.prefixTh.replace(/\s/g, ''); if (!/^[\u0E00-\u0E7F.]{1,30}$/.test(d.prefixTh)) err.push('คำนำหน้าต้องเป็นภาษาไทย'); }
+    if (d.prefixTh) { d.prefixTh = cleanPrefix(d.prefixTh); if (!prefixOk(d.prefixTh)) err.push('คำนำหน้าต้องเป็นภาษาไทย (ใช้จุด วงเล็บ และเว้นวรรคได้)'); }
     if (d.email && !/^[^@\s]+@[^@\s]+[.][^@\s]{2,}$/.test(d.email)) err.push('อีเมลไม่ถูกต้อง');
     if (d.level && /^(ไม่มี|-)$/.test(d.level)) d.level = '';
     if (!levelOk(d.level)) err.push('ระดับต้องเป็นตัวเลข');
@@ -6961,7 +7266,7 @@ function bindEvents() {
   $('#content').addEventListener('keydown', e => {
     if (e.target.id === 'stScan' && e.key === 'Enter') { e.preventDefault(); const v = e.target.value; e.target.value = ''; stationScan(v); }
   });
-  $('#content').addEventListener('change', e => { if (e.target.id === 'pfFt') { S.pfm.ft = e.target.value; render(); return; } if (e.target.closest && e.target.closest('#pfForm') && (e.target.tagName === 'SELECT' || e.target.type === 'date' || e.target.type === 'time')) onPfInput(e); });
+  $('#content').addEventListener('change', e => { if (e.target.dataset && e.target.dataset.pfshow) { pfToggleShow(e.target.dataset.pfshow, e.target.checked, e.target); return; } if (e.target.id === 'pfFt') { S.pfm.ft = e.target.value; render(); return; } if (e.target.closest && e.target.closest('#pfForm') && (e.target.tagName === 'SELECT' || e.target.type === 'date' || e.target.type === 'time')) onPfInput(e); });
   $('#content').addEventListener('change', e => { if (e.target.id === 'stAuto' && S.station) { S.station.auto = e.target.checked; store.set('hrd_st_auto', e.target.checked ? '1' : '', true); } });
   const chatFileChange = e => {
     if (e.target.id === 'chatFileU' || e.target.id === 'chatFileA') {
