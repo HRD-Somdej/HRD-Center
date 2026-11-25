@@ -727,6 +727,11 @@ tr.u-sel td{background:#f0fbfb}
   .bar-row{grid-template-columns:110px 1fr 28px}
   .search{min-width:0}
 }
+.pv-bar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;padding:10px 28px;background:#4b2a8f;color:#fff;font-size:14px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.pv-bar .msr{font-size:20px}.pv-bar b{font-weight:600}.pv-bar small{opacity:.85}.pv-bar .grow{flex:1}
+.pv-bar .btn{background:#fff;color:#4b2a8f;border-color:#fff}
+@media (max-width:760px){.pv-bar{padding:8px 14px;font-size:13px}}
+body.pv-on .sidebar{box-shadow:inset 4px 0 0 #6a3fc4}
 .idle-warn{display:flex;align-items:center;gap:10px;margin:14px 28px 0;padding:10px 16px;border-radius:12px;background:#fff7e6;border:1px solid #f6dfb5;color:#8a5a00;font-size:14px}
 .idle-warn .btn{margin-left:auto;background:#fff;border:1px solid #f6dfb5}
 @media (max-width:760px){.idle-warn{margin:10px 14px 0}}
@@ -837,6 +842,7 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .tr-mail{display:block;font-size:12px;margin-top:2px}.tr-mail.ok{color:#0a7d55}.tr-mail.no{color:#b45309}
 .tr-person .req-grid{grid-template-columns:minmax(150px,1fr) minmax(0,1.6fr);gap:10px 14px}.tr-person .req-grid>.c2{grid-column:auto}
 @media (max-width:560px){.tr-person .req-grid{grid-template-columns:1fr}}
+.tr-two .tr-person .req-grid{grid-template-columns:1fr}
 .tr-emp{display:flex;gap:6px}.tr-emp .input{min-width:0}.tr-emp .input{flex:1}.tr-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:900px){.tr-two{grid-template-columns:1fr}}
 tr.tr-todo td{background:#fffbeb}.tr-todo-t{color:#b45309;font-weight:600}
 .pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
@@ -1058,6 +1064,7 @@ tr.tr-todo td{background:#fffbeb}.tr-todo-t{color:#b45309;font-weight:600}
         </div>
       </div>
     </header>
+    <div class="pv-bar hidden" id="pvBar" role="status"><span class="msr">visibility</span><span><b>กำลังดูตัวอย่างหน้าผู้ใช้งาน</b> <small id="pvWho"></small><br><small>เห็นเมนูและข้อมูลเหมือนบุคลากรทั่วไป (ข้อมูลของบัญชีบุคลากรของท่านเอง) · ดูได้อย่างเดียว ไม่บันทึกข้อมูล</small></span><span class="grow"></span><button class="btn btn-sm" type="button" data-action="pvExit"><span class="msr">admin_panel_settings</span>กลับสู่หน้าผู้ดูแล</button></div>
     <div class="idle-warn hidden" id="idleWarn"><span class="msr">timer</span><span>ไม่มีการใช้งานนาน — ระบบจะออกจากระบบอัตโนมัติในอีก <b id="idleLeft">2</b> นาที</span><button class="btn btn-sm" type="button" id="idleStay">ใช้งานต่อ</button></div>
     <div class="content" id="content"></div>
   </main>
@@ -1129,8 +1136,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.14.0',
-  BUILD: '2569-11-25.5'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.15.0',
+  BUILD: '2569-11-25.6'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -1742,6 +1749,7 @@ const API_URL = String((window.HRD_CONFIG && window.HRD_CONFIG.API_URL) || '').t
 const API_READ = /^(get|list|my|chatStatus|staffStatus|linkedUserInfo|logArchiveInfo)/;
 const API_TRANSIENT = /Failed to fetch|Load failed|NetworkError|network|server error occurred|ข้อผิดพลาดของเซิร์ฟเวอร์|BAD_RESPONSE|timed out|Service invoked too many times|Exceeded maximum execution/i;
 async function api(fn, ...args) {
+  if (PREVIEW && args[0] === S.token && PREVIEW_READ.indexOf(fn) < 0) throw new Error(PREVIEW_MSG);   // โหมดดูตัวอย่าง: ไม่ส่งคำสั่งบันทึกไปหลังบ้าน (หลังบ้านตรวจซ้ำ)
   try { return await apiOnce(fn, ...args); }
   catch (e) {
     if (!API_READ.test(fn) || !API_TRANSIENT.test(e.raw || '')) throw e;
@@ -2257,7 +2265,7 @@ function applyBoot(d) {
   bootSave(d);
 }
 /** จำข้อมูลหน้าแรกไว้ในแท็บนี้ (sessionStorage · ผูกกับ token) — รีเฟรช/เปิดซ้ำเห็นหน้าทันที แล้วอัปเดตตามหลัง · ล้างเมื่อออกจากระบบ */
-function bootSave(d) { try { if (S.token) sessionStorage.setItem('hrd_boot', JSON.stringify({ t: S.token, at: Date.now(), d: d })); } catch (e) { try { sessionStorage.removeItem('hrd_boot'); } catch (x) { } } }
+function bootSave(d) { if (PREVIEW) return; try { if (S.token) sessionStorage.setItem('hrd_boot', JSON.stringify({ t: S.token, at: Date.now(), d: d })); } catch (e) { try { sessionStorage.removeItem('hrd_boot'); } catch (x) { } } }
 function bootLoad(token) {
   try { const o = JSON.parse(sessionStorage.getItem('hrd_boot') || 'null'); if (o && o.t === token && Date.now() - o.at < 12 * 3600000) return o.d; } catch (e) { }
   return null;
@@ -2408,6 +2416,7 @@ function idleCheck() {
   }
 }
 function idleLogout() {
+  if (PREVIEW) { api('logout', S.token).catch(() => {}); S.token = PREVIEW.token; pvClear(); }
   const t = S.token, mode = S.user && S.user.kind === 'user' ? 'user' : 'admin';
   stopChat(); clearTimeout(PEND.timer);
   S.token = null; S.user = null; S.me = null;
@@ -2424,6 +2433,66 @@ function initIdle() {
   clearInterval(IDLE.timer);
   IDLE.timer = setInterval(idleCheck, 15000);
 }
+/* ===================== ดูตัวอย่างหน้าผู้ใช้งาน (build 2569-11-25.6) =====================
+ * ผู้ดูแลระบบกด "ดูตัวอย่างหน้าผู้ใช้งาน" → หลังบ้านออกเซสชันผู้ใช้งาน (บัญชีบุคลากรของตนเอง อายุ 30 นาที อ่านอย่างเดียว)
+ * หน้าเว็บสลับไปแสดงเหมือนผู้ใช้งานทั่วไป + แถบสีม่วงด้านบน · กด "กลับสู่หน้าผู้ดูแล" เพื่อกลับ (token ผู้ดูแลเดิมยังอยู่) */
+let PREVIEW = null;
+const PREVIEW_MIN = 30;
+const PREVIEW_READ = ['getBootstrap', 'logout', 'getFile', 'getThumbs', 'getLogo', 'getLoginPosters', 'getPosterImage', 'getLoginConfig',
+  'chatStatus', 'getChatImage', 'listRequests', 'listPrintForms', 'listActivities', 'myAttendance', 'myQr', 'myPending', 'staffStatus',
+  'listPips', 'getPipPeriods', 'listTrainReports', 'getTrainReport', 'trPhoto', 'trPrintDoc', 'trLookupPerson', 'bkList'];
+const PREVIEW_MSG = 'โหมดดูตัวอย่างหน้าผู้ใช้งาน — ดูได้อย่างเดียว ไม่บันทึกข้อมูล (กด "กลับสู่หน้าผู้ดูแล" เพื่อทำงานต่อ)';
+function pvResetPages() {
+  if (S.tr) Object.assign(S.tr, { mode: 'list', id: null, rep: null, data: null, photos: [] });
+  if (S.bk) Object.assign(S.bk, { tab: 'open', data: null, roster: null });
+  if (S.pfm) Object.assign(S.pfm, { mode: 'list', id: null });
+  if (S.req) Object.assign(S.req, { mode: 'list', id: null });
+  if (S.pv) Object.assign(S.pv, { mode: 'list', id: null });
+}
+function pvClear() {
+  PREVIEW = null;
+  document.body.classList.remove('pv-on');
+  const b = $('#pvBar'); if (b) b.classList.add('hidden');
+}
+async function pvStart() {
+  if (PREVIEW || !isAdmin()) return;
+  loader(true);
+  let r;
+  try { r = await api('previewAsUser', S.token); }
+  catch (e) { loader(false); return toast(e.message, 'err'); }
+  PREVIEW = { token: S.token, page: S.page, at: Date.now() };
+  stopChat(); closeModal(true);
+  S.token = r.token;
+  pvResetPages();
+  applyBoot(r.boot);
+  document.body.classList.add('pv-on');
+  $('#pvWho').textContent = '· มุมมองของ ' + (r.user.fullName || r.user.username) + (r.user.employeeId ? ' (' + r.user.employeeId + ')' : '');
+  $('#pvBar').classList.remove('hidden');
+  renderUser(); refreshCounts();
+  loader(false);
+  await go(firstPage());
+  startChat();
+  toast('เปิดตัวอย่างหน้าผู้ใช้งานแล้ว (ดูได้ ' + PREVIEW_MIN + ' นาที)', 'info');
+}
+async function pvExit(quiet, msg) {
+  if (!PREVIEW) return;
+  const P = PREVIEW, t = S.token;
+  stopChat(); answerAsk(false); closeModal(true);
+  pvClear();
+  if (t && t !== P.token) api('logout', t).catch(() => {});
+  S.token = P.token;
+  pvResetPages();
+  store.set('hrd_page', P.page || 'dashboard');
+  loader(true);
+  try {
+    const c = bootLoad(P.token);
+    if (c) applyBoot(c);
+    await loadAll();
+    enterApp();
+    if (msg) toast(msg, 'info'); else if (!quiet) toast('กลับสู่หน้าผู้ดูแลระบบแล้ว', 'info');
+  } catch (e) { if (S.token) toast(e.message, 'err'); }
+  finally { loader(false); }
+}
 function enterApp() {
   IDLE.last = Date.now(); IDLE.saved = 0; idleTouch();
   $('#loginView').classList.add('hidden');
@@ -2437,6 +2506,7 @@ function enterApp() {
 }
 async function doLogout() {
   closeDropdown();
+  if (PREVIEW) return pvExit(false);
   if (!(await ask(ASK.logout))) return;
   const t = S.token;
   stopChat();
@@ -2445,6 +2515,7 @@ async function doLogout() {
   if (t) api('logout', t).catch(() => {});
 }
 function onExpired() {
+  if (PREVIEW) { const P = PREVIEW; setTimeout(() => { if (PREVIEW === P) pvExit(true, 'หมดเวลาดูตัวอย่าง (' + PREVIEW_MIN + ' นาที) — กลับสู่หน้าผู้ดูแลแล้ว'); }, 0); return; }
   const mode = S.user && S.user.kind !== 'user' && !S.user.src ? 'admin' : S.user && S.user.src === 'legacy' ? 'user' : 'home';
   stopChat();
   S.token = null; store.del('hrd_token'); bootClear();
@@ -2468,8 +2539,9 @@ function renderUser() {
   }
   $('#ddPw').classList.toggle('hidden', viaHrc());
   $('#ddPwHrc').classList.toggle('hidden', !viaHrc());
-  $('#ddSwitch').innerHTML = isAdmin() && !S.user.src
-    ? `<button data-action="linkUser"><span class="msr">${S.me ? 'badge' : 'add_link'}</span>${S.me ? 'บัญชีบุคลากรของฉัน' : 'ผูกบัญชีบุคลากรของฉัน'}</button>` : '';
+  $('#ddSwitch').innerHTML = (isAdmin() && !S.user.src
+    ? `<button data-action="linkUser"><span class="msr">${S.me ? 'badge' : 'add_link'}</span>${S.me ? 'บัญชีบุคลากรของฉัน' : 'ผูกบัญชีบุคลากรของฉัน'}</button>` : '') +
+    (isAdmin() ? `<button data-action="pvStart"><span class="msr">visibility</span>ดูตัวอย่างหน้าผู้ใช้งาน</button>` : PREVIEW ? `<button data-action="pvExit"><span class="msr">admin_panel_settings</span>กลับสู่หน้าผู้ดูแล</button>` : '');
 }
 async function openLinkUser() {
   closeDropdown();
@@ -3125,7 +3197,7 @@ function renderReqList() {
 function rqv(k) { const v = S.req.data[k]; return v == null ? '' : v; }
 function rqIn(k, label, o) {
   o = o || {};
-  return `<label class="field ${o.cls || ''}"><span>${esc(label)}${o.req ? ' <span class="req">*</span>' : ''}</span>
+  return `<label class="field ${o.cls || ''}"><span>${esc(label)}</span>
     <input class="input" name="${k}" type="${o.type || 'text'}" value="${esc(rqv(k))}" placeholder="${esc(o.ph || '')}"${o.list ? ` list="${o.list}"` : ''}${o.max ? ` maxlength="${o.max}"` : ''}${o.mode ? ` inputmode="${o.mode}"` : ''}></label>`;
 }
 function rqChk(k, label) { return `<label class="check"><input type="checkbox" name="${k}" ${rqv(k) ? 'checked' : ''}> ${esc(label)}</label>`; }
@@ -3158,10 +3230,10 @@ function renderReqEditor() {
     ${rqIn('department', 'ฝ่าย', { req: true })}
   </div></div></div>
   <div class="card req-sec"><div class="card-h"><h3><span class="msr">event_note</span>รายละเอียดการขออนุมัติ</h3></div><div class="card-b"><div class="req-grid">
-    <div class="field c4"><span>ขออนุมัติเข้าร่วม <span class="req">*</span></span>
+    <div class="field c4"><span>ขออนุมัติเข้าร่วม</span>
       <div class="seg">${REQ_TYPES.map(t => `<label><input type="checkbox" name="types" value="${t[0]}" ${(d.types || []).indexOf(t[0]) > -1 ? 'checked' : ''}><span>${t[1]}</span></label>`).join('')}</div></div>
     ${rqIn('planNo', 'ตามแผนฯ ลำดับที่', { ph: 'ถ้ามี' })}
-    <label class="field c4"><span>เรื่อง <span class="req">*</span></span><textarea class="input" name="subject" rows="2" maxlength="300" style="min-height:70px">${esc(rqv('subject'))}</textarea></label>
+    <label class="field c4"><span>เรื่อง</span><textarea class="input" name="subject" rows="2" maxlength="300" style="min-height:70px">${esc(rqv('subject'))}</textarea></label>
     ${rqIn('startDate', 'ตั้งแต่วันที่', { type: 'date', req: true })}
     ${rqIn('endDate', 'ถึงวันที่', { type: 'date' })}
     ${rqIn('place', 'ณ (สถานที่)', { cls: 'c2', req: true })}
@@ -3232,13 +3304,10 @@ function onReqInput(e) {
   t.classList.remove('req-field-err');
 }
 function validateReq() {
-  const d = readReqForm(), miss = [];
-  const need = [['reqDate', 'วันที่เขียนแบบฟอร์ม'], ['to', 'เรียน'], ['fullName', 'ชื่อ-นามสกุล'], ['position', 'ตำแหน่ง'], ['department', 'ฝ่าย'], ['subject', 'เรื่อง'], ['startDate', 'วันที่เริ่ม'], ['place', 'สถานที่ (ณ)']];
+  const d = readReqForm(), miss = [];   // ไม่บังคับกรอกทุกช่อง (build 2569-11-25.6) ตรวจเฉพาะความถูกต้องของข้อมูลที่กรอก
   $$('#reqForm .req-field-err').forEach(el => el.classList.remove('req-field-err'));
-  need.forEach(n => { if (!String(d[n[0]] || '').trim()) { miss.push(n[1]); const el = $('#reqForm [name=' + n[0] + ']'); if (el) el.classList.add('req-field-err'); } });
-  if (!(d.types || []).length) miss.push('ประเภทที่ขออนุมัติเข้าร่วม');
-  if (d.endDate && d.startDate && d.endDate < d.startDate) miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม');
-  if (miss.length) { toast('กรุณากรอก: ' + miss.join(', '), 'err'); const first = $('#reqForm .req-field-err'); if (first) first.focus(); return false; }
+  if (d.endDate && d.startDate && d.endDate < d.startDate) { miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม'); const el = $('#reqForm [name=endDate]'); if (el) el.classList.add('req-field-err'); }
+  if (miss.length) { toast('กรุณาตรวจ: ' + miss.join(', '), 'err'); const first = $('#reqForm .req-field-err'); if (first) first.focus(); return false; }
   return true;
 }
 async function saveReq(andPrint) {
@@ -3810,7 +3879,7 @@ function pfSet(path, v) {
 function pfv(path) { const v = pfGet(path); return v == null ? '' : v; }
 function pfIn(path, label, o) {
   o = o || {};
-  return `<label class="field ${o.cls || ''}"><span>${esc(label)}${o.req ? ' <span class="req">*</span>' : ''}</span>
+  return `<label class="field ${o.cls || ''}"><span>${esc(label)}</span>
     <input class="input${o.num ? ' pf-num' : ''}" name="${path}" type="${o.type || 'text'}" value="${esc(pfv(path))}" placeholder="${esc(o.ph || '')}"${o.max ? ` maxlength="${o.max}"` : ''}${o.mode ? ` inputmode="${o.mode}"` : ''}${o.list ? ` list="${o.list}"` : ''}>${o.hint ? `<small class="hint">${o.hint}</small>` : ''}</label>`;
 }
 function pfCellIn(path, o) {
@@ -3979,21 +4048,14 @@ function pfValidate() {
   const t = S.pfm.type, d = pfReadForm(), miss = [];
   $$('#pfForm .req-field-err').forEach(el => el.classList.remove('req-field-err'));
   const mark = n => { const el = $('#pfForm [name="' + n + '"]'); if (el) el.classList.add('req-field-err'); };
-  if ((t === '2144' || t === '026' || t === 'stc') && !String(d.fullName || '').trim()) { miss.push('ชื่อ-นามสกุล'); mark('fullName'); }
   if (t === 'stc') {
     const sc = S.pfm.secret || {};
     if (!d.secA && !d.secB && !d.secC) miss.push('เลือกส่วนที่จะพิมพ์อย่างน้อย 1 ส่วน');
     if (d.startDate && d.endDate && d.endDate < d.startDate) { mark('endDate'); miss.push('ถึงวันที่ต้องไม่ก่อนวันเริ่มต้น'); }
     [['idNo', 'เลขประจำตัวประชาชนของผู้ให้สัญญา'], ['gId', 'เลขประจำตัวประชาชนของผู้ค้ำประกัน']].forEach(x => { const v = String(sc[x[0]] || '').replace(/[\s-]/g, ''); if (v && !/^[0-9]{13}$/.test(v)) { mark('sec.' + x[0]); miss.push(x[1] + ' ต้องเป็นตัวเลข 13 หลัก'); } });
   } else if (t !== '026') {
-    const used = (d.rows || []).map((r, i) => ({ r, i })).filter(x => pfRowUsed(Object.assign({}, x.r, { date: '' })));
-    if (!used.length) miss.push('รายการอย่างน้อย 1 รายการ');
-    used.forEach(x => {
-      const p = 'rows.' + x.i + '.';
-      if (!x.r.date) { mark(p + 'date'); miss.push('วันที่ของรายการที่ ' + (x.i + 1)); }
-      if (!String(t === '2144' ? x.r.item || '' : (x.r.purpose || '') + (x.r.item || '')).trim()) { mark(p + (t === '2144' ? 'item' : 'purpose')); miss.push('รายการที่ ' + (x.i + 1)); }
-      if (!(pfNum(x.r.amount) > 0) || !pfMoneyOk(x.r.amount)) { mark(p + 'amount'); miss.push('จำนวนเงินของรายการที่ ' + (x.i + 1)); }
-    });
+    // ไม่บังคับกรอกทุกช่อง (build 2569-11-25.6) — ตรวจเฉพาะจำนวนเงินที่กรอกต้องเป็นตัวเลข
+    (d.rows || []).forEach((r, i) => { if (String(r.amount || '').trim() && !pfMoneyOk(r.amount)) { mark('rows.' + i + '.amount'); miss.push('จำนวนเงินของรายการที่ ' + (i + 1) + ' ต้องเป็นตัวเลข'); } });
   } else {
     if (d.departDate && d.returnDate && d.returnDate < d.departDate) { mark('returnDate'); miss.push('วันที่กลับต้องไม่ก่อนวันที่ออกเดินทาง'); }
     $$('#pfForm .pf-num').forEach(el => { if (/amount|rate/.test(el.name) && !pfMoneyOk(el.value)) { el.classList.add('req-field-err'); miss.push('จำนวนเงินต้องเป็นตัวเลข'); } });
@@ -4470,12 +4532,12 @@ function trEditOpen(rep) {
 }
 function trIn(k, label, o) {
   o = o || {}; const v = S.tr.data[k] == null ? '' : S.tr.data[k];
-  return `<label class="field ${o.cls || ''}"><span>${esc(label)}${o.req ? ' <span class="req">*</span>' : ''}</span>
+  return `<label class="field ${o.cls || ''}"><span>${esc(label)}</span>
     <input class="input" name="${k}" type="${o.type || 'text'}" value="${esc(v)}" placeholder="${esc(o.ph || '')}"${o.max ? ` maxlength="${o.max}"` : ''}${o.mode ? ` inputmode="${o.mode}"` : ''}${o.list ? ` list="${o.list}"` : ''}${o.ro ? ' readonly' : ''}>${o.hint ? `<small class="hint">${esc(o.hint)}</small>` : ''}</label>`;
 }
 function trTa(k, label, o) {
   o = o || {}; const v = S.tr.data[k] == null ? '' : S.tr.data[k];
-  return `<label class="field ${o.cls || 'c4'}"><span>${esc(label)}${o.req ? ' <span class="req">*</span>' : ''}</span>
+  return `<label class="field ${o.cls || 'c4'}"><span>${esc(label)}</span>
     <textarea class="input tr-ta" name="${k}" rows="${o.rows || 4}" maxlength="${o.max || 2000}" placeholder="${esc(o.ph || '')}">${esc(v)}</textarea>
     <small class="hint tr-cnt" data-cnt="${k}">${String(v).length.toLocaleString()} / ${(o.max || 2000).toLocaleString()} ตัวอักษร${o.hint ? ' · ' + esc(o.hint) : ''}</small></label>`;
 }
@@ -4492,7 +4554,7 @@ function trEditHtml() {
   const costs = [['costReg', 'ค่าลงทะเบียน'], ['costStay', 'ค่าที่พัก'], ['costTravel', 'ค่าพาหนะเดินทาง'], ['costAllow', 'ค่าเบี้ยเลี้ยง'], ['costOther', 'ค่าใช้จ่ายอื่น ๆ']];
   const ph = S.tr.photos;
   return `<div class="pf-ed-head" style="${cvar('teal')}"><div class="doc-ic"><span class="msr">assignment_turned_in</span></div><div><b>${esc(TR_T1)}<br>${esc(TR_T2)}</b>
-    <small>${S.tr.id ? 'แก้ไขร่าง' : 'เขียนรายงานใหม่'} · ช่องที่มี <span class="req">*</span> ต้องกรอกก่อนส่ง</small></div></div>
+    <small>${S.tr.id ? 'แก้ไขร่าง' : 'เขียนรายงานใหม่'} · ไม่บังคับกรอกทุกช่อง กรอกเฉพาะข้อมูลที่มี</small></div></div>
   ${ret ? `<div class="pf-warn"><span class="msr">undo</span><span><b>ถูกส่งกลับให้แก้ไข:</b> ${esc(rep.returnNote || '')}</span></div>` : ''}
   <form id="trForm" onsubmit="return false" autocomplete="off">
   ${pfSec('badge', 'ส่วนที่ 1 ข้อมูลผู้รายงาน', `<div class="req-grid">
@@ -4502,18 +4564,18 @@ function trEditHtml() {
   ${pfSec('event_note', 'ส่วนที่ 2 ข้อมูลการเข้าร่วม', `
       <div class="req-grid">
         <div class="field c4"><span>ตามคำสั่ง${esc(PF_ORG)}</span><div class="tr-order">${trIn('orderNo', 'ที่', { max: 40, ph: 'เช่น 123/2569' })}${trIn('orderDate', 'ลงวันที่', { type: 'date' })}</div></div>
-        <div class="field c4"><span>ประเภท <span class="req">*</span></span>${trRadios('kind', d.kind === 'learn' ? TR_KIND_ALL : TR_KIND)}</div>
+        <div class="field c4"><span>ประเภท</span>${trRadios('kind', d.kind === 'learn' ? TR_KIND_ALL : TR_KIND)}</div>
         ${trIn('title', 'เรื่อง / หลักสูตร', { cls: 'c4', req: true, max: 300 })}
         ${trIn('organizer', 'หน่วยงานผู้จัด', { cls: 'c2', req: true, max: 200 })}${trIn('place', 'สถานที่', { req: true, max: 200 })}${trIn('province', 'จังหวัด', { max: 60, list: 'trProv' })}
       </div>
       <datalist id="trProv">${TH_PROVINCES.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
-      <div class="tr-sub">ระหว่างวันที่ <span class="req">*</span> <small class="muted" style="font-weight:400">ไปหลายวันแต่ไม่ติดต่อกัน กด "เพิ่มช่วงวันที่"</small></div>
+      <div class="tr-sub">ระหว่างวันที่ <small class="muted" style="font-weight:400">ไปหลายวันแต่ไม่ติดต่อกัน กด "เพิ่มช่วงวันที่"</small></div>
       <div class="tr-dates">${rg.map((x, i) => `<div class="tr-dr"><span class="tr-dn">${i + 1}</span>
           <label class="field"><span>วันที่</span><input class="input" type="date" name="dS.${i}" value="${esc(x.s || '')}"></label>
           <label class="field"><span>ถึงวันที่ (ถ้าวันเดียว เว้นว่างได้)</span><input class="input" type="date" name="dE.${i}" value="${esc(x.e || '')}"></label>
           ${rg.length > 1 ? `<button type="button" class="icon-btn danger" data-action="trDateDel" data-i="${i}" title="ลบช่วงนี้"><span class="msr">delete</span></button>` : '<span></span>'}</div>`).join('')}</div>
       <div class="tr-dfoot">${rg.length < TR_MAXRG ? `<button type="button" class="btn btn-light btn-sm" data-action="trDateAdd"><span class="msr">add</span>เพิ่มช่วงวันที่</button>` : ''}
-        <label class="field tr-days"><span>รวม (วัน) <span class="req">*</span></span><input class="input" name="days" value="${esc(d.days || '')}" inputmode="decimal" maxlength="5" placeholder="พิมพ์เอง เช่น 3"></label>
+        <label class="field tr-days"><span>รวม (วัน)</span><input class="input" name="days" value="${esc(d.days || '')}" inputmode="decimal" maxlength="5" placeholder="พิมพ์เอง เช่น 3"></label>
         <small class="hint" data-out="trDays">${cnt ? 'นับจากช่วงวันที่ได้ ' + cnt + ' วัน' : ''}</small></div>
       ${dueIso ? `<p class="small muted" style="margin:6px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">schedule</span> ควรส่งรายงานภายใน ${TR_DUE_DAYS} วันหลังเสร็จสิ้น (ภายใน ${esc(thDateLong(dueIso))})</p>` : ''}
       <div class="field" style="margin-top:14px"><span>แหล่งงบประมาณ</span>${trRadios('fund', TR_FUND)}</div>
@@ -4527,7 +4589,7 @@ function trEditHtml() {
       ${trTa('knowledge', '3.2 สาระสำคัญ / ความรู้ที่ได้รับ', { req: true, max: 6000, rows: 8, hint: 'สรุปเป็นข้อ ๆ ได้ (ขึ้นบรรทัดใหม่ตามต้องการ)' })}
       ${trTa('benefitSelf', '3.3 ประโยชน์ที่ได้รับต่อตนเอง', { max: 2000, rows: 3 })}
       ${trTa('benefitOrg', '3.4 ประโยชน์ที่ได้รับต่อหน่วยงาน / โรงพยาบาล', { req: true, max: 2000, rows: 3 })}
-      <div class="field c4"><span>3.5 การนำไปใช้ / ขยายผล <span class="req">*</span></span>
+      <div class="field c4"><span>3.5 การนำไปใช้ / ขยายผล</span>
         <div class="seg">${Object.keys(TR_APPLY).map(x => `<label><input type="checkbox" name="applyHow" value="${x}"${(d.applyHow || []).indexOf(x) > -1 ? ' checked' : ''}><span>${esc(TR_APPLY[x])}</span></label>`).join('')}</div></div>
       <div class="req-grid c4 tr-other${(d.applyHow || []).indexOf('other') > -1 ? '' : ' hidden'}" data-show="applyHow" style="grid-column:1/-1">${trIn('applyOther', 'ระบุวิธีอื่น', { cls: 'c2', max: 150 })}</div>
       ${trTa('applyDetail', 'รายละเอียดการนำไปใช้ / ขยายผล', { req: true, max: 2000, rows: 3, ph: 'เช่น ถ่ายทอดความรู้ในการประชุมประจำเดือนของหน่วยงาน' })}
@@ -4591,12 +4653,8 @@ function trRefresh() {
 }
 function trMissing() {
   const d = S.tr.data, miss = [];
-  const R = { fullName: 'ชื่อ-สกุล', kind: 'ประเภท', title: 'เรื่อง / หลักสูตร', organizer: 'หน่วยงานผู้จัด', place: 'สถานที่', days: 'จำนวนวันรวม',
-    objective: 'วัตถุประสงค์', knowledge: 'สาระสำคัญ / ความรู้ที่ได้รับ', benefitOrg: 'ประโยชน์ต่อหน่วยงาน', applyDetail: 'รายละเอียดการนำไปใช้ / ขยายผล' };
+  // ไม่บังคับกรอกทุกช่อง (build 2569-11-25.6) — ตรวจเฉพาะรูปแบบของข้อมูลที่กรอก
   $$('#trForm .req-field-err').forEach(e => e.classList.remove('req-field-err'));
-  Object.keys(R).forEach(k => { if (!String(d[k] || '').trim()) { miss.push(R[k]); const el = $(`#trForm [name="${k}"]`); if (el && el.type !== 'radio') el.classList.add('req-field-err'); } });
-  const rg = trRanges(d).filter(x => x.s || x.e);
-  if (!rg.length) { miss.push('วันที่เข้าร่วม'); const el = $('#trForm [name="dS.0"]'); if (el) el.classList.add('req-field-err'); }
   trRanges(d).forEach((x, i) => { if (x.s && x.e && x.e < x.s) { miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม (ช่วงที่ ' + (i + 1) + ')'); const el = $(`#trForm [name="dE.${i}"]`); if (el) el.classList.add('req-field-err'); } });
   trLinks(d).forEach((x, i) => { if ((x.url || x.title) && !/^https?:\/\/[^\s<>"'`]+$/i.test(x.url)) { miss.push('ลิงก์เอกสารแนบที่ ' + (i + 1) + ' ต้องขึ้นต้นด้วย https://'); const el = $(`#trForm [name="lU.${i}"]`); if (el) el.classList.add('req-field-err'); } });
   if (d.days && !/^[0-9]{1,3}(\.[0-9])?$/.test(String(d.days).trim())) { miss.push('จำนวนวันรวมต้องเป็นตัวเลข'); const el = $('#trForm [name=days]'); if (el) el.classList.add('req-field-err'); }
@@ -4751,10 +4809,18 @@ async function trFileView(fileId) {
 }
 
 /* ---------- ช่องผู้ลงนาม: รหัสบุคลากร + ค้นชื่อ ---------- */
-function trPersonHtml(pre, p, title) {
-  p = p || {};
-  return `<div class="tr-person" data-person="${pre}"><div class="tr-person-h">${esc(title)}</div>
-    <div class="req-grid"><label class="field"><span>รหัสบุคลากร <span class="req">*</span></span><div class="tr-emp">
+/** ผู้ลงนามคนสุดท้าย (build 2569-11-25.6): ผู้อำนวยการ หรือ รองผู้อำนวยการ / ผู้ช่วยผู้อำนวยการ ที่ลงนามปฏิบัติการแทนผู้อำนวยการตามสายงาน */
+const TR_EXEC_ACT = { '': 'ผู้อำนวยการ (ลงนามเอง)', dep: 'รองผู้อำนวยการ ปฏิบัติการแทนผู้อำนวยการ', ast: 'ผู้ช่วยผู้อำนวยการ ปฏิบัติการแทนผู้อำนวยการ' };
+const TR_DIRECTOR = 'ผู้อำนวยการ' + APP_INFO.ORG;
+function trActLine(s) { return s && s.role === 'exec' && TR_EXEC_ACT[s.act] && s.act ? 'ปฏิบัติการแทน' + TR_DIRECTOR : ''; }
+function trActHtml(pre, v) {
+  return `<label class="field c4"><span>ลงนามในฐานะ</span><select class="input" id="f_${pre}Act">${Object.keys(TR_EXEC_ACT).map(k => `<option value="${k}"${(v || '') === k ? ' selected' : ''}>${esc(TR_EXEC_ACT[k])}</option>`).join('')}</select>
+    <small class="hint">ปฏิบัติการแทน = เอกสารพิมพ์ใต้ตำแหน่งว่า "ปฏิบัติการแทนผู้อำนวยการ…"</small></label>`;
+}
+function trPersonHtml(pre, p, title, opt) {
+  p = p || {}; opt = opt || {};
+  return `<div class="tr-person" data-person="${pre}"><div class="tr-person-h">${esc(title)}${opt.del ? `<button type="button" class="icon-btn danger" data-action="trExDel" data-i="${esc(opt.del)}" title="นำออก" style="float:right"><span class="msr">delete</span></button>` : ''}</div>
+    <div class="req-grid">${opt.act ? trActHtml(pre, p.act) : ''}${opt.line ? `<label class="field c4"><span>สายงาน (ใช้เลือกตอนรับเรื่อง)</span><input class="input" id="f_${pre}Line" value="${esc(p.line || '')}" maxlength="100" placeholder="เช่น ฝ่ายการพยาบาล / ฝ่ายการแพทย์ / ฝ่ายบริหาร"></label>` : ''}<label class="field"><span>รหัสบุคลากร <span class="req">*</span></span><div class="tr-emp">
         <input class="input" id="f_${pre}Emp" value="${esc(p.emp || '')}" inputmode="numeric" maxlength="7" placeholder="7 หลัก">
         <button type="button" class="btn btn-light btn-sm" data-action="trLookup" data-p="${pre}" title="ค้นชื่อจากรหัส"><span class="msr">person_search</span></button></div></label>
       <label class="field"><span>ชื่อ-สกุล <span class="req">*</span></span><input class="input" id="f_${pre}Name" value="${esc(p.name || '')}" maxlength="100"></label>
@@ -4763,7 +4829,12 @@ function trPersonHtml(pre, p, title) {
         <small class="hint">ระบบส่งอีเมลแจ้งให้ลงนาม · ถ้ามีอีเมลในระบบ HRD Center อยู่แล้ว ไม่ต้องกรอก</small></label></div>
     <small class="hint tr-person-msg" id="f_${pre}Msg"></small></div>`;
 }
-function trPersonRead(pre) { return { emp: ($('#f_' + pre + 'Emp') || {}).value || '', name: ($('#f_' + pre + 'Name') || {}).value || '', pos: ($('#f_' + pre + 'Pos') || {}).value || '', email: (($('#f_' + pre + 'Mail') || {}).value || '').trim() }; }
+function trPersonRead(pre) {
+  const o = { emp: ($('#f_' + pre + 'Emp') || {}).value || '', name: ($('#f_' + pre + 'Name') || {}).value || '', pos: ($('#f_' + pre + 'Pos') || {}).value || '', email: (($('#f_' + pre + 'Mail') || {}).value || '').trim() };
+  const a = $('#f_' + pre + 'Act'), l = $('#f_' + pre + 'Line');
+  if (a) o.act = a.value; if (l) o.line = l.value.trim();
+  return o;
+}
 const TR_MAIL = /^[^@\s<>"']+@[^@\s<>"']+\.[^@\s<>"']+$/;
 function trPersonCheck(pre, label) {
   const p = trPersonRead(pre);
@@ -4789,7 +4860,7 @@ async function trLookup(pre) {
 async function trSubmit() {
   trRead();
   const miss = trMissing();
-  if (miss.length) { toast('กรุณากรอกให้ครบ: ' + miss.slice(0, 4).join(', ') + (miss.length > 4 ? ' และอีก ' + (miss.length - 4) + ' ช่อง' : ''), 'err'); const e = $('#trForm .req-field-err'); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); return; }
+  if (miss.length) { toast('กรุณาตรวจ: ' + miss.slice(0, 4).join(', ') + (miss.length > 4 ? ' และอีก ' + (miss.length - 4) + ' ช่อง' : ''), 'err'); const e = $('#trForm .req-field-err'); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); return; }
   if (!(await trSave(true))) return;
   const rep = S.tr.rep, prev = (rep.chain || []).filter(s => s.role === 'sup');
   openModal({
@@ -4835,7 +4906,7 @@ function trViewHtml() {
     const lab = s.role === 'sup' ? 'ผู้บังคับบัญชาลำดับที่ ' + (++nSup) : s.role === 'exec' ? 'ผู้บริหาร (ลงนามคนสุดท้าย)' : TR_ROLEL[s.role];
     const g = s.sign, cur = !g && r.cur && s.name === r.cur.name;
     return `<div class="tr-step ${g ? 'ok' : cur ? 'cur' : ''}"><div class="tr-dot"><span class="msr">${g ? 'check' : cur ? 'hourglass_top' : 'more_horiz'}</span></div>
-      <div><b>${esc(lab)}</b> · ${esc(g ? g.name : s.name)}<small>${esc(s.pos || '')}</small>
+      <div><b>${esc(lab)}</b> · ${esc(g ? g.name : s.name)}<small>${esc(s.pos || '')}</small>${trActLine(s) ? `<small>${esc(trActLine(s))}</small>` : ''}
       ${cur && s.mail ? trMailHtml(s.mail) : ''}${g ? `<small>ลงนามอิเล็กทรอนิกส์ ${esc(fmtDate(g.at, true))}</small>${g.to ? `<small>เรียน ${esc(g.to)}</small>` : ''}${s.role !== 'rep' ? `<div class="tr-cm">${trTxt(g.comment)}</div>` : ''}` : `<small>${cur ? 'รอลงนาม' : 'ยังไม่ถึงขั้น'}</small>`}</div></div>`;
   }).join('') + (r.status === 'hr' ? `<div class="tr-step cur"><div class="tr-dot"><span class="msr">hourglass_top</span></div><div><b>${TR_ROLEL.hro}</b><small>รอรับเรื่อง</small></div></div>` : '');
   const acts = [];
@@ -4885,12 +4956,14 @@ function trToHtml(v, hint) {
 function trToAuto(v) { const i = $('#trTo'); if (i && i.dataset.auto === '1') i.value = v || ''; }
 function trToVal() { const i = $('#trTo'); return i ? i.value.trim() : ''; }
 function trQuickHtml(id) { return `<div class="tr-quick">${TR_QUICK.map(q => `<button type="button" class="btn btn-light btn-sm" data-trq="${esc(id)}" data-v="${esc(q)}">${esc(q)}</button>`).join('')}</div>`; }
+/** "เรียน" ที่เติมให้: ผู้รับคนถัดไปเป็นผู้ปฏิบัติการแทน = เรียนผู้อำนวยการ */
+function trNextTo(n) { return !n ? '' : n.role === 'exec' && n.act ? TR_DIRECTOR : (n.pos || ''); }
 function trSignHtml(r) {
   const step = (r.chain || []).find(s => !s.sign) || {};
   const isSup = step.role === 'sup';
   return `<div class="card req-sec tr-act"><div class="card-h"><h3><span class="msr">draw</span>ลงความเห็นและลงนาม (${esc(isSup ? 'ผู้บังคับบัญชาตามสายงาน' : TR_ROLEL[step.role] || '')})</h3></div><div class="card-b">
     <p class="small muted" style="margin-top:0">กรุณาอ่านรายงานด้านล่างก่อนลงนาม · ความเห็นว่าง ระบบบันทึกว่า "ทราบ"</p>
-    ${step.role === 'exec' ? '' : trToHtml(isSup ? '' : ((r.chain || [])[(r.chain || []).indexOf(step) + 1] || {}).pos, isSup ? 'เติมจากผู้รับที่เลือกด้านล่าง (ส่งถึง HR = "ฝ่ายทรัพยากรบุคคล") แก้ไขได้' : '')}
+    ${step.role === 'exec' ? '' : trToHtml(isSup ? '' : trNextTo((r.chain || [])[(r.chain || []).indexOf(step) + 1]), isSup ? 'เติมจากผู้รับที่เลือกด้านล่าง (ส่งถึง HR = "ฝ่ายทรัพยากรบุคคล") แก้ไขได้' : '')}
     <label class="field"><span>${step.role === 'exec' ? 'ความคิดเห็นผู้บริหาร' : 'ความเห็น'}</span><textarea class="input" id="trCm" rows="3" maxlength="500" placeholder="เช่น ทราบ และให้นำไปขยายผลในหน่วยงาน"></textarea></label>${trQuickHtml('trCm')}
     ${isSup ? `<div class="field" style="margin-top:14px"><span>หลังลงนาม</span><div class="seg">
         <label><input type="radio" name="trNext" value="up" checked><span>เรียนผู้บังคับบัญชาที่สูงขึ้นตามสายงาน</span></label>
@@ -4900,13 +4973,26 @@ function trSignHtml(r) {
     <div class="tr-btns"><button class="btn btn-light" data-action="trReturn"><span class="msr">undo</span>ส่งกลับแก้ไข</button>
       <button class="btn btn-primary" data-action="trSign"><span class="msr">draw</span>ลงนาม</button></div></div></div>`;
 }
+function trExPickHtml(cfg) {
+  const L = (cfg && cfg.execs) || [];
+  if (L.length < 2) return '';
+  return `<label class="field"><span>เลือกผู้บริหารตามสายงาน</span><select class="input" id="trExPick"><option value="">— เลือกจากรายชื่อที่ตั้งไว้ —</option>
+    ${L.map((x, i) => `<option value="${i}">${esc((x.line ? x.line + ' — ' : '') + x.name + (x.pos ? ' (' + x.pos + ')' : '') + (x.act ? ' · ปฏิบัติการแทน' : ''))}</option>`).join('')}</select>
+    <small class="hint">ระบบเติมรหัส ชื่อ ตำแหน่ง และ "ลงนามในฐานะ" ให้ แก้ไขต่อได้</small></label>`;
+}
+function trExPickFill(i) {
+  const x = (((S.trCfg || {}).execs) || [])[Number(i)]; if (!x) return;
+  [['Emp', x.emp], ['Name', x.name], ['Pos', x.pos], ['Mail', x.email || ''], ['Act', x.act || '']].forEach(([k, v]) => { const el = $('#f_exec' + k); if (el) el.value = v || ''; });
+  const m = $('#f_execMsg'); if (m) m.textContent = '';
+}
 function trReceiveHtml(r) {
   const cfg = S.trCfg || { hrh: {}, exec: {} };
   return `<div class="card req-sec tr-act"><div class="card-h"><h3><span class="msr">move_to_inbox</span>รับเรื่อง (เจ้าหน้าที่ฝ่ายทรัพยากรบุคคล)</h3></div><div class="card-b">
-    <p class="small muted" style="margin-top:0">ตรวจรายงานแล้วลงข้อเสนอแนะ ลงนาม และเรียนหัวหน้าฝ่ายทรัพยากรบุคคลและผู้บริหารสูงสุดตามลำดับ · ระบบออกเลขที่รับให้อัตโนมัติ</p>
+    <p class="small muted" style="margin-top:0">ตรวจรายงานแล้วลงข้อเสนอแนะ ลงนาม และ<b>เพิ่มผู้บริหารที่ลงนามคนสุดท้ายตามสายงาน</b> (ผู้อำนวยการ หรือรองผู้อำนวยการ/ผู้ช่วยผู้อำนวยการที่ลงนามปฏิบัติการแทน) ก่อนส่งให้หัวหน้าฝ่ายทรัพยากรบุคคล · ระบบออกเลขที่รับให้อัตโนมัติ</p>
     ${trToHtml(cfg.hrh && cfg.hrh.pos, 'เติมจากตำแหน่งหัวหน้าฝ่ายทรัพยากรบุคคลด้านล่าง แก้ไขได้')}
     <label class="field"><span>ข้อเสนอแนะของเจ้าหน้าที่</span><textarea class="input" id="trHrCm" rows="3" maxlength="500" placeholder="เช่น ได้ตรวจสอบรายงานแล้ว เห็นควรเรียนเพื่อโปรดทราบ"></textarea></label>${trQuickHtml('trHrCm')}
-    <div class="tr-two">${trPersonHtml('hrh', cfg.hrh, 'เรียน หัวหน้าฝ่ายทรัพยากรบุคคล')}${trPersonHtml('exec', cfg.exec, 'เรียน ผู้บริหารสูงสุด (ลงนามคนสุดท้าย)')}</div>
+    ${trExPickHtml(cfg)}
+    <div class="tr-two">${trPersonHtml('hrh', cfg.hrh, 'เรียน หัวหน้าฝ่ายทรัพยากรบุคคล')}${trPersonHtml('exec', cfg.exec, 'ผู้บริหารที่ลงนามคนสุดท้าย (ผู้อำนวยการ หรือผู้ปฏิบัติการแทน)', { act: true })}</div>
     <div class="tr-btns"><button class="btn btn-light" data-action="trReturn"><span class="msr">undo</span>ส่งกลับแก้ไข</button>
       <button class="btn btn-primary" data-action="trReceive"><span class="msr">move_to_inbox</span>รับเรื่อง ลงนาม และเรียนต่อ</button></div></div></div>`;
 }
@@ -4940,8 +5026,9 @@ function trSign() {
 function trReceive() {
   const r = S.tr.rep, comment = ($('#trHrCm') || {}).value || '';
   const hrh = trPersonCheck('hrh', 'หัวหน้าฝ่ายทรัพยากรบุคคล'); if (!hrh) return;
-  const ex = trPersonCheck('exec', 'ผู้บริหารสูงสุด'); if (!ex) return;
-  trSignModal('รับเรื่อง ลงนาม และเรียนต่อ', 'เรียน <b>' + esc(hrh.name) + '</b> → <b>' + esc(ex.name) + '</b>',
+  const ex = trPersonCheck('exec', 'ผู้บริหารที่ลงนามคนสุดท้าย'); if (!ex) return;
+  if (ex.act && (!ex.pos.trim() || ex.pos.trim() === TR_DIRECTOR)) { toast('กรุณาระบุตำแหน่งของผู้ลงนามปฏิบัติการแทนผู้อำนวยการ เช่น รองผู้อำนวยการฝ่ายการแพทย์', 'err'); const i = $('#f_execPos'); if (i) i.focus(); return; }
+  trSignModal('รับเรื่อง ลงนาม และเรียนต่อ', 'เรียน <b>' + esc(hrh.name) + '</b> → <b>' + esc(ex.name) + '</b>' + (ex.act ? ' <small>(' + esc(ex.pos) + ' ปฏิบัติการแทนผู้อำนวยการ)</small>' : ''),
     pw => api('receiveTrainReport', S.token, r.id, { comment, hrh, exec: ex, to: trToVal(), password: pw, ack: true }).then(rep => { toast('รับเรื่องแล้ว เลขที่รับ ' + rep.hrNo); return rep; }));
 }
 function trReturn() {
@@ -5000,13 +5087,26 @@ async function trPhView(fileId) {
       body: `<div style="text-align:center"><img src="data:${esc(p.mime)};base64,${p.data}" alt="" style="max-width:100%;max-height:70vh;border-radius:8px">${cap ? `<p>${esc(cap)}</p>` : ''}</div>` });
   } catch (e) { toast(e.message, 'err'); } finally { loader(false); }
 }
+const TR_MAX_EX = 20;
+function trExListHtml(L) {
+  return L.map((x, i) => trPersonHtml('ex' + i, x, 'ผู้บริหารลำดับที่ ' + (i + 1) + (i === 0 ? ' (ค่าเริ่มต้นตอนรับเรื่อง)' : ''), { act: true, line: true, del: String(i) })).join('') ||
+    '<p class="small muted">ยังไม่มีรายชื่อ — กด "เพิ่มผู้บริหาร"</p>';
+}
+function trExRead() { return $$('#trExList [data-person]').map(el => trPersonRead(el.dataset.person)); }
+function trExPaint(L) { const b = $('#trExList'); if (b) b.innerHTML = trExListHtml(L); const n = $('#trExAdd'); if (n) n.disabled = L.length >= TR_MAX_EX; }
 function openTrCfg() {
-  const c = S.trCfg || { hrh: {}, exec: {} };
+  const c = S.trCfg || { hrh: {}, exec: {}, execs: [] };
+  const L = (c.execs && c.execs.length ? c.execs : (c.exec && c.exec.emp ? [c.exec] : [{ pos: TR_DIRECTOR }])).map(x => Object.assign({}, x));
   openModal({
     title: 'ผู้ลงนามฝั่งฝ่ายทรัพยากรบุคคล (ค่าเริ่มต้น)', icon: 'settings', okText: 'บันทึก', size: 'wide',
     body: `<p class="small muted" style="margin-top:0">ระบบเติมให้ตอนเจ้าหน้าที่ "รับเรื่อง" · เปลี่ยนเป็นรายครั้งได้ (เช่น มีผู้รักษาการ)</p>
-      <form id="mForm" onsubmit="return false">${trPersonHtml('hrh', c.hrh, 'หัวหน้าฝ่ายทรัพยากรบุคคล')}${trPersonHtml('exec', c.exec, 'ผู้บริหารสูงสุด (ลงนามคนสุดท้าย)')}</form>`,
-    onOk: async () => { S.trCfg = await api('saveTrCfg', S.token, { hrh: trPersonRead('hrh'), exec: trPersonRead('exec') }); toast('บันทึกผู้ลงนามเริ่มต้นแล้ว'); render(); }
+      <form id="mForm" onsubmit="return false">${trPersonHtml('hrh', c.hrh, 'หัวหน้าฝ่ายทรัพยากรบุคคล')}
+        <h4 class="bk-h" style="margin-top:16px">ผู้บริหารที่ลงนามคนสุดท้าย (ตามสายงาน)</h4>
+        <p class="small muted" style="margin-top:0">ผู้อำนวยการ และรองผู้อำนวยการ / ผู้ช่วยผู้อำนวยการที่ลงนามปฏิบัติการแทนผู้อำนวยการตามสายงาน · ตอนรับเรื่องเจ้าหน้าที่เลือกจากรายชื่อนี้ได้</p>
+        <div id="trExList">${trExListHtml(L)}</div>
+        <button type="button" class="btn btn-light btn-sm" id="trExAdd" data-action="trExAdd"${L.length >= TR_MAX_EX ? ' disabled' : ''}><span class="msr">person_add</span>เพิ่มผู้บริหาร</button></form>`,
+    validate: () => { const bad = trExRead().findIndex(x => (x.emp || x.name) && !/^[0-9]{7}$/.test(String(x.emp).trim())); if (bad > -1) { toast('กรุณาระบุรหัสบุคลากร 7 หลักของผู้บริหารลำดับที่ ' + (bad + 1), 'err'); return false; } },
+    onOk: async () => { S.trCfg = await api('saveTrCfg', S.token, { hrh: trPersonRead('hrh'), execs: trExRead() }); toast('บันทึกผู้ลงนามเริ่มต้นแล้ว'); render(); }
   });
 }
 async function trAction(a, d, el) {
@@ -5033,6 +5133,8 @@ async function trAction(a, d, el) {
     case 'trPhUp': { trRead(); const i = Number(d.i), p = S.tr.photos; [p[i - 1], p[i]] = [p[i], p[i - 1]]; render(); return; }
     case 'trPhView': return trPhView(d.f);
     case 'trLookup': return trLookup(d.p);
+    case 'trExAdd': { const L = trExRead(); if (L.length >= TR_MAX_EX) return; L.push({ act: 'dep' }); trExPaint(L); const el = $('#f_ex' + (L.length - 1) + 'Emp'); if (el) el.focus(); return; }
+    case 'trExDel': { const L = trExRead(); L.splice(Number(d.i), 1); trExPaint(L); return; }
     case 'trLinkAdd': { trRead(); const L = trLinks(S.tr.data).slice(); if (L.length >= TR_MAXLK) return; L.push({ title: '', url: '' }); S.tr.data.links = L; render(); const el = $(`#trForm [name="lT.${L.length - 1}"]`); if (el) el.focus(); return; }
     case 'trLinkDel': { trRead(); const L = trLinks(S.tr.data).slice(); L.splice(Number(d.i), 1); S.tr.data.links = L; render(); return; }
     case 'trFileDel': { trRead(); const i = Number(d.i), f = (S.tr.files || [])[i]; if (!f) return;
@@ -5059,13 +5161,14 @@ async function trAction(a, d, el) {
 document.addEventListener('input', e => {
   if (e.target.id === 'trQ') { S.tr.q = e.target.value; clearTimeout(S.tr.qt); S.tr.qt = setTimeout(() => { render(); const i = $('#trQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); return; }
   if (e.target.closest && e.target.closest('#trForm')) trRefresh();
-  if (/^f_(sup|up|hrh|exec)Emp$/.test(e.target.id || '')) { const v = e.target.value.replace(/\D/g, ''); if (v !== e.target.value) e.target.value = v; }
+  if (/^f_(sup|up|hrh|exec|ex[0-9]+)Emp$/.test(e.target.id || '')) { const v = e.target.value.replace(/\D/g, ''); if (v !== e.target.value) e.target.value = v; }
   if (e.target.id === 'trTo') e.target.dataset.auto = e.target.value ? '0' : '1';
   if (/^f_(sup|up|hrh)(Pos|Name)$/.test(e.target.id || '')) { const pre = e.target.id.replace(/^f_|(Pos|Name)$/g, ''); trToAuto(($('#f_' + pre + 'Pos') || {}).value || ($('#f_' + pre + 'Name') || {}).value); }
 });
 document.addEventListener('change', e => {
   const n = e.target.name || e.target.id;
   if (n === 'trTab') { S.tr.tab = e.target.value; return render(); }
+  if (e.target.id === 'trExPick') { trExPickFill(e.target.value); return; }
   if (e.target.id === 'trSt') { S.tr.st = e.target.value; return render(); }
   if (e.target.id === 'trFy') { S.tr.fy = e.target.value; return render(); }
   if (e.target.id === 'trPhFile') { const fs = e.target.files; trAddPhotos(fs); e.target.value = ''; return; }
@@ -5097,13 +5200,14 @@ async function loadBk() {
 async function bkLoadRoster(cid) { S.bk.roster = await api('bkRoster', S.token, cid); }
 function bkSetSum() {
   const d = S.bk.data; if (!d) return;
-  const today = todayStr(), live = m => m.run && String(m.run.endDate || m.run.startDate) >= today;
+  const live = m => m.run && !bkRunPast(m.run);
   S.bkSum = { open: d.list.reduce((n, c) => n + (c.status === 'active' ? c.runs.filter(r => r.state === 'open').length : 0), 0),
     mine: d.mine.filter(m => m.status === 'booked' && live(m)).length, wait: d.mine.filter(m => m.status === 'wait' && live(m)).length };
   refreshCounts();
 }
 function bkWhen(r) {
   if (!r) return '-';
+  if (!r.startDate) return 'ยังไม่กำหนดวัน' + (r.startTime ? ' · ' + r.startTime.replace(':', '.') + (r.endTime ? '–' + r.endTime.replace(':', '.') : '') + ' น.' : '');
   const t = r.startTime ? ' · ' + r.startTime.replace(':', '.') + (r.endTime ? '–' + r.endTime.replace(':', '.') : '') + ' น.' : '';
   return thRange(r.startDate, r.endDate) + t;
 }
@@ -5124,7 +5228,7 @@ function bkWindow(r) {
 function bkCourseById(id) { return ((S.bk.data || {}).list || []).find(c => c.id === id); }
 function bkRunById(id) { for (const c of ((S.bk.data || {}).list || [])) { const r = c.runs.find(x => x.id === id); if (r) return { c, r }; } return null; }
 function bkMineOf(runId) { return ((S.bk.data || {}).mine || []).find(m => m.runId === runId && m.status !== 'cancel'); }
-function bkRunPast(r) { return String(r.endDate || r.startDate) < todayStr(); }
+function bkRunPast(r) { const e = String(r.endDate || r.startDate || ''); return !!e && e < todayStr(); }   // ไม่กำหนดวัน = ยังไม่ผ่าน
 
 function renderBk() {
   const d = S.bk.data;
@@ -5171,14 +5275,14 @@ function bkCourseHtml(c) {
       ${c.fileId ? `<div class="bk-poster">${thumbHtml('Courses', c, 'lg')}</div>` : ''}
       <div class="bk-c-main">
         <h3 class="bk-title">${esc(c.title)}</h3>
-        <div class="muted small"><span class="msr" style="font-size:15px;vertical-align:-3px">apartment</span> จัดโดย ${esc(c.organizer)}</div>
-        <div class="bk-detail">${esc(c.detail)}</div>
+        ${c.organizer ? `<div class="muted small"><span class="msr" style="font-size:15px;vertical-align:-3px">apartment</span> จัดโดย ${esc(c.organizer)}</div>` : ''}
+        ${c.detail ? `<div class="bk-detail">${esc(c.detail)}</div>` : ''}
         ${c.qualify ? `<div class="bk-qual"><b><span class="msr">verified_user</span>คุณสมบัติผู้เข้าร่วม</b><div>${esc(c.qualify)}</div></div>` : ''}
         ${c.link ? `<a class="btn btn-light btn-sm" href="${esc(c.link)}" target="_blank" rel="noopener"><span class="msr">description</span>เอกสารเพิ่มเติม</a>` : ''}
       </div>
     </div>
     <div class="table-wrap"><table class="tbl bk-runs">
-      <thead><tr><th>รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th></th></tr></thead>
+      <thead><tr><th>${c.single ? 'การจัด' : 'รุ่น'}</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th></th></tr></thead>
       <tbody>${runs.map(r => {
         const mine = bkMineOf(r.id);
         let act;
@@ -5188,7 +5292,7 @@ function bkCourseHtml(c) {
         else if (d.needLink) act = '<small class="muted">ผูกบัญชีบุคลากรก่อนจอง</small>';
         else act = `<button class="btn ${r.full ? 'btn-warn' : 'btn-primary'} btn-sm" data-action="bkBook" data-id="${esc(r.id)}"><span class="msr">${r.full ? 'hourglass_top' : 'event_seat'}</span>${r.full ? 'จองเป็นผู้สำรอง' : 'จอง'}</button>`;
         return `<tr${mine ? ' class="bk-mine"' : ''}>
-          <td><b>${esc(r.name)}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}<br><small class="muted">${esc(bkWindow(r))}</small></td>
+          <td><b>${esc(bkRunLabel(r, c))}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}<br><small class="muted">${esc(bkWindow(r))}</small></td>
           <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
           <td>${esc(r.place || '-')}<br>${bkModeBadge(r.mode)}${mine && mine.status === 'booked' && r.meetUrl ? ` <a class="link small" href="${esc(r.meetUrl)}" target="_blank" rel="noopener">ลิงก์ห้องประชุม</a>` : ''}</td>
           <td style="text-align:center">${bkSeats(r)}</td>
@@ -5208,7 +5312,7 @@ function bkBookOpen(runId) {
     title: r.full ? 'จองเป็นผู้สำรอง' : 'จองกิจกรรม/โครงการ', icon: r.full ? 'hourglass_top' : 'event_seat', size: 'lg',
     okText: r.full ? 'ยืนยันจองเป็นผู้สำรอง' : 'ยืนยันการจอง', okClass: r.full ? 'btn-warn' : 'btn-primary', confirmCancel: false,
     body: `<form id="mForm" onsubmit="return false" autocomplete="off">
-      <div class="bk-sum"><b>${esc(c.title)}</b><div>${esc(r.name)} · ${esc(bkWhen(r))}</div><div>${esc(r.place || '-')} · ${esc(BK_MODE_LONG[r.mode] || '')}</div></div>
+      <div class="bk-sum"><b>${esc(c.title)}</b><div>${r.name ? esc(r.name) + ' · ' : ''}${esc(bkWhen(r))}</div><div>${esc(r.place || '-')} · ${esc(BK_MODE_LONG[r.mode] || '')}</div></div>
       ${r.full ? `<div class="pf-warn" id="bkFullNote"><span class="msr">hourglass_top</span><span>รุ่นนี้มีผู้จองเต็ม ${r.capacity} ที่นั่งแล้ว ท่านจะอยู่ใน<b>รายชื่อสำรองลำดับที่ ${r.wait + 1}</b> เมื่อมีที่นั่งว่าง ระบบจะเลื่อนให้อัตโนมัติและแจ้งทางอีเมล</span></div>` : ''}
       ${c.qualify ? `<div class="bk-qual"><b><span class="msr">verified_user</span>คุณสมบัติผู้เข้าร่วม</b><div>${esc(c.qualify)}</div></div>` : ''}
       <h4 class="bk-h">ข้อมูลผู้จอง</h4>
@@ -5217,7 +5321,7 @@ function bkBookOpen(runId) {
       <div class="form-grid" style="margin-top:12px">
         ${fieldHtml({ k: 'academicPosition', label: 'ตำแหน่งทางวิชาการ', ph: 'ถ้าไม่มีให้เว้นว่าง' }, me.academicPosition)}
         ${fieldHtml({ k: 'adminPosition', label: 'ตำแหน่งทางบริหาร', ph: 'ถ้าไม่มีให้เว้นว่าง' }, me.adminPosition)}
-        ${fieldHtml({ k: 'email', label: 'Email', type: 'email', req: true, col: 2, ph: 'name@example.org', hint: 'ใช้ส่งอีเมลยืนยันการจอง · ตำแหน่งและอีเมลที่แก้ไขจะบันทึกในข้อมูลส่วนตัวของท่านด้วย' }, me.email)}
+        ${fieldHtml({ k: 'email', label: 'Email', type: 'email', col: 2, ph: 'name@example.org', hint: 'ไม่บังคับ แต่แนะนำให้กรอก เพื่อรับอีเมลยืนยันการจองและแจ้งเมื่อเลื่อนจากผู้สำรอง · ตำแหน่งและอีเมลที่แก้ไขจะบันทึกในข้อมูลส่วนตัวของท่านด้วย' }, me.email)}
       </div>
       <label class="bk-ack" id="bkAckBox"><input type="checkbox" id="bkAck" name="supAck" value="Y"><span><b>ข้าพเจ้าได้ขออนุญาตผู้บังคับบัญชาเรียบร้อยแล้ว</b><small>ต้องติ๊กก่อนยืนยันการจอง</small></span></label>
     </form>`,
@@ -5251,7 +5355,7 @@ function bkMineHtml() {
   ${L.length ? `<div class="table-wrap"><table class="tbl">
     <thead><tr><th>กิจกรรม / รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th>สถานะ</th><th></th></tr></thead>
     <tbody>${L.map(m => { const r = m.run; return `<tr${m.status === 'cancel' ? ' class="bk-off"' : ''}>
-      <td><b>${esc(m.title)}</b><br><small class="muted">${esc(r ? r.name : '(รุ่นถูกลบแล้ว)')} · จองเมื่อ ${esc(thStamp(m.createdAt))}</small>
+      <td><b>${esc(m.title)}</b><br><small class="muted">${esc(r ? (r.name || 'จัดครั้งเดียว') : '(รุ่นถูกลบแล้ว)')} · จองเมื่อ ${esc(thStamp(m.createdAt))}</small>
         <br><small class="bk-ok"><span class="msr" style="font-size:14px;vertical-align:-2px">task_alt</span>ยืนยันว่าได้ขออนุญาตผู้บังคับบัญชาแล้ว</small></td>
       <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
       <td>${esc(r ? r.place : '-')}${r ? '<br>' + bkModeBadge(r.mode) : ''}${r && r.meetUrl && m.status === 'booked' ? `<br><a class="link small" href="${esc(r.meetUrl)}" target="_blank" rel="noopener"><span class="msr" style="font-size:14px;vertical-align:-2px">videocam</span>ลิงก์ห้องประชุม</a>` : ''}</td>
@@ -5272,51 +5376,104 @@ function bkManageHtml() {
     <div class="card-h bk-mh"><div><h3 style="margin:0">${esc(c.title)}</h3>
       <div class="small muted" style="margin-top:4px">${c.status === 'active' ? '<span class="badge b-green">แสดงให้บุคลากรจอง</span>' : '<span class="badge b-gray">ไม่แสดง (ร่าง)</span>'}
         ${c.fileId ? '<span class="tag"><span class="msr" style="font-size:14px;vertical-align:-3px">image</span> มีโปสเตอร์</span>' : ''}
-        · ${c.runs.length} รุ่น · จองแล้ว ${nb} คน${nw ? ' · สำรอง ' + nw + ' คน' : ''}${c.cancelled ? ' · ยกเลิก ' + c.cancelled : ''} · จัดโดย ${esc(c.organizer)}</div></div>
+        · ${c.single ? '<span class="tag">จัดครั้งเดียว (ไม่มีรุ่น)</span>' : c.runs.length + ' รุ่น'} · จองแล้ว ${nb} คน${nw ? ' · สำรอง ' + nw + ' คน' : ''}${c.cancelled ? ' · ยกเลิก ' + c.cancelled : ''}${c.organizer ? ' · จัดโดย ' + esc(c.organizer) : ''}</div></div>
       <div class="actions">
         <button class="btn btn-light btn-sm" data-action="bkRoster" data-id="${esc(c.id)}"><span class="msr">groups</span>รายชื่อผู้จอง</button>
-        <button class="btn btn-light btn-sm" data-action="bkRunNew" data-id="${esc(c.id)}"><span class="msr">add</span>เพิ่มรุ่น</button>
+        ${c.single ? '' : `<button class="btn btn-light btn-sm" data-action="bkRunNew" data-id="${esc(c.id)}"><span class="msr">add</span>เพิ่มรุ่น</button>`}
         <button class="icon-btn" data-action="bkCourseEdit" data-id="${esc(c.id)}" title="แก้ไขกิจกรรม/โครงการ"><span class="msr">edit</span></button>
         ${d.canDelete ? `<button class="icon-btn danger" data-action="bkCourseDel" data-id="${esc(c.id)}" title="ลบกิจกรรม/โครงการ"><span class="msr">delete</span></button>` : ''}
       </div></div>
     <div class="table-wrap"><table class="tbl bk-runs">
-      <thead><tr><th>รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th>การรับจอง</th><th></th></tr></thead>
+      <thead><tr><th>${c.single ? 'การจัด' : 'รุ่น'}</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th>การรับจอง</th><th></th></tr></thead>
       <tbody>${c.runs.map(r => `<tr>
-        <td><b>${esc(r.name)}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}</td>
+        <td><b>${esc(bkRunLabel(r, c))}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}</td>
         <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
         <td>${esc(r.place || '-')}<br>${bkModeBadge(r.mode)}${r.meetUrl ? ' <span class="tag" title="' + esc(r.meetUrl) + '">มีลิงก์ห้องประชุม</span>' : ''}</td>
         <td style="text-align:center">${bkSeats(r)}</td>
         <td>${bkStBadge(r)}<br><small class="muted">${esc(bkWindow(r))}</small></td>
         <td><div class="actions">
           <button class="icon-btn" data-action="bkRunToggle" data-id="${esc(r.id)}" title="${r.status === 'closed' ? 'เปิดรับจอง' : 'ปิดรับจอง'}"><span class="msr">${r.status === 'closed' ? 'lock_open' : 'lock'}</span></button>
-          <button class="icon-btn" data-action="bkRunEdit" data-id="${esc(r.id)}" title="แก้ไขรุ่น"><span class="msr">edit</span></button>
-          ${d.canDelete ? `<button class="icon-btn danger" data-action="bkRunDel" data-id="${esc(r.id)}" title="ลบรุ่น"><span class="msr">delete</span></button>` : ''}
-        </div></td></tr>`).join('') || `<tr><td colspan="6" class="muted">ยังไม่มีรุ่น — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่ สถานที่ และจำนวนที่รับ</td></tr>`}</tbody></table></div>
+          <button class="icon-btn" data-action="bkRunEdit" data-id="${esc(r.id)}" title="${c.single ? 'แก้ไขวันที่ สถานที่ ที่นั่ง' : 'แก้ไขรุ่น'}"><span class="msr">edit</span></button>
+          ${d.canDelete && !c.single ? `<button class="icon-btn danger" data-action="bkRunDel" data-id="${esc(r.id)}" title="ลบรุ่น"><span class="msr">delete</span></button>` : ''}
+        </div></td></tr>`).join('') || `<tr><td colspan="6" class="muted">${c.single ? 'ยังไม่ได้กำหนดวันที่ — กดปุ่มแก้ไขกิจกรรม' : 'ยังไม่มีรุ่น — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่ สถานที่ และจำนวนที่รับ'}</td></tr>`}</tbody></table></div>
     </div>`; }).join('')
     : `<div class="card">${emptyState('event_seat', d.list.length ? 'ไม่พบกิจกรรม' : 'ยังไม่มีกิจกรรม/โครงการ', d.list.length ? 'ลองเปลี่ยนคำค้นหา' : 'สร้างกิจกรรม/โครงการ แล้วเพิ่มรุ่นเพื่อเปิดให้บุคลากรจอง', d.list.length ? null : { label: 'สร้างกิจกรรม/โครงการ', attr: 'data-action="bkCourseNew"' })}</div>`}`;
 }
+/** ช่องข้อมูลของรุ่น (ใช้ทั้งป๊อปอัปรุ่น และส่วน "จัดครั้งเดียว" ในป๊อปอัปกิจกรรม — pre = คำนำหน้าชื่อช่อง กันชื่อซ้ำ) · ไม่บังคับกรอก (build 2569-11-25.6) */
+function bkRunFields(pre, withName) {
+  pre = pre || '';
+  const F = [
+    { k: 'mode', label: 'รูปแบบ', type: 'select', options: [['onsite', BK_MODE_LONG.onsite], ['online', BK_MODE_LONG.online], ['hybrid', BK_MODE_LONG.hybrid]] },
+    { k: 'startDate', label: 'วันที่เริ่ม', type: 'date', hint: 'เว้นว่างได้ถ้ายังไม่กำหนดวัน' },
+    { k: 'endDate', label: 'วันที่สิ้นสุด', type: 'date', hint: 'เว้นว่าง = วันเดียว' },
+    { k: 'startTime', label: 'เวลาเริ่ม', type: 'time' },
+    { k: 'endTime', label: 'เวลาสิ้นสุด', type: 'time' },
+    { k: 'place', label: 'สถานที่', col: 2, ph: 'เช่น ห้องประชุม ชั้น 5 อาคาร...', hint: 'Online เว้นว่างได้' },
+    { k: 'meetUrl', label: 'ลิงก์ห้องประชุมออนไลน์', col: 2, ph: 'https://...', hint: 'แสดงเฉพาะผู้ที่จองสำเร็จ (Online / Hybrid)' },
+    { k: 'capacity', label: 'จำนวนที่รับ (คน)', type: 'number', hint: 'เว้นว่าง = ไม่จำกัด · เต็มแล้วจองเป็นผู้สำรองได้' },
+    { k: 'status', label: 'การรับจอง', type: 'select', options: [['open', 'เปิดรับจอง'], ['closed', 'ปิดรับจอง']] },
+    { k: 'openAt', label: 'เวลาเปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = เปิดทันที' },
+    { k: 'closeAt', label: 'เวลาปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = ปิดเมื่อถึงวันเวลาเริ่มกิจกรรม' },
+    { k: 'note', label: withName ? 'หมายเหตุของรุ่น' : 'หมายเหตุ', col: 2, ph: 'เช่น สำหรับบุคลากรฝ่ายการพยาบาล' }
+  ];
+  if (withName) F.unshift({ k: 'name', label: 'ชื่อรุ่น', ph: 'เช่น รุ่นที่ 1' });
+  return F.map(f => Object.assign({}, f, { k: pre + f.k }));
+}
+function bkRunFieldsHtml(pre, r, withName) {
+  const dtv = v => String(v || '').replace(' ', 'T');
+  return bkRunFields(pre, withName).map(f => { const k = f.k.slice(pre.length); return fieldHtml(f, f.type === 'datetime-local' ? dtv(r[k]) : (r[k] == null || r[k] === 0 ? '' : r[k])); }).join('');
+}
+function bkRunCheck(pre) {
+  const v = k => (($('#f_' + pre + k) || {}).value || '').trim();
+  if (v('meetUrl') && !/^https:[/][/]/i.test(v('meetUrl'))) { toast('ลิงก์ห้องประชุมต้องขึ้นต้นด้วย https://', 'err'); return false; }
+  if (v('startDate') && v('endDate') && v('endDate') < v('startDate')) { toast('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', 'err'); return false; }
+  return true;
+}
+function bkRunCollect(data, pre) {
+  const o = {};
+  Object.keys(data).forEach(k => { if (k.indexOf(pre) === 0) { o[k.slice(pre.length)] = data[k]; delete data[k]; } });
+  return o;
+}
+/** ชื่อรุ่นที่แสดง: กิจกรรมจัดครั้งเดียว = ไม่มีชื่อรุ่น */
+function bkRunLabel(r, c) { return r && r.name ? r.name : (c && c.single ? 'จัดครั้งเดียว' : 'รุ่น (ไม่ระบุชื่อ)'); }
 function bkCourseForm(c) {
   const isEdit = !!(c && c.id);
-  c = c || { status: 'active', organizer: BK_ORG };
+  c = c || { status: 'active', organizer: '' };
+  const run0 = isEdit && c.runs && c.runs.length === 1 ? c.runs[0] : { mode: 'onsite', status: 'open' };
+  const canSingle = !isEdit || (c.runs || []).length <= 1;
   const orgs = Array.from(new Set([BK_ORG].concat(((S.bk.data || {}).list || []).map(x => x.organizer).filter(Boolean))));
   const fields = [
     { k: 'title', label: 'ชื่อกิจกรรม/โครงการ', req: true, col: 2 },
-    { k: 'organizer', label: 'หน่วยงานที่จัด', type: 'datalist', options: orgs, req: true },
+    { k: 'organizer', label: 'หน่วยงานที่จัด', type: 'datalist', options: orgs, hint: 'พิมพ์ชื่อหน่วยงานได้เอง หรือเลือกจากรายการที่เคยใช้' },
     { k: 'status', label: 'การแสดงผล', type: 'select', options: [['active', 'แสดงให้บุคลากรจอง'], ['hidden', 'ไม่แสดง (ร่าง)']] },
-    { k: 'detail', label: 'รายละเอียดกิจกรรม', type: 'textarea', req: true, col: 2, ph: 'วัตถุประสงค์ หัวข้อ วิทยากร สิ่งที่ต้องเตรียม ฯลฯ' },
+    { k: 'detail', label: 'รายละเอียดกิจกรรม', type: 'textarea', col: 2, ph: 'วัตถุประสงค์ หัวข้อ วิทยากร สิ่งที่ต้องเตรียม ฯลฯ' },
     { k: 'qualify', label: 'คุณสมบัติผู้เข้าร่วม', type: 'textarea', col: 2, ph: 'เช่น พยาบาลวิชาชีพที่ปฏิบัติงานอย่างน้อย 1 ปี', hint: 'แสดงให้บุคลากรอ่านก่อนจอง (ระบบไม่ตรวจคุณสมบัติให้)' },
     { k: 'link', label: 'ลิงก์เอกสารเพิ่มเติม', col: 2, ph: 'https://...', hint: 'ไม่บังคับ เช่น หนังสือเชิญ กำหนดการ' },
     { k: 'poster', label: 'โปสเตอร์ (รูปภาพ ไม่บังคับ)', type: 'file', imageOnly: true, col: 2 }
   ];
+  const single = !!c.single;
   openModal({
     title: isEdit ? 'แก้ไขกิจกรรม/โครงการ' : 'สร้างกิจกรรม/โครงการ', icon: 'event_seat', size: 'lg', confirmSave: ASK.save(isEdit), confirmCancel: true,
     okText: isEdit ? 'บันทึกการแก้ไข' : 'สร้างกิจกรรม/โครงการ',
-    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => fieldHtml(f, f.type === 'file' ? (c.fileId ? c : null) : (c[f.k] || ''))).join('')}</form>`,
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => fieldHtml(f, f.type === 'file' ? (c.fileId ? c : null) : (c[f.k] || ''))).join('')}
+      <div class="field col-2"><span>รูปแบบการจัด</span><div class="seg" id="bkSingleSeg">
+        <label><input type="radio" name="single" value="" ${single ? '' : 'checked'}><span><span class="msr">view_list</span>จัดหลายรุ่น</span></label>
+        <label${canSingle ? '' : ' title="มีหลายรุ่นแล้ว"'}><input type="radio" name="single" value="Y" ${single ? 'checked' : ''}${canSingle ? '' : ' disabled'}><span><span class="msr">event</span>จัดครั้งเดียว (ไม่มีรุ่น)</span></label></div>
+        <small class="hint">${canSingle ? 'จัดครั้งเดียว = กรอกวันที่ สถานที่ และจำนวนที่รับด้านล่างได้เลย ไม่ต้องเพิ่มรุ่น' : 'กิจกรรมนี้มีหลายรุ่นแล้ว — ถ้าต้องการจัดครั้งเดียว ให้ลบรุ่นที่ไม่ใช้ให้เหลือ 1 รุ่นก่อน'}</small></div>
+      <div class="col-2 form-grid bk-single${single ? '' : ' hidden'}" id="bkSingleBox" style="padding:0;margin:0">${bkRunFieldsHtml('r_', run0, false)}
+        ${isEdit && single && run0.booked ? `<div class="col-2 pf-warn"><span class="msr">info</span><span>มีผู้จองแล้ว ${run0.booked} คน${run0.wait ? ' สำรอง ' + run0.wait + ' คน' : ''} · เพิ่มจำนวนที่รับ = เลื่อนผู้สำรองขึ้นอัตโนมัติ · ลดจำนวนที่รับ ระบบไม่ยกเลิกผู้ที่จองไว้</span></div>` : ''}</div></form>`,
+    onOpen: () => {
+      const cap = $('#f_r_capacity'); if (cap) { cap.min = '0'; cap.step = '1'; }
+      $$('#bkSingleSeg input').forEach(i => i.addEventListener('change', () => $('#bkSingleBox').classList.toggle('hidden', !($('#bkSingleSeg input[value="Y"]') || {}).checked)));
+    },
     validate: () => { const fl = ($('#f_poster') || {}).files; const fe = fl && fl[0] ? pdfError(fl[0], true) : ''; if (fe) { toast(fe, 'err'); return false; }
-      const lk = $('#f_link').value.trim(); if (lk && !/^https:[/][/]/i.test(lk)) { toast('ลิงก์เอกสารต้องขึ้นต้นด้วย https://', 'err'); return false; } },
+      const lk = $('#f_link').value.trim(); if (lk && !/^https:[/][/]/i.test(lk)) { toast('ลิงก์เอกสารต้องขึ้นต้นด้วย https://', 'err'); return false; }
+      if (($('#bkSingleSeg input[value="Y"]') || {}).checked && !bkRunCheck('r_')) return false; },
     onOk: async () => {
       const data = collect($('#mForm'));
       delete data.poster;
+      const run = bkRunCollect(data, 'r_');
+      if (data.single === 'Y') data.run = run; else data.single = '';
       let file = (($('#f_poster') || {}).files || [])[0];
       if (file) {
         if (!(file.size < 450000 && /[.]jpe?g$/i.test(file.name))) {
@@ -5330,39 +5487,26 @@ function bkCourseForm(c) {
       if (isEdit) data.id = c.id;
       const r = await api('bkSaveCourse', S.token, data);
       await loadBk(); S.bk.tab = 'manage'; render();
-      toast(isEdit ? 'บันทึกการแก้ไขแล้ว' : 'สร้างกิจกรรม/โครงการแล้ว — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่และที่นั่ง');
-      if (!isEdit) setTimeout(() => bkRunForm(r.id), 300);
+      if (data.single === 'Y') toast((isEdit ? 'บันทึกการแก้ไขแล้ว' : 'สร้างกิจกรรมแล้ว (จัดครั้งเดียว)') + (r.promoted ? ' · เลื่อนผู้สำรองขึ้น ' + r.promoted + ' คน (ส่งอีเมลแจ้งแล้ว)' : ''));
+      else {
+        toast(isEdit ? 'บันทึกการแก้ไขแล้ว' : 'สร้างกิจกรรม/โครงการแล้ว — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่และที่นั่ง');
+        if (!isEdit) setTimeout(() => bkRunForm(r.id), 300);
+      }
     }
   });
 }
 function bkRunForm(courseId, r) {
   const isEdit = !!(r && r.id), c = bkCourseById(courseId || (r && r.courseId));
   if (!c) return;
+  if (c.single) return bkCourseForm(c);   // จัดครั้งเดียว: แก้วันที่/สถานที่ในป๊อปอัปกิจกรรม
   r = r || { name: 'รุ่นที่ ' + (c.runs.length + 1), mode: 'onsite', status: 'open', startDate: '', place: '' };
-  const dtv = v => String(v || '').replace(' ', 'T');
-  const fields = [
-    { k: 'name', label: 'ชื่อรุ่น', req: true },
-    { k: 'mode', label: 'รูปแบบ', type: 'select', options: [['onsite', BK_MODE_LONG.onsite], ['online', BK_MODE_LONG.online], ['hybrid', BK_MODE_LONG.hybrid]] },
-    { k: 'startDate', label: 'วันที่เริ่ม', type: 'date', req: true },
-    { k: 'endDate', label: 'วันที่สิ้นสุด', type: 'date', hint: 'เว้นว่าง = วันเดียว' },
-    { k: 'startTime', label: 'เวลาเริ่ม', type: 'time' },
-    { k: 'endTime', label: 'เวลาสิ้นสุด', type: 'time' },
-    { k: 'place', label: 'สถานที่', col: 2, ph: 'เช่น ห้องประชุม ชั้น 5 อาคาร...', hint: 'Online เว้นว่างได้' },
-    { k: 'meetUrl', label: 'ลิงก์ห้องประชุมออนไลน์', col: 2, ph: 'https://...', hint: 'แสดงเฉพาะผู้ที่จองสำเร็จ (Online / Hybrid)' },
-    { k: 'capacity', label: 'จำนวนที่รับ (คน)', type: 'number', hint: 'เว้นว่าง = ไม่จำกัด · เต็มแล้วจองเป็นผู้สำรองได้' },
-    { k: 'status', label: 'การรับจอง', type: 'select', options: [['open', 'เปิดรับจอง'], ['closed', 'ปิดรับจอง']] },
-    { k: 'openAt', label: 'เวลาเปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = เปิดทันที' },
-    { k: 'closeAt', label: 'เวลาปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = ปิดเมื่อถึงวันเวลาเริ่มกิจกรรม' },
-    { k: 'note', label: 'หมายเหตุของรุ่น', col: 2, ph: 'เช่น สำหรับบุคลากรฝ่ายการพยาบาล' }
-  ];
   openModal({
     title: (isEdit ? 'แก้ไขรุ่น' : 'เพิ่มรุ่น') + ' — ' + c.title, icon: 'date_range', size: 'lg', confirmSave: ASK.save(isEdit), confirmCancel: true,
     okText: isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มรุ่น',
-    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => fieldHtml(f, f.type === 'datetime-local' ? dtv(r[f.k]) : (r[f.k] == null || r[f.k] === 0 ? '' : r[f.k]))).join('')}
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${bkRunFieldsHtml('', r, true)}
       ${isEdit && r.booked ? `<div class="col-2 pf-warn"><span class="msr">info</span><span>รุ่นนี้มีผู้จองแล้ว ${r.booked} คน${r.wait ? ' สำรอง ' + r.wait + ' คน' : ''} · เพิ่มจำนวนที่รับ = เลื่อนผู้สำรองขึ้นอัตโนมัติ · ลดจำนวนที่รับ ระบบไม่ยกเลิกผู้ที่จองไว้</span></div>` : ''}</form>`,
     onOpen: () => { const cap = $('#f_capacity'); if (cap) { cap.min = '0'; cap.step = '1'; } },
-    validate: () => { const u = $('#f_meetUrl').value.trim(); if (u && !/^https:[/][/]/i.test(u)) { toast('ลิงก์ห้องประชุมต้องขึ้นต้นด้วย https://', 'err'); return false; }
-      if ($('#f_mode').value !== 'online' && !$('#f_place').value.trim()) { toast('กรุณากรอกสถานที่', 'err'); return false; } },
+    validate: () => bkRunCheck('') ? undefined : false,
     onOk: async () => {
       const data = collect($('#mForm'));
       data.courseId = c.id; if (isEdit) { data.id = r.id; data.sortOrder = r.sortOrder || ''; }
@@ -5375,7 +5519,7 @@ function bkRunForm(courseId, r) {
 async function bkRunToggle(id) {
   const x = bkRunById(id); if (!x) return;
   const close = x.r.status !== 'closed';
-  if (!(await ask({ tone: close ? 'danger' : 'primary', icon: close ? 'lock' : 'lock_open', title: close ? 'ปิดรับจองรุ่นนี้?' : 'เปิดรับจองรุ่นนี้?', message: x.c.title + ' — ' + x.r.name, okText: close ? 'ปิดรับจอง' : 'เปิดรับจอง' }))) return;
+  if (!(await ask({ tone: close ? 'danger' : 'primary', icon: close ? 'lock' : 'lock_open', title: close ? 'ปิดรับจองรุ่นนี้?' : 'เปิดรับจองรุ่นนี้?', message: x.c.title + (x.r.name ? ' — ' + x.r.name : ''), okText: close ? 'ปิดรับจอง' : 'เปิดรับจอง' }))) return;
   loader(true);
   try { const res = await api('bkSaveRun', S.token, Object.assign({}, x.r, { status: close ? 'closed' : 'open', capacity: x.r.capacity || '' })); await loadBk(); render(); toast((close ? 'ปิดรับจองแล้ว' : 'เปิดรับจองแล้ว') + (res.promoted ? ' · เลื่อนผู้สำรองขึ้น ' + res.promoted + ' คน' : '')); }
   catch (e) { toast(e.message, 'err'); } finally { loader(false); }
@@ -5387,7 +5531,7 @@ function bkRosterRows() {
   return R.rows.filter(x => (!f.rRun || x.runId === f.rRun) && (f.rSt === 'all' || (f.rSt === 'active' ? x.status !== 'cancel' : x.status === f.rSt))
     && match(f.rQ, x.fullName, x.employeeId, x.department, x.position, x.email));
 }
-function bkRunName(id) { const r = ((S.bk.roster || {}).runs || []).find(x => x.id === id); return r ? r.name : '-'; }
+function bkRunName(id) { const R = S.bk.roster || {}, r = (R.runs || []).find(x => x.id === id); return r ? bkRunLabel(r, R.course) : '-'; }
 function bkRosterHtml() {
   const R = S.bk.roster, c = R.course, f = S.bk, rows = bkRosterRows();
   const runs = R.runs;
@@ -5395,11 +5539,11 @@ function bkRosterHtml() {
   <div class="card page-head" style="${cvar('teal')}">
     <div class="ph-ic"><span class="msr">groups</span></div>
     <div class="grow"><h2>${esc(c.title)}</h2>
-      <p>${runs.map(r => `<span class="tag">${esc(r.name)} · ${esc(bkWhen(r))} · จอง ${r.booked}${r.capacity ? '/' + r.capacity : ''}${r.wait ? ' · สำรอง ' + r.wait : ''}</span>`).join(' ')}</p></div>
+      <p>${runs.map(r => `<span class="tag">${esc(bkRunLabel(r, c))} · ${esc(bkWhen(r))} · จอง ${r.booked}${r.capacity ? '/' + r.capacity : ''}${r.wait ? ' · สำรอง ' + r.wait : ''}</span>`).join(' ')}</p></div>
   </div>
   <div class="toolbar">
     <button class="btn btn-light" data-action="bkRosterBack"><span class="msr">arrow_back</span>กลับ</button>
-    <select class="input" id="bkRRun" style="max-width:220px"><option value="">ทุกรุ่น</option>${runs.map(r => `<option value="${esc(r.id)}"${f.rRun === r.id ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
+    <select class="input" id="bkRRun" style="max-width:220px"><option value="">ทุกรุ่น</option>${runs.map(r => `<option value="${esc(r.id)}"${f.rRun === r.id ? ' selected' : ''}>${esc(bkRunLabel(r, c))}</option>`).join('')}</select>
     <select class="input" id="bkRSt" style="max-width:220px">${[['active', 'จองสำเร็จ + สำรอง'], ['booked', 'จองสำเร็จ'], ['wait', 'สำรอง'], ['cancel', 'ยกเลิก'], ['all', 'ทั้งหมด']].map(o => `<option value="${o[0]}"${f.rSt === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
     <div class="search"><span class="msr">search</span><input id="bkRQ" placeholder="ค้นหาชื่อ รหัสบุคลากร ฝ่าย อีเมล..." value="${esc(f.rQ)}"></div>
     <div class="grow"></div>
@@ -5446,7 +5590,7 @@ function bkRosterXlsx() {
     x.department || '', x.unit || '', x.email || '', x.supAck === 'Y' ? thStamp(x.supAckAt) : '', thStamp(x.createdAt), x.promotedAt ? thStamp(x.promotedAt) : '',
     x.cancelAt ? thStamp(x.cancelAt) : '', x.cancelBy === 'self' ? 'ผู้จอง' : x.cancelBy || '', x.cancelNote || '']); st[out.length - 1] = 3; });
   const s2 = [['รุ่น', 'วันที่ / เวลา', 'สถานที่', 'รูปแบบ', 'จำนวนที่รับ', 'จองสำเร็จ', 'สำรอง']];
-  R.runs.forEach(r => s2.push([r.name, bkWhen(r), r.place || '', BK_MODE_LONG[r.mode] || r.mode, r.capacity || 'ไม่จำกัด', r.booked, r.wait]));
+  R.runs.forEach(r => s2.push([bkRunLabel(r, R.course), bkWhen(r), r.place || '', BK_MODE_LONG[r.mode] || r.mode, r.capacity || 'ไม่จำกัด', r.booked, r.wait]));
   const st2 = { 0: 2 }; for (let i = 1; i < s2.length; i++) st2[i] = 3;
   const blob = xlsxBlob([{ name: 'รายชื่อผู้จอง', rows: out, styles: st, widths: [7, 14, 11, 9, 12, 26, 22, 7, 16, 20, 22, 20, 26, 20, 16, 16, 16, 12, 26], merges: ['A1:K1', 'A2:K2'], freeze: 4 },
     { name: 'สรุปรายรุ่น', rows: s2, styles: st2, widths: [16, 30, 30, 22, 12, 10, 8] }]);
@@ -5466,7 +5610,7 @@ async function bkRosterPrint() {
   const pages = groups.map(g => `<section class="pg">
     <div class="hd">${logo ? `<img src="${logo}" alt="">` : ''}<div><b>โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา สภากาชาดไทย</b><div>${E(BK_ORG)}</div></div></div>
     <h2>ใบลงชื่อผู้เข้าร่วม: ${E(R.course.title)}</h2>
-    <p class="meta">${E(g.r.name)} · ${E(bkWhen(g.r))} · ${E(g.r.place || '')} · ${E(BK_MODE_LONG[g.r.mode] || '')} · จัดโดย ${E(R.course.organizer)}</p>
+    <p class="meta">${g.r.name ? E(g.r.name) + ' · ' : ''}${E(bkWhen(g.r))} · ${E(g.r.place || '')} · ${E(BK_MODE_LONG[g.r.mode] || '')}${R.course.organizer ? ' · จัดโดย ' + E(R.course.organizer) : ''}</p>
     ${tbl(g.rows, 'ผู้ได้ที่นั่ง')}${g.waits.length ? tbl(g.waits, 'รายชื่อสำรอง (ตามลำดับ)') : ''}
     <p class="ft">พิมพ์จากระบบ HRD Center เมื่อ ${E(new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }))}</p></section>`).join('');
   const SC = 'scr' + 'ipt';
@@ -5502,7 +5646,7 @@ async function bkAction(a, d) {
     case 'bkRunToggle': return bkRunToggle(d.id);
     case 'bkRunDel': {
       const x = bkRunById(d.id); if (!x) return;
-      if (!(await confirmBox('ลบ "' + x.r.name + '" ของ ' + x.c.title + ' ?', 'รายชื่อผู้จอง ' + (x.r.booked + x.r.wait) + ' คนของรุ่นนี้จะถูกลบด้วย — กู้คืนไม่ได้'))) return;
+      if (!(await confirmBox('ลบ "' + bkRunLabel(x.r, x.c) + '" ของ ' + x.c.title + ' ?', 'รายชื่อผู้จอง ' + (x.r.booked + x.r.wait) + ' คนของรุ่นนี้จะถูกลบด้วย — กู้คืนไม่ได้'))) return;
       return busy(async () => { await api('bkDeleteRun', S.token, x.r.id); await loadBk(); render(); }, 'ลบรุ่นแล้ว');
     }
     case 'bkRoster': return busy(async () => { S.bk.rRun = ''; S.bk.rSt = 'active'; S.bk.rQ = ''; await bkLoadRoster(d.id); render(); window.scrollTo(0, 0); });
@@ -8013,7 +8157,7 @@ function renderSettings() {
   return `
   <div class="grid" style="max-width:860px">
     <div class="card">
-      <div class="card-h"><h3><span class="msr">visibility</span>เมนูที่ผู้ใช้งานมองเห็น</h3></div>
+      <div class="card-h"><h3><span class="msr">visibility</span>เมนูที่ผู้ใช้งานมองเห็น</h3><button class="btn btn-light btn-sm" data-action="pvStart" title="ดูหน้าระบบแบบที่บุคลากรทั่วไปเห็น (อ่านอย่างเดียว)"><span class="msr">preview</span>ดูตัวอย่างหน้าผู้ใช้งาน</button></div>
       <div class="card-b">
         <p class="muted small">ผู้ใช้งานดูข้อมูลได้อย่างเดียว เพิ่ม แก้ไข หรือลบไม่ได้ · เมนูผู้ใช้งาน ผู้ดูแลระบบ ตั้งค่า และบันทึกการใช้งาน แสดงเฉพาะ Admin เสมอ</p>
         ${MOD_INFO.map(m => `<label class="set-row"><span class="set-ic"><span class="msr">${m[1]}</span></span>
@@ -8480,6 +8624,8 @@ function bindEvents() {
     if (d.action && d.action.indexOf('tr') === 0) return trAction(d.action, d, el);
     if (d.action && d.action.indexOf('bk') === 0) return bkAction(d.action, d);
     switch (d.action) {
+      case 'pvStart': closeDropdown(); return pvStart();
+      case 'pvExit': closeDropdown(); return pvExit(false);
       case 'logout': return doLogout();
       case 'profile': return openProfile();
       case 'password': return openPassword(false);
