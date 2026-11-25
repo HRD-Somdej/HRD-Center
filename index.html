@@ -821,13 +821,23 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .tr-dot .msr{font-size:17px;color:#64748b}.tr-step.ok .tr-dot{background:#dcfce7}.tr-step.ok .tr-dot .msr{color:#16a34a}
 .tr-step.cur .tr-dot{background:#fef3c7}.tr-step.cur .tr-dot .msr{color:#b45309}.tr-step.cur b{color:#b45309}
 .tr-cm{margin-top:4px;padding:6px 10px;background:#f8fafc;border-left:3px solid var(--teal);border-radius:6px;font-size:14px}
+.bk-course{overflow:hidden;margin-bottom:16px}.bk-c-top{display:flex;gap:18px;padding:18px 20px;flex-wrap:wrap}.bk-poster{flex:0 0 220px;max-width:100%}.bk-poster .thumb.lg{height:auto;min-height:150px;margin:0}.bk-poster .thumb.lg img{object-fit:contain}
+.bk-c-main{flex:1 1 320px;min-width:0}.bk-title{margin:0 0 4px;font-size:18px}.bk-detail{white-space:pre-wrap;margin:10px 0;line-height:1.65;color:var(--text)}
+.bk-qual{background:#f1f8f7;border:1px solid #cfe9e6;border-radius:10px;padding:8px 12px;margin:8px 0 10px;white-space:pre-wrap}.bk-qual b{display:flex;align-items:center;gap:6px;color:var(--teal);white-space:normal}.bk-qual .msr{font-size:18px}
+.bk-runs td{vertical-align:top}.bk-runs tr.bk-mine td{background:#f2fbf6}.bk-mode{margin-top:4px}.bk-wait{color:#b45309;font-weight:500;white-space:nowrap}.bk-ok{color:var(--green)}.tbl tr.bk-off td{opacity:.6}
+.bk-mh{align-items:flex-start;gap:12px;flex-wrap:wrap}.bk-sum{background:#f6f8fb;border-radius:10px;padding:10px 14px;margin-bottom:10px;line-height:1.6}.bk-h{margin:14px 0 6px;font-size:15px}
+.bk-person{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;border:1px solid var(--line-2);border-radius:10px;padding:10px 14px}.bk-pi{display:flex;flex-direction:column}.bk-pi span{font-size:12px;color:var(--text-2)}.bk-pi b{font-weight:600;word-break:break-word}
+.bk-ack{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border:2px solid var(--teal);border-radius:12px;background:#f1f8f7;cursor:pointer}.bk-ack input{width:20px;height:20px;margin-top:2px;flex:0 0 auto}.bk-ack small{display:block;color:var(--text-2)}
+@media (max-width:640px){.bk-person{grid-template-columns:1fr}.bk-poster{flex-basis:100%}.bk-c-top{padding:14px}}
 .tr-act{border:2px solid var(--teal)}.tr-ph-warn{margin:10px 0 0;color:#b45309}.tr-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:14px}.tr-btns.tr-top{justify-content:flex-start;margin:0 0 16px}.tr-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .tr-person{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}.tr-person-h{font-weight:600;color:#0b2545;margin-bottom:6px}
 .tr-link{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}@media (max-width:700px){.tr-link{grid-template-columns:1fr auto}.tr-link [name^="lU."]{grid-column:1}}
 .tr-files{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}.tr-file{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;text-align:left;font:inherit;color:inherit;text-decoration:none;cursor:pointer}
 .tr-file>.msr:first-child{color:#c62828}.tr-file:hover{border-color:var(--teal-500,#14b8a6)}.tr-file .grow{flex:1;min-width:0;word-break:break-word}
 .tr-mail{display:block;font-size:12px;margin-top:2px}.tr-mail.ok{color:#0a7d55}.tr-mail.no{color:#b45309}
-.tr-emp{display:flex;gap:6px}.tr-emp .input{flex:1}.tr-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:900px){.tr-two{grid-template-columns:1fr}}
+.tr-person .req-grid{grid-template-columns:minmax(150px,1fr) minmax(0,1.6fr);gap:10px 14px}.tr-person .req-grid>.c2{grid-column:auto}
+@media (max-width:560px){.tr-person .req-grid{grid-template-columns:1fr}}
+.tr-emp{display:flex;gap:6px}.tr-emp .input{min-width:0}.tr-emp .input{flex:1}.tr-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:900px){.tr-two{grid-template-columns:1fr}}
 tr.tr-todo td{background:#fffbeb}.tr-todo-t{color:#b45309;font-weight:600}
 .pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
 .pf-pick{display:grid;gap:8px;max-height:52vh;overflow:auto}
@@ -999,6 +1009,7 @@ tr.tr-todo td{background:#fffbeb}.tr-todo-t{color:#b45309;font-weight:600}
       <a data-page="pip"><span class="msr">trending_up</span>แผนพัฒนาการปฏิบัติงาน (PIP)<em class="count warn hidden" id="cntPip">0</em></a>
       <a data-page="printforms"><span class="msr">print</span>พิมพ์แบบฟอร์ม</a>
       <a data-page="trreport"><span class="msr">assignment_turned_in</span>รายงานผลการพัฒนา<em class="count warn hidden" id="cntTr">0</em></a>
+      <a data-page="booking"><span class="msr">event_seat</span>จองกิจกรรม/โครงการ<em class="count hidden" id="cntBk">0</em></a>
       <div id="customNav"></div>
       <a data-page="staffscan" class="hidden"><span class="msr">qr_code_scanner</span>สแกนลงทะเบียนกิจกรรม</a>
       <a class="nav-add admin-only" data-navadd="1"><span class="msr">add</span>เพิ่มเมนูหลัก</a>
@@ -1118,14 +1129,14 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.13.2',
-  BUILD: '2569-11-25.3'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.14.0',
+  BUILD: '2569-11-25.5'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
 const GOTO_ALIAS = { home: 'dashboard', dashboard: 'dashboard', pip: 'pip', myqr: 'checkin', qr: 'checkin', checkin: 'checkin', forms: 'forms', training: 'forms',
   documents: 'documents', docs: 'documents', announcements: 'announcements', news: 'announcements', systems: 'systems', scan: 'staffscan', chat: 'chat',
-  printforms: 'printforms', printform: 'printforms', print: 'printforms', trreport: 'trreport', report: 'trreport' };
+  printforms: 'printforms', printform: 'printforms', print: 'printforms', trreport: 'trreport', report: 'trreport', booking: 'booking', book: 'booking', bk: 'booking' };
 
 const PAGES = {
   dashboard:     { title: 'หน้าแรก',             render: renderDashboard, mod: 'dashboard' },
@@ -1137,6 +1148,7 @@ const PAGES = {
   pip:           { title: 'แผนพัฒนาการปฏิบัติงาน (PIP)', render: renderPip, load: loadPips, mod: 'pip' },
   printforms:    { title: 'พิมพ์แบบฟอร์ม', render: renderPrintForms, load: loadPrintForms, mod: 'printforms' },
   trreport:      { title: 'รายงานผลการพัฒนา', render: renderTr, load: loadTr, mod: 'trreport' },
+  booking:       { title: 'จองกิจกรรม/โครงการ', render: renderBk, load: loadBk, mod: 'booking' },
   staffscan:     { title: 'สแกนลงทะเบียนกิจกรรม', render: renderStaffScan, load: loadStaffActs, staff: true },
   activities:    { title: 'โครงการ/กิจกรรม', render: renderActivities, load: loadActivities, admin: true },
   chat:          { title: 'ข้อความจากผู้ใช้งาน',   render: renderChatAdmin, load: loadChatThreads, admin: true },
@@ -1202,7 +1214,8 @@ const ACTIONS = {
   ARCHIVE:      { label: 'ย้ายบันทึกเก่า',         icon: 'inventory_2',   color: 'slate' },
   EXPORT:       { label: 'ส่งออกข้อมูล',          icon: 'picture_as_pdf', color: 'indigo' },
   CHECKIN:      { label: 'ลงชื่อเข้าร่วมกิจกรรม', icon: 'how_to_reg',    color: 'green' },
-  EMAIL:        { label: 'อีเมลแจ้งเตือน',       icon: 'mail',          color: 'teal' }
+  EMAIL:        { label: 'อีเมลแจ้งเตือน',       icon: 'mail',          color: 'teal' },
+  BOOK:         { label: 'จองกิจกรรม',           icon: 'event_seat',    color: 'blue' }
 };
 const MAX_UPLOAD_MB = 10;
 const IMG_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -1292,6 +1305,7 @@ const MOD_INFO = [
   ['checkin', 'qr_code_2', 'QR Code ของฉัน (ลงทะเบียนเข้าร่วมกิจกรรม)', 'แสดง QR ประจำตัวให้เจ้าหน้าที่สแกน แล้วยืนยันการเข้าร่วมด้วยรหัสผ่าน'],
   ['pip', 'trending_up', 'แผนพัฒนาการปฏิบัติงาน (PIP)', 'เมนูจะแสดงเฉพาะบุคลากรที่มีแผน PIP เกี่ยวข้อง (ผู้เข้ารับการพัฒนา / ผู้บังคับบัญชา) เพื่อลงนามและดูแผน'],
   ['printforms', 'print', 'พิมพ์แบบฟอร์ม', 'กรอกและพิมพ์ใบรับรองการจ่ายเงิน (2144) · ใบรับรองค่าพาหนะ (2318) · แบบรายงานการเดินทาง (FM-HRM-026) · เห็นเฉพาะของตนเอง'],
+  ['booking', 'event_seat', 'จองกิจกรรม/โครงการ', 'บุคลากรเลือกรุ่นและจองด้วยรหัสบุคลากร ยืนยันว่าขออนุญาตผู้บังคับบัญชาแล้ว · เต็มแล้วจองเป็นผู้สำรองได้'],
   ['chat', 'forum', 'แชทกับผู้ดูแลระบบ', 'ปุ่มแชทมุมขวาล่าง ให้ผู้ใช้งานส่งข้อความสอบถามผู้ดูแลระบบ']
 ];
 const ENT_KEY = { Systems: 'systems', Documents: 'documents', Announcements: 'announcements', Menus: 'menus', MenuItems: 'menuItems', Posters: 'posters' };
@@ -1368,7 +1382,7 @@ const FORMS = {
 const S = {
   token: null, user: null, page: 'dashboard',
   systems: [], documents: [], announcements: [], admins: [], users: [], logs: [], recentLogs: [], counts: {},
-  settings: { modules: { dashboard: true, systems: true, documents: true, announcements: true, forms: true, checkin: true, pip: true, chat: true }, requireApproval: true },
+  settings: { modules: { dashboard: true, systems: true, documents: true, announcements: true, forms: true, checkin: true, pip: true, chat: true, booking: true }, requireApproval: true },
   menus: [], menuItems: [], posters: [], sysCats: SYS_CATS.slice(), catDraft: null, thumbs: {}, thumbTry: {},
   setDraft: null,
   f: { sysCat: 'all', sysQ: '', docCat: 'all', docQ: '', annQ: '', logQ: '', userQ: '', userSt: 'all', menuQ: '' }
@@ -2238,6 +2252,7 @@ function applyBoot(d) {
   S.navCfg = d.navCfg || {};
   S.pfCfg = d.pfCfg || null;
   S.trSum = d.trSum || { todo: 0, draft: 0, count: 0 }; S.trCanWrite = !S.trSum.signOnly;
+  S.bkSum = d.bkSum || { open: 0, mine: 0, wait: 0 }; S.bk.data = null; S.bk.roster = null;
   applyNavLabels();
   bootSave(d);
 }
@@ -2504,6 +2519,8 @@ function refreshCounts() {
   const na = $('#nav a[data-page=pip]'); if (na && S.user) na.classList.toggle('hidden', !canSee('pip'));
   const tn = ((S.trSum && S.trSum.todo) || 0), ct = $('#cntTr');
   if (ct) { ct.textContent = tn; ct.classList.toggle('hidden', !tn); ct.title = isAdmin() ? 'รายงานที่รอท่านลงนาม / รอรับเรื่อง' : 'รายงานที่รอท่านลงนาม'; }
+  const bo = (S.bkSum && S.bkSum.open) || 0, cb = $('#cntBk');
+  if (cb) { cb.textContent = bo; cb.classList.toggle('hidden', !bo); cb.title = 'รุ่นที่เปิดรับจองอยู่'; }
 }
 async function go(page) {
   if (!canSee(page)) page = firstPage();
@@ -2574,6 +2591,9 @@ function myTodoHtml() {
     if (ts.todo) t.push({ go: 'trreport', icon: 'draw', warn: 1, b: 'รายงานผลการพัฒนา รอท่านดำเนินการ', s: 'ลงความเห็นและลงนาม' + (isAdmin() ? ' / รับเรื่อง' : ''), n: ts.todo });
     else if (ts.draft) t.push({ go: 'trreport', icon: 'edit_note', warn: 1, b: 'รายงานผลการพัฒนา (ร่าง / ส่งกลับแก้ไข)', s: 'แก้ไขแล้วส่งลงนาม', n: ts.draft });
     else t.push({ go: 'trreport', icon: 'assignment_turned_in', b: navName('trreport'), s: 'รายงานหลังไปดูงาน อบรม สัมมนา ประชุม' }); }
+  if (canSee('booking')) { const bs = S.bkSum || {};
+    if (bs.mine || bs.wait) t.push({ go: 'booking', icon: 'event_available', b: 'กิจกรรมที่ท่านจองไว้', s: (bs.mine ? 'จองสำเร็จ ' + bs.mine + ' รายการ' : '') + (bs.mine && bs.wait ? ' · ' : '') + (bs.wait ? 'สำรอง ' + bs.wait + ' รายการ' : ''), n: bs.mine + bs.wait });
+    else t.push({ go: 'booking', icon: 'event_seat', b: navName('booking'), s: bs.open ? 'เปิดรับจอง ' + bs.open + ' รุ่น' : 'ดูกิจกรรม/โครงการที่เปิดรับจอง' }); }
   if (isStaff()) t.push({ go: 'staffscan', icon: 'qr_code_scanner', b: 'สแกนลงทะเบียนกิจกรรม', s: 'สำหรับเจ้าหน้าที่ลงทะเบียน' });
   t.push({ act: 'profile', icon: hrcLocked() ? 'verified' : 'badge', b: 'ข้อมูลส่วนตัว', s: hrcLocked() ? 'ข้อมูลจาก SOMDEJ HR Connect' : 'ตรวจและแก้ไขข้อมูลของท่าน' });
   return `<div class="card" id="myTodo"><div class="card-h"><h3><span class="msr">task_alt</span>งานของฉัน</h3></div><div class="card-b"><div class="todo-grid">${t.map(x =>
@@ -4500,7 +4520,7 @@ function trEditHtml() {
       <div class="req-grid tr-other${d.fund === 'other' ? '' : ' hidden'}" data-show="fund">${trIn('fundOther', 'ระบุแหล่งงบประมาณ', { cls: 'c2', max: 120 })}</div>
       <div class="tr-costs${d.fund === 'hosp' ? '' : ' hidden'}" data-show="cost"><div class="tr-sub">ค่าใช้จ่าย (บาท) — เฉพาะงบประมาณโรงพยาบาล</div>
       <div class="req-grid">${costs.map(c => trIn(c[0], c[1], { mode: 'decimal', ph: '0.00', max: 12 })).join('')}
-        <div class="field"><span>รวมทั้งสิ้น</span><div class="pf-fixed" data-out="trTotal">-</div></div></div></div>`,
+        <div class="field"><span>รวมทั้งสิ้น</span><div class="pf-fixed" data-out="trTotal">${trCostTotal(d) ? trCostTotal(d).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}</div></div></div></div>`,
       `<button type="button" class="btn btn-light btn-sm" data-action="trFrom008"><span class="msr">download</span>ดึงจากคำขอ FM-HRD-008</button>`)}
   ${pfSec('menu_book', 'ส่วนที่ 3 สาระสำคัญ', `<div class="req-grid">
       ${trTa('objective', '3.1 วัตถุประสงค์', { req: true, max: 1500, rows: 3 })}
@@ -4983,7 +5003,7 @@ async function trPhView(fileId) {
 function openTrCfg() {
   const c = S.trCfg || { hrh: {}, exec: {} };
   openModal({
-    title: 'ผู้ลงนามฝั่งฝ่ายทรัพยากรบุคคล (ค่าเริ่มต้น)', icon: 'settings', okText: 'บันทึก',
+    title: 'ผู้ลงนามฝั่งฝ่ายทรัพยากรบุคคล (ค่าเริ่มต้น)', icon: 'settings', okText: 'บันทึก', size: 'wide',
     body: `<p class="small muted" style="margin-top:0">ระบบเติมให้ตอนเจ้าหน้าที่ "รับเรื่อง" · เปลี่ยนเป็นรายครั้งได้ (เช่น มีผู้รักษาการ)</p>
       <form id="mForm" onsubmit="return false">${trPersonHtml('hrh', c.hrh, 'หัวหน้าฝ่ายทรัพยากรบุคคล')}${trPersonHtml('exec', c.exec, 'ผู้บริหารสูงสุด (ลงนามคนสุดท้าย)')}</form>`,
     onOk: async () => { S.trCfg = await api('saveTrCfg', S.token, { hrh: trPersonRead('hrh'), exec: trPersonRead('exec') }); toast('บันทึกผู้ลงนามเริ่มต้นแล้ว'); render(); }
@@ -5057,6 +5077,455 @@ document.addEventListener('change', e => {
 document.addEventListener('click', e => {
   const q = e.target.closest && e.target.closest('[data-trq]');
   if (q) { const ta = $('#' + q.dataset.trq); if (ta) { ta.value = q.dataset.v; ta.focus(); } }
+});
+
+/* ===================== จองกิจกรรม/โครงการ (build 2569-11-25.5) =====================
+ * บุคลากร: เลือกกิจกรรม → เลือกรุ่น → ตรวจข้อมูลของตนเอง → ติ๊ก "ได้ขออนุญาตผู้บังคับบัญชาเรียบร้อยแล้ว" → ยืนยัน (เต็มแล้ว = จองเป็นผู้สำรอง)
+ * เจ้าหน้าที่/ผู้ดูแล: แท็บ "จัดการกิจกรรม/โครงการ" สร้างโครงการ + รุ่น · รายชื่อผู้จอง · ส่งออก Excel · พิมพ์ใบลงชื่อ */
+const BK_MODE = { onsite: ['Onsite', 'location_on', 'b-blue'], online: ['Online', 'videocam', 'b-purple'], hybrid: ['Hybrid', 'devices', 'b-amber'] };
+const BK_MODE_LONG = { onsite: 'Onsite (ณ สถานที่จัด)', online: 'Online', hybrid: 'Hybrid (Onsite + Online)' };
+const BK_RST = { open: ['เปิดรับจอง', 'b-green'], notyet: ['ยังไม่เปิดรับจอง', 'b-amber'], ended: ['ปิดรับจองแล้ว', 'b-gray'], closed: ['ปิดรับจอง', 'b-gray'], hidden: ['ไม่แสดง', 'b-gray'] };
+const BK_BST = { booked: ['จองสำเร็จ', 'b-green', 'event_available'], wait: ['สำรอง', 'b-amber', 'hourglass_top'], cancel: ['ยกเลิก', 'b-gray', 'event_busy'] };
+const BK_ORG = 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล';
+S.bk = { tab: 'open', q: '', past: false, data: null, roster: null, rRun: '', rSt: 'active', rQ: '' };
+S.bkSum = { open: 0, mine: 0, wait: 0 };
+async function loadBk() {
+  S.bk.data = await api('bkList', S.token);
+  bkSetSum();
+  if (S.bk.roster) { try { await bkLoadRoster(S.bk.roster.course.id); } catch (e) { S.bk.roster = null; } }
+}
+async function bkLoadRoster(cid) { S.bk.roster = await api('bkRoster', S.token, cid); }
+function bkSetSum() {
+  const d = S.bk.data; if (!d) return;
+  const today = todayStr(), live = m => m.run && String(m.run.endDate || m.run.startDate) >= today;
+  S.bkSum = { open: d.list.reduce((n, c) => n + (c.status === 'active' ? c.runs.filter(r => r.state === 'open').length : 0), 0),
+    mine: d.mine.filter(m => m.status === 'booked' && live(m)).length, wait: d.mine.filter(m => m.status === 'wait' && live(m)).length };
+  refreshCounts();
+}
+function bkWhen(r) {
+  if (!r) return '-';
+  const t = r.startTime ? ' · ' + r.startTime.replace(':', '.') + (r.endTime ? '–' + r.endTime.replace(':', '.') : '') + ' น.' : '';
+  return thRange(r.startDate, r.endDate) + t;
+}
+function bkModeBadge(m) { const x = BK_MODE[m] || BK_MODE.onsite; return `<span class="badge ${x[2]} bk-mode"><span class="msr" style="font-size:14px">${x[1]}</span>${x[0]}</span>`; }
+function bkStBadge(r) { const x = BK_RST[r.state] || BK_RST.closed; return `<span class="badge ${x[1]}">${x[0]}</span>`; }
+function bkBookBadge(m) {
+  const x = BK_BST[m.status] || BK_BST.cancel;
+  return `<span class="badge ${x[1]}"><span class="msr" style="font-size:14px">${x[2]}</span>${x[0]}${m.status === 'wait' && m.waitNo ? ' ลำดับที่ ' + m.waitNo : ''}</span>`;
+}
+function bkSeats(r) {
+  const s = r.capacity ? `<b>${r.booked}</b>/${r.capacity}` : `<b>${r.booked}</b> <small class="muted">(ไม่จำกัด)</small>`;
+  return s + (r.wait ? `<br><small class="bk-wait">สำรอง ${r.wait} คน</small>` : r.full ? '<br><small class="bk-wait">เต็มแล้ว</small>' : '');
+}
+function bkWindow(r) {
+  const c = r.closeAt || r.closeAtEff;
+  return (r.openAt ? 'เปิด ' + thStamp(r.openAt) + ' · ' : '') + (c ? 'ปิดรับจอง ' + thStamp(c) : '');
+}
+function bkCourseById(id) { return ((S.bk.data || {}).list || []).find(c => c.id === id); }
+function bkRunById(id) { for (const c of ((S.bk.data || {}).list || [])) { const r = c.runs.find(x => x.id === id); if (r) return { c, r }; } return null; }
+function bkMineOf(runId) { return ((S.bk.data || {}).mine || []).find(m => m.runId === runId && m.status !== 'cancel'); }
+function bkRunPast(r) { return String(r.endDate || r.startDate) < todayStr(); }
+
+function renderBk() {
+  const d = S.bk.data;
+  if (!d) return `<div class="card">${emptyState('event_seat', 'โหลดข้อมูลไม่สำเร็จ', 'กดรีเฟรชหน้าอีกครั้ง')}</div>`;
+  if (S.bk.roster && d.staff) return bkRosterHtml();
+  const f = S.bk;
+  const nMine = d.mine.filter(m => m.status !== 'cancel').length;
+  const tabs = [['open', 'กิจกรรมที่เปิดรับจอง', S.bkSum.open], ['mine', 'การจองของฉัน', nMine]];
+  if (d.staff) tabs.push(['manage', 'จัดการกิจกรรม/โครงการ', d.list.length]);
+  if (!tabs.some(t => t[0] === f.tab)) f.tab = 'open';
+  const body = f.tab === 'mine' ? bkMineHtml() : f.tab === 'manage' ? bkManageHtml() : bkOpenHtml();
+  return `
+  <div class="req-note"><span class="msr">info</span><div><b>จองกิจกรรม/โครงการ</b>
+    เลือกรุ่นที่ต้องการ → ตรวจข้อมูลของท่าน → ติ๊ก <b>"ได้ขออนุญาตผู้บังคับบัญชาเรียบร้อยแล้ว"</b> → ยืนยันการจอง ·
+    จองได้ 1 รุ่นต่อกิจกรรม · รุ่นที่เต็มแล้วยังจองเป็น <b>ผู้สำรอง</b> ได้ เมื่อมีที่นั่งว่างระบบจะเลื่อนให้อัตโนมัติและแจ้งทางอีเมล</div></div>
+  ${d.needLink ? `<div class="pf-warn"><span class="msr">link</span><span>บัญชีผู้ดูแลนี้ยังไม่ได้ผูกกับบัญชีบุคลากร จึงจองในนามตนเองไม่ได้ <a class="link" data-action="linkUser">ผูกบัญชีบุคลากร</a></span></div>` : ''}
+  <div class="toolbar">
+    <div class="seg">${tabs.map(t => `<label><input type="radio" name="bkTab" value="${t[0]}" ${f.tab === t[0] ? 'checked' : ''}><span>${esc(t[1])}${t[2] ? ` <em class="count" style="position:static;margin-left:2px">${t[2]}</em>` : ''}</span></label>`).join('')}</div>
+    <div class="grow"></div>
+    <button class="btn btn-light" data-action="bkRefresh"><span class="msr">refresh</span>รีเฟรช</button>
+    ${f.tab === 'manage' ? `<button class="btn btn-primary" data-action="bkCourseNew"><span class="msr">add</span>สร้างกิจกรรม/โครงการ</button>` : ''}
+  </div>
+  ${body}`;
+}
+
+/* ---------- แท็บ: กิจกรรมที่เปิดรับจอง ---------- */
+function bkOpenHtml() {
+  const d = S.bk.data, f = S.bk;
+  const list = d.list.filter(c => c.status === 'active' && c.runs.length && (f.past || c.runs.some(r => !bkRunPast(r)))
+    && match(f.q, c.title, c.organizer, c.detail, ...c.runs.map(r => r.name + ' ' + r.place)));
+  const hasPast = d.list.some(c => c.status === 'active' && c.runs.length && c.runs.every(bkRunPast));
+  return `
+  <div class="toolbar">
+    <div class="search"><span class="msr">search</span><input id="bkQ" placeholder="ค้นหาชื่อกิจกรรม สถานที่ ผู้จัด..." value="${esc(f.q)}"></div>
+    ${hasPast || f.past ? `<label class="check small"><input type="checkbox" id="bkPast" ${f.past ? 'checked' : ''}> แสดงกิจกรรมที่ผ่านมาแล้ว</label>` : ''}
+  </div>
+  ${list.length ? list.map(bkCourseHtml).join('') : `<div class="card">${emptyState('event_seat', d.list.some(c => c.status === 'active') ? 'ไม่พบกิจกรรม' : 'ยังไม่มีกิจกรรมเปิดรับจอง', d.list.some(c => c.status === 'active') ? 'ลองเปลี่ยนคำค้นหา' : 'เมื่องานพัฒนาบุคลากรเปิดรับจองกิจกรรม/โครงการ จะแสดงที่นี่')}</div>`}`;
+}
+function bkCourseHtml(c) {
+  const d = S.bk.data, runs = S.bk.past ? c.runs : c.runs.filter(r => !bkRunPast(r));
+  const mineHere = d.mine.find(m => m.courseId === c.id && m.status !== 'cancel');
+  return `<div class="card bk-course" data-cid="${esc(c.id)}">
+    <div class="bk-c-top">
+      ${c.fileId ? `<div class="bk-poster">${thumbHtml('Courses', c, 'lg')}</div>` : ''}
+      <div class="bk-c-main">
+        <h3 class="bk-title">${esc(c.title)}</h3>
+        <div class="muted small"><span class="msr" style="font-size:15px;vertical-align:-3px">apartment</span> จัดโดย ${esc(c.organizer)}</div>
+        <div class="bk-detail">${esc(c.detail)}</div>
+        ${c.qualify ? `<div class="bk-qual"><b><span class="msr">verified_user</span>คุณสมบัติผู้เข้าร่วม</b><div>${esc(c.qualify)}</div></div>` : ''}
+        ${c.link ? `<a class="btn btn-light btn-sm" href="${esc(c.link)}" target="_blank" rel="noopener"><span class="msr">description</span>เอกสารเพิ่มเติม</a>` : ''}
+      </div>
+    </div>
+    <div class="table-wrap"><table class="tbl bk-runs">
+      <thead><tr><th>รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th></th></tr></thead>
+      <tbody>${runs.map(r => {
+        const mine = bkMineOf(r.id);
+        let act;
+        if (mine) act = `${bkBookBadge(mine)}${mine.canCancel ? `<br><a class="link small" data-action="bkCancelMine" data-id="${esc(mine.id)}">ยกเลิกการจอง</a>` : ''}`;
+        else if (mineHere) act = '<small class="muted">ท่านจองรุ่นอื่นของกิจกรรมนี้แล้ว</small>';
+        else if (r.state !== 'open') act = bkStBadge(r);
+        else if (d.needLink) act = '<small class="muted">ผูกบัญชีบุคลากรก่อนจอง</small>';
+        else act = `<button class="btn ${r.full ? 'btn-warn' : 'btn-primary'} btn-sm" data-action="bkBook" data-id="${esc(r.id)}"><span class="msr">${r.full ? 'hourglass_top' : 'event_seat'}</span>${r.full ? 'จองเป็นผู้สำรอง' : 'จอง'}</button>`;
+        return `<tr${mine ? ' class="bk-mine"' : ''}>
+          <td><b>${esc(r.name)}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}<br><small class="muted">${esc(bkWindow(r))}</small></td>
+          <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
+          <td>${esc(r.place || '-')}<br>${bkModeBadge(r.mode)}${mine && mine.status === 'booked' && r.meetUrl ? ` <a class="link small" href="${esc(r.meetUrl)}" target="_blank" rel="noopener">ลิงก์ห้องประชุม</a>` : ''}</td>
+          <td style="text-align:center">${bkSeats(r)}</td>
+          <td style="text-align:right">${act}</td></tr>`;
+      }).join('') || `<tr><td colspan="5" class="muted">ยังไม่มีรุ่นที่จะจัด</td></tr>`}</tbody></table></div>
+  </div>`;
+}
+
+/* ---------- ป๊อปอัปจอง ---------- */
+function bkBookOpen(runId) {
+  const x = bkRunById(runId), me = (S.bk.data || {}).me;
+  if (!x) return;
+  if (!me) return toast('ไม่พบข้อมูลบุคลากรของท่าน กรุณาออกจากระบบแล้วเข้าใหม่', 'err');
+  const { c, r } = x;
+  const row = (k, v) => `<div class="bk-pi"><span>${esc(k)}</span><b>${esc(v || '-')}</b></div>`;
+  openModal({
+    title: r.full ? 'จองเป็นผู้สำรอง' : 'จองกิจกรรม/โครงการ', icon: r.full ? 'hourglass_top' : 'event_seat', size: 'lg',
+    okText: r.full ? 'ยืนยันจองเป็นผู้สำรอง' : 'ยืนยันการจอง', okClass: r.full ? 'btn-warn' : 'btn-primary', confirmCancel: false,
+    body: `<form id="mForm" onsubmit="return false" autocomplete="off">
+      <div class="bk-sum"><b>${esc(c.title)}</b><div>${esc(r.name)} · ${esc(bkWhen(r))}</div><div>${esc(r.place || '-')} · ${esc(BK_MODE_LONG[r.mode] || '')}</div></div>
+      ${r.full ? `<div class="pf-warn" id="bkFullNote"><span class="msr">hourglass_top</span><span>รุ่นนี้มีผู้จองเต็ม ${r.capacity} ที่นั่งแล้ว ท่านจะอยู่ใน<b>รายชื่อสำรองลำดับที่ ${r.wait + 1}</b> เมื่อมีที่นั่งว่าง ระบบจะเลื่อนให้อัตโนมัติและแจ้งทางอีเมล</span></div>` : ''}
+      ${c.qualify ? `<div class="bk-qual"><b><span class="msr">verified_user</span>คุณสมบัติผู้เข้าร่วม</b><div>${esc(c.qualify)}</div></div>` : ''}
+      <h4 class="bk-h">ข้อมูลผู้จอง</h4>
+      <div class="bk-person">${row('รหัสบุคลากร', me.employeeId)}${row('ชื่อ-นามสกุล', me.fullName)}${row('ตำแหน่ง', me.position)}${row('ระดับ', me.level)}${row('ฝ่าย / หน่วยงาน', [me.department, me.unit].filter(Boolean).join(' · '))}</div>
+      <small class="hint">ชื่อ ตำแหน่ง และระดับ มาจาก SOMDEJ HR Connect หากไม่ถูกต้อง กรุณาแจ้งฝ่ายทรัพยากรบุคคล</small>
+      <div class="form-grid" style="margin-top:12px">
+        ${fieldHtml({ k: 'academicPosition', label: 'ตำแหน่งทางวิชาการ', ph: 'ถ้าไม่มีให้เว้นว่าง' }, me.academicPosition)}
+        ${fieldHtml({ k: 'adminPosition', label: 'ตำแหน่งทางบริหาร', ph: 'ถ้าไม่มีให้เว้นว่าง' }, me.adminPosition)}
+        ${fieldHtml({ k: 'email', label: 'Email', type: 'email', req: true, col: 2, ph: 'name@example.org', hint: 'ใช้ส่งอีเมลยืนยันการจอง · ตำแหน่งและอีเมลที่แก้ไขจะบันทึกในข้อมูลส่วนตัวของท่านด้วย' }, me.email)}
+      </div>
+      <label class="bk-ack" id="bkAckBox"><input type="checkbox" id="bkAck" name="supAck" value="Y"><span><b>ข้าพเจ้าได้ขออนุญาตผู้บังคับบัญชาเรียบร้อยแล้ว</b><small>ต้องติ๊กก่อนยืนยันการจอง</small></span></label>
+    </form>`,
+    onOpen: () => { $('#bkAck').addEventListener('change', e => { if (e.target.checked) $('#bkAckBox').classList.remove('req-field-err'); }); },
+    validate: () => { if (!$('#bkAck').checked) { const bx = $('#bkAckBox'); bx.classList.add('req-field-err'); try { bx.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { }
+      toast('กรุณาติ๊ก "ได้ขออนุญาตผู้บังคับบัญชาเรียบร้อยแล้ว" ก่อนยืนยันการจอง', 'err'); return false; } },
+    onOk: async () => {
+      const v = collect($('#mForm'));
+      const res = await api('bkBook', S.token, r.id, { email: v.email, academicPosition: v.academicPosition, adminPosition: v.adminPosition, supAck: true });
+      S.bk.data = res; bkSetSum();
+      if (S.user && res.me && S.user.kind === 'user') Object.assign(S.user, { email: res.me.email, academicPosition: res.me.academicPosition, adminPosition: res.me.adminPosition });
+      if (S.me && res.me) Object.assign(S.me, { email: res.me.email, academicPosition: res.me.academicPosition, adminPosition: res.me.adminPosition });
+      const rs = res.result || {};
+      toast((rs.status === 'wait' ? 'จองเป็นผู้สำรองลำดับที่ ' + rs.waitNo + ' แล้ว' : 'จองสำเร็จ') + (rs.mailed ? ' · ส่งอีเมลยืนยันแล้ว' : ' · ส่งอีเมลยืนยันไม่ได้ ดูสถานะที่แท็บ "การจองของฉัน"'));
+      render();
+    }
+  });
+}
+async function bkCancelMine(id) {
+  const m = ((S.bk.data || {}).mine || []).find(x => x.id === id); if (!m) return;
+  if (!(await ask({ tone: 'danger', icon: 'event_busy', title: 'ยกเลิกการจอง?', message: m.title + ' — ' + (m.run ? m.run.name : '') + (m.status === 'booked' ? ' (ที่นั่งจะถูกส่งต่อให้ผู้สำรองลำดับถัดไป)' : ''), okText: 'ยกเลิกการจอง', cancelText: 'ไม่ยกเลิก' }))) return;
+  loader(true);
+  try { S.bk.data = await api('bkCancel', S.token, id); bkSetSum(); render(); toast('ยกเลิกการจองแล้ว'); }
+  catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+
+/* ---------- แท็บ: การจองของฉัน ---------- */
+function bkMineHtml() {
+  const L = S.bk.data.mine.slice().sort((a, b) => (a.status === 'cancel') - (b.status === 'cancel'));
+  return `<div class="card"><div class="card-h"><h3><span class="msr">event_available</span>การจองของฉัน</h3><span class="muted small">${L.filter(m => m.status !== 'cancel').length} รายการ</span></div>
+  ${L.length ? `<div class="table-wrap"><table class="tbl">
+    <thead><tr><th>กิจกรรม / รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th>สถานะ</th><th></th></tr></thead>
+    <tbody>${L.map(m => { const r = m.run; return `<tr${m.status === 'cancel' ? ' class="bk-off"' : ''}>
+      <td><b>${esc(m.title)}</b><br><small class="muted">${esc(r ? r.name : '(รุ่นถูกลบแล้ว)')} · จองเมื่อ ${esc(thStamp(m.createdAt))}</small>
+        <br><small class="bk-ok"><span class="msr" style="font-size:14px;vertical-align:-2px">task_alt</span>ยืนยันว่าได้ขออนุญาตผู้บังคับบัญชาแล้ว</small></td>
+      <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
+      <td>${esc(r ? r.place : '-')}${r ? '<br>' + bkModeBadge(r.mode) : ''}${r && r.meetUrl && m.status === 'booked' ? `<br><a class="link small" href="${esc(r.meetUrl)}" target="_blank" rel="noopener"><span class="msr" style="font-size:14px;vertical-align:-2px">videocam</span>ลิงก์ห้องประชุม</a>` : ''}</td>
+      <td>${bkBookBadge(m)}${m.promotedAt && m.status === 'booked' ? `<br><small class="muted">เลื่อนจากสำรอง ${esc(thStamp(m.promotedAt))}</small>` : ''}${m.status === 'cancel' ? `<br><small class="muted">${m.cancelBy === 'self' ? 'ยกเลิกเอง' : 'เจ้าหน้าที่ยกเลิก'} ${esc(thStamp(m.cancelAt))}${m.cancelNote ? ' · ' + esc(m.cancelNote) : ''}</small>` : ''}</td>
+      <td style="text-align:right">${m.canCancel ? `<button class="btn btn-light btn-sm" data-action="bkCancelMine" data-id="${esc(m.id)}"><span class="msr">event_busy</span>ยกเลิก</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>`
+    : emptyState('event_seat', 'ยังไม่มีการจอง', 'เลือกกิจกรรมที่แท็บ "กิจกรรมที่เปิดรับจอง"')}</div>`;
+}
+
+/* ---------- แท็บ: จัดการกิจกรรม/โครงการ (เจ้าหน้าที่/ผู้ดูแล) ---------- */
+function bkManageHtml() {
+  const d = S.bk.data, f = S.bk;
+  const list = d.list.filter(c => match(f.q, c.title, c.organizer, ...c.runs.map(r => r.name + ' ' + r.place)));
+  return `
+  <div class="toolbar"><div class="search"><span class="msr">search</span><input id="bkQ" placeholder="ค้นหาชื่อกิจกรรม รุ่น สถานที่..." value="${esc(f.q)}"></div></div>
+  ${list.length ? list.map(c => {
+    const nb = c.runs.reduce((n, r) => n + r.booked, 0), nw = c.runs.reduce((n, r) => n + r.wait, 0);
+    return `<div class="card bk-course">
+    <div class="card-h bk-mh"><div><h3 style="margin:0">${esc(c.title)}</h3>
+      <div class="small muted" style="margin-top:4px">${c.status === 'active' ? '<span class="badge b-green">แสดงให้บุคลากรจอง</span>' : '<span class="badge b-gray">ไม่แสดง (ร่าง)</span>'}
+        ${c.fileId ? '<span class="tag"><span class="msr" style="font-size:14px;vertical-align:-3px">image</span> มีโปสเตอร์</span>' : ''}
+        · ${c.runs.length} รุ่น · จองแล้ว ${nb} คน${nw ? ' · สำรอง ' + nw + ' คน' : ''}${c.cancelled ? ' · ยกเลิก ' + c.cancelled : ''} · จัดโดย ${esc(c.organizer)}</div></div>
+      <div class="actions">
+        <button class="btn btn-light btn-sm" data-action="bkRoster" data-id="${esc(c.id)}"><span class="msr">groups</span>รายชื่อผู้จอง</button>
+        <button class="btn btn-light btn-sm" data-action="bkRunNew" data-id="${esc(c.id)}"><span class="msr">add</span>เพิ่มรุ่น</button>
+        <button class="icon-btn" data-action="bkCourseEdit" data-id="${esc(c.id)}" title="แก้ไขกิจกรรม/โครงการ"><span class="msr">edit</span></button>
+        ${d.canDelete ? `<button class="icon-btn danger" data-action="bkCourseDel" data-id="${esc(c.id)}" title="ลบกิจกรรม/โครงการ"><span class="msr">delete</span></button>` : ''}
+      </div></div>
+    <div class="table-wrap"><table class="tbl bk-runs">
+      <thead><tr><th>รุ่น</th><th>วันที่ / เวลา</th><th>สถานที่ / รูปแบบ</th><th style="text-align:center">ที่นั่ง</th><th>การรับจอง</th><th></th></tr></thead>
+      <tbody>${c.runs.map(r => `<tr>
+        <td><b>${esc(r.name)}</b>${r.note ? `<br><small class="muted">${esc(r.note)}</small>` : ''}</td>
+        <td style="white-space:nowrap">${esc(bkWhen(r))}</td>
+        <td>${esc(r.place || '-')}<br>${bkModeBadge(r.mode)}${r.meetUrl ? ' <span class="tag" title="' + esc(r.meetUrl) + '">มีลิงก์ห้องประชุม</span>' : ''}</td>
+        <td style="text-align:center">${bkSeats(r)}</td>
+        <td>${bkStBadge(r)}<br><small class="muted">${esc(bkWindow(r))}</small></td>
+        <td><div class="actions">
+          <button class="icon-btn" data-action="bkRunToggle" data-id="${esc(r.id)}" title="${r.status === 'closed' ? 'เปิดรับจอง' : 'ปิดรับจอง'}"><span class="msr">${r.status === 'closed' ? 'lock_open' : 'lock'}</span></button>
+          <button class="icon-btn" data-action="bkRunEdit" data-id="${esc(r.id)}" title="แก้ไขรุ่น"><span class="msr">edit</span></button>
+          ${d.canDelete ? `<button class="icon-btn danger" data-action="bkRunDel" data-id="${esc(r.id)}" title="ลบรุ่น"><span class="msr">delete</span></button>` : ''}
+        </div></td></tr>`).join('') || `<tr><td colspan="6" class="muted">ยังไม่มีรุ่น — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่ สถานที่ และจำนวนที่รับ</td></tr>`}</tbody></table></div>
+    </div>`; }).join('')
+    : `<div class="card">${emptyState('event_seat', d.list.length ? 'ไม่พบกิจกรรม' : 'ยังไม่มีกิจกรรม/โครงการ', d.list.length ? 'ลองเปลี่ยนคำค้นหา' : 'สร้างกิจกรรม/โครงการ แล้วเพิ่มรุ่นเพื่อเปิดให้บุคลากรจอง', d.list.length ? null : { label: 'สร้างกิจกรรม/โครงการ', attr: 'data-action="bkCourseNew"' })}</div>`}`;
+}
+function bkCourseForm(c) {
+  const isEdit = !!(c && c.id);
+  c = c || { status: 'active', organizer: BK_ORG };
+  const orgs = Array.from(new Set([BK_ORG].concat(((S.bk.data || {}).list || []).map(x => x.organizer).filter(Boolean))));
+  const fields = [
+    { k: 'title', label: 'ชื่อกิจกรรม/โครงการ', req: true, col: 2 },
+    { k: 'organizer', label: 'หน่วยงานที่จัด', type: 'datalist', options: orgs, req: true },
+    { k: 'status', label: 'การแสดงผล', type: 'select', options: [['active', 'แสดงให้บุคลากรจอง'], ['hidden', 'ไม่แสดง (ร่าง)']] },
+    { k: 'detail', label: 'รายละเอียดกิจกรรม', type: 'textarea', req: true, col: 2, ph: 'วัตถุประสงค์ หัวข้อ วิทยากร สิ่งที่ต้องเตรียม ฯลฯ' },
+    { k: 'qualify', label: 'คุณสมบัติผู้เข้าร่วม', type: 'textarea', col: 2, ph: 'เช่น พยาบาลวิชาชีพที่ปฏิบัติงานอย่างน้อย 1 ปี', hint: 'แสดงให้บุคลากรอ่านก่อนจอง (ระบบไม่ตรวจคุณสมบัติให้)' },
+    { k: 'link', label: 'ลิงก์เอกสารเพิ่มเติม', col: 2, ph: 'https://...', hint: 'ไม่บังคับ เช่น หนังสือเชิญ กำหนดการ' },
+    { k: 'poster', label: 'โปสเตอร์ (รูปภาพ ไม่บังคับ)', type: 'file', imageOnly: true, col: 2 }
+  ];
+  openModal({
+    title: isEdit ? 'แก้ไขกิจกรรม/โครงการ' : 'สร้างกิจกรรม/โครงการ', icon: 'event_seat', size: 'lg', confirmSave: ASK.save(isEdit), confirmCancel: true,
+    okText: isEdit ? 'บันทึกการแก้ไข' : 'สร้างกิจกรรม/โครงการ',
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => fieldHtml(f, f.type === 'file' ? (c.fileId ? c : null) : (c[f.k] || ''))).join('')}</form>`,
+    validate: () => { const fl = ($('#f_poster') || {}).files; const fe = fl && fl[0] ? pdfError(fl[0], true) : ''; if (fe) { toast(fe, 'err'); return false; }
+      const lk = $('#f_link').value.trim(); if (lk && !/^https:[/][/]/i.test(lk)) { toast('ลิงก์เอกสารต้องขึ้นต้นด้วย https://', 'err'); return false; } },
+    onOk: async () => {
+      const data = collect($('#mForm'));
+      delete data.poster;
+      let file = (($('#f_poster') || {}).files || [])[0];
+      if (file) {
+        if (!(file.size < 450000 && /[.]jpe?g$/i.test(file.name))) {
+          $('#mOk .btn-label').textContent = 'กำลังย่อรูป...';
+          try { const bl = await resizeImage(file, 1500, 0.82); file = new File([bl], file.name.replace(/[.][^.]+$/, '') + '.jpg', { type: 'image/jpeg' }); } catch (e) { }
+        }
+        $('#mOk .btn-label').textContent = 'กำลังอัปโหลดรูป...';
+        const up = await api('bkUploadPoster', S.token, { name: file.name, data: await fileToBase64(file) });
+        data.fileId = up.fileId; data.thumb = await imageThumb(file); delete data.removeFile;
+      }
+      if (isEdit) data.id = c.id;
+      const r = await api('bkSaveCourse', S.token, data);
+      await loadBk(); S.bk.tab = 'manage'; render();
+      toast(isEdit ? 'บันทึกการแก้ไขแล้ว' : 'สร้างกิจกรรม/โครงการแล้ว — กด "เพิ่มรุ่น" เพื่อกำหนดวันที่และที่นั่ง');
+      if (!isEdit) setTimeout(() => bkRunForm(r.id), 300);
+    }
+  });
+}
+function bkRunForm(courseId, r) {
+  const isEdit = !!(r && r.id), c = bkCourseById(courseId || (r && r.courseId));
+  if (!c) return;
+  r = r || { name: 'รุ่นที่ ' + (c.runs.length + 1), mode: 'onsite', status: 'open', startDate: '', place: '' };
+  const dtv = v => String(v || '').replace(' ', 'T');
+  const fields = [
+    { k: 'name', label: 'ชื่อรุ่น', req: true },
+    { k: 'mode', label: 'รูปแบบ', type: 'select', options: [['onsite', BK_MODE_LONG.onsite], ['online', BK_MODE_LONG.online], ['hybrid', BK_MODE_LONG.hybrid]] },
+    { k: 'startDate', label: 'วันที่เริ่ม', type: 'date', req: true },
+    { k: 'endDate', label: 'วันที่สิ้นสุด', type: 'date', hint: 'เว้นว่าง = วันเดียว' },
+    { k: 'startTime', label: 'เวลาเริ่ม', type: 'time' },
+    { k: 'endTime', label: 'เวลาสิ้นสุด', type: 'time' },
+    { k: 'place', label: 'สถานที่', col: 2, ph: 'เช่น ห้องประชุม ชั้น 5 อาคาร...', hint: 'Online เว้นว่างได้' },
+    { k: 'meetUrl', label: 'ลิงก์ห้องประชุมออนไลน์', col: 2, ph: 'https://...', hint: 'แสดงเฉพาะผู้ที่จองสำเร็จ (Online / Hybrid)' },
+    { k: 'capacity', label: 'จำนวนที่รับ (คน)', type: 'number', hint: 'เว้นว่าง = ไม่จำกัด · เต็มแล้วจองเป็นผู้สำรองได้' },
+    { k: 'status', label: 'การรับจอง', type: 'select', options: [['open', 'เปิดรับจอง'], ['closed', 'ปิดรับจอง']] },
+    { k: 'openAt', label: 'เวลาเปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = เปิดทันที' },
+    { k: 'closeAt', label: 'เวลาปิดรับจอง', type: 'datetime-local', hint: 'เว้นว่าง = ปิดเมื่อถึงวันเวลาเริ่มกิจกรรม' },
+    { k: 'note', label: 'หมายเหตุของรุ่น', col: 2, ph: 'เช่น สำหรับบุคลากรฝ่ายการพยาบาล' }
+  ];
+  openModal({
+    title: (isEdit ? 'แก้ไขรุ่น' : 'เพิ่มรุ่น') + ' — ' + c.title, icon: 'date_range', size: 'lg', confirmSave: ASK.save(isEdit), confirmCancel: true,
+    okText: isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มรุ่น',
+    body: `<form id="mForm" class="form-grid" onsubmit="return false" autocomplete="off">${fields.map(f => fieldHtml(f, f.type === 'datetime-local' ? dtv(r[f.k]) : (r[f.k] == null || r[f.k] === 0 ? '' : r[f.k]))).join('')}
+      ${isEdit && r.booked ? `<div class="col-2 pf-warn"><span class="msr">info</span><span>รุ่นนี้มีผู้จองแล้ว ${r.booked} คน${r.wait ? ' สำรอง ' + r.wait + ' คน' : ''} · เพิ่มจำนวนที่รับ = เลื่อนผู้สำรองขึ้นอัตโนมัติ · ลดจำนวนที่รับ ระบบไม่ยกเลิกผู้ที่จองไว้</span></div>` : ''}</form>`,
+    onOpen: () => { const cap = $('#f_capacity'); if (cap) { cap.min = '0'; cap.step = '1'; } },
+    validate: () => { const u = $('#f_meetUrl').value.trim(); if (u && !/^https:[/][/]/i.test(u)) { toast('ลิงก์ห้องประชุมต้องขึ้นต้นด้วย https://', 'err'); return false; }
+      if ($('#f_mode').value !== 'online' && !$('#f_place').value.trim()) { toast('กรุณากรอกสถานที่', 'err'); return false; } },
+    onOk: async () => {
+      const data = collect($('#mForm'));
+      data.courseId = c.id; if (isEdit) { data.id = r.id; data.sortOrder = r.sortOrder || ''; }
+      const res = await api('bkSaveRun', S.token, data);
+      await loadBk(); render();
+      toast((isEdit ? 'บันทึกรุ่นแล้ว' : 'เพิ่มรุ่นแล้ว') + (res.promoted ? ' · เลื่อนผู้สำรองขึ้น ' + res.promoted + ' คน (ส่งอีเมลแจ้งแล้ว)' : ''));
+    }
+  });
+}
+async function bkRunToggle(id) {
+  const x = bkRunById(id); if (!x) return;
+  const close = x.r.status !== 'closed';
+  if (!(await ask({ tone: close ? 'danger' : 'primary', icon: close ? 'lock' : 'lock_open', title: close ? 'ปิดรับจองรุ่นนี้?' : 'เปิดรับจองรุ่นนี้?', message: x.c.title + ' — ' + x.r.name, okText: close ? 'ปิดรับจอง' : 'เปิดรับจอง' }))) return;
+  loader(true);
+  try { const res = await api('bkSaveRun', S.token, Object.assign({}, x.r, { status: close ? 'closed' : 'open', capacity: x.r.capacity || '' })); await loadBk(); render(); toast((close ? 'ปิดรับจองแล้ว' : 'เปิดรับจองแล้ว') + (res.promoted ? ' · เลื่อนผู้สำรองขึ้น ' + res.promoted + ' คน' : '')); }
+  catch (e) { toast(e.message, 'err'); } finally { loader(false); }
+}
+
+/* ---------- รายชื่อผู้จอง ---------- */
+function bkRosterRows() {
+  const R = S.bk.roster, f = S.bk;
+  return R.rows.filter(x => (!f.rRun || x.runId === f.rRun) && (f.rSt === 'all' || (f.rSt === 'active' ? x.status !== 'cancel' : x.status === f.rSt))
+    && match(f.rQ, x.fullName, x.employeeId, x.department, x.position, x.email));
+}
+function bkRunName(id) { const r = ((S.bk.roster || {}).runs || []).find(x => x.id === id); return r ? r.name : '-'; }
+function bkRosterHtml() {
+  const R = S.bk.roster, c = R.course, f = S.bk, rows = bkRosterRows();
+  const runs = R.runs;
+  return `
+  <div class="card page-head" style="${cvar('teal')}">
+    <div class="ph-ic"><span class="msr">groups</span></div>
+    <div class="grow"><h2>${esc(c.title)}</h2>
+      <p>${runs.map(r => `<span class="tag">${esc(r.name)} · ${esc(bkWhen(r))} · จอง ${r.booked}${r.capacity ? '/' + r.capacity : ''}${r.wait ? ' · สำรอง ' + r.wait : ''}</span>`).join(' ')}</p></div>
+  </div>
+  <div class="toolbar">
+    <button class="btn btn-light" data-action="bkRosterBack"><span class="msr">arrow_back</span>กลับ</button>
+    <select class="input" id="bkRRun" style="max-width:220px"><option value="">ทุกรุ่น</option>${runs.map(r => `<option value="${esc(r.id)}"${f.rRun === r.id ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select>
+    <select class="input" id="bkRSt" style="max-width:220px">${[['active', 'จองสำเร็จ + สำรอง'], ['booked', 'จองสำเร็จ'], ['wait', 'สำรอง'], ['cancel', 'ยกเลิก'], ['all', 'ทั้งหมด']].map(o => `<option value="${o[0]}"${f.rSt === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
+    <div class="search"><span class="msr">search</span><input id="bkRQ" placeholder="ค้นหาชื่อ รหัสบุคลากร ฝ่าย อีเมล..." value="${esc(f.rQ)}"></div>
+    <div class="grow"></div>
+    <button class="btn btn-light" data-action="bkRosterRefresh"><span class="msr">refresh</span>รีเฟรช</button>
+    <button class="btn btn-light" data-action="bkRosterPrint"><span class="msr">print</span>พิมพ์ใบลงชื่อ</button>
+    <button class="btn btn-primary" data-action="bkRosterXlsx"><span class="msr">download</span>Excel</button>
+  </div>
+  <div class="card"><div class="card-h"><h3><span class="msr">groups</span>รายชื่อผู้จอง</h3><span class="muted small">${rows.length} คน</span></div>
+  ${rows.length ? `<div class="table-wrap"><table class="tbl" id="bkRosterTbl">
+    <thead><tr><th style="width:44px">ลำดับ</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง / ระดับ</th><th>ฝ่าย</th><th>Email</th><th>รุ่น</th><th>สถานะ</th><th></th></tr></thead>
+    <tbody>${rows.map((x, i) => `<tr${x.status === 'cancel' ? ' class="bk-off"' : ''}>
+      <td class="muted">${i + 1}</td>
+      <td><b>${esc(x.fullName)}</b><br><small class="mono muted">${esc(x.employeeId)}</small></td>
+      <td>${esc(joinPosLevel(x.position, x.level) || '-')}${x.academicPosition || x.adminPosition ? `<br><small class="muted">${esc([x.academicPosition, x.adminPosition].filter(Boolean).join(' · '))}</small>` : ''}</td>
+      <td>${esc(x.department || '-')}</td>
+      <td class="small">${esc(x.email || '-')}</td>
+      <td style="white-space:nowrap">${esc(bkRunName(x.runId))}</td>
+      <td>${bkBookBadge(x)}<br><small class="muted">จอง ${esc(thStamp(x.createdAt))}</small>${x.supAck === 'Y' ? '<br><small class="bk-ok">ขออนุญาตผู้บังคับบัญชาแล้ว</small>' : ''}${x.status === 'cancel' ? `<br><small class="muted">${x.cancelBy === 'self' ? 'ยกเลิกเอง' : 'ยกเลิกโดย ' + esc(x.cancelBy)}${x.cancelNote ? ' · ' + esc(x.cancelNote) : ''}</small>` : ''}</td>
+      <td>${x.status !== 'cancel' ? `<div class="actions"><button class="icon-btn danger" data-action="bkStaffCancel" data-id="${esc(x.id)}" title="ยกเลิกรายชื่อนี้"><span class="msr">person_remove</span></button></div>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+    : emptyState('groups', R.rows.length ? 'ไม่พบรายชื่อ' : 'ยังไม่มีผู้จอง', R.rows.length ? 'ลองเปลี่ยนตัวกรอง' : 'เมื่อบุคลากรจอง รายชื่อจะแสดงที่นี่')}</div>`;
+}
+function bkStaffCancel(id) {
+  const x = S.bk.roster.rows.find(r => r.id === id); if (!x) return;
+  openModal({
+    title: 'ยกเลิกรายชื่อผู้จอง', icon: 'person_remove', okText: 'ยกเลิกรายชื่อ', okClass: 'btn-danger',
+    body: `<form id="mForm" onsubmit="return false"><p style="margin-top:0"><b>${esc(x.fullName)}</b> · ${esc(bkRunName(x.runId))} (${esc(BK_BST[x.status][0])})</p>
+      ${fieldHtml({ k: 'note', label: 'เหตุผลการยกเลิก (แจ้งผู้จองทางอีเมล)', type: 'textarea', req: true }, '')}
+      ${x.status === 'booked' ? '<small class="hint">ระบบจะเลื่อนผู้สำรองลำดับแรกของรุ่นนี้ขึ้นแทนอัตโนมัติ</small>' : ''}</form>`,
+    onOk: async () => {
+      const res = await api('bkCancel', S.token, id, $('#f_note').value);
+      S.bk.roster = res.roster; try { S.bk.data = await api('bkList', S.token); bkSetSum(); } catch (e) { }
+      render(); toast('ยกเลิกรายชื่อแล้ว' + (res.promoted ? ' · เลื่อนผู้สำรองขึ้น ' + res.promoted + ' คน' : ''));
+    }
+  });
+}
+function bkRosterXlsx() {
+  const R = S.bk.roster, rows = bkRosterRows();
+  if (!rows.length) return toast('ไม่มีรายชื่อตามตัวกรองที่เลือก', 'err');
+  const head = ['ลำดับ', 'รุ่น', 'สถานะ', 'ลำดับสำรอง', 'รหัสบุคลากร', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'ระดับ', 'ตำแหน่งทางวิชาการ', 'ตำแหน่งทางบริหาร', 'ฝ่าย', 'หน่วยงาน', 'Email',
+    'ขออนุญาตผู้บังคับบัญชาแล้ว (เวลาที่ยืนยัน)', 'จองเมื่อ', 'เลื่อนจากสำรองเมื่อ', 'ยกเลิกเมื่อ', 'ยกเลิกโดย', 'เหตุผลการยกเลิก'];
+  const out = [[R.course.title], ['จัดโดย ' + R.course.organizer + ' · ข้อมูล ณ ' + new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })], [], head];
+  const st = { 0: 1, 3: 2 };
+  rows.forEach((x, i) => { out.push([i + 1, bkRunName(x.runId), (BK_BST[x.status] || [x.status])[0], x.waitNo || '', x.employeeId, x.fullName, x.position || '', x.level || '', x.academicPosition || '', x.adminPosition || '',
+    x.department || '', x.unit || '', x.email || '', x.supAck === 'Y' ? thStamp(x.supAckAt) : '', thStamp(x.createdAt), x.promotedAt ? thStamp(x.promotedAt) : '',
+    x.cancelAt ? thStamp(x.cancelAt) : '', x.cancelBy === 'self' ? 'ผู้จอง' : x.cancelBy || '', x.cancelNote || '']); st[out.length - 1] = 3; });
+  const s2 = [['รุ่น', 'วันที่ / เวลา', 'สถานที่', 'รูปแบบ', 'จำนวนที่รับ', 'จองสำเร็จ', 'สำรอง']];
+  R.runs.forEach(r => s2.push([r.name, bkWhen(r), r.place || '', BK_MODE_LONG[r.mode] || r.mode, r.capacity || 'ไม่จำกัด', r.booked, r.wait]));
+  const st2 = { 0: 2 }; for (let i = 1; i < s2.length; i++) st2[i] = 3;
+  const blob = xlsxBlob([{ name: 'รายชื่อผู้จอง', rows: out, styles: st, widths: [7, 14, 11, 9, 12, 26, 22, 7, 16, 20, 22, 20, 26, 20, 16, 16, 16, 12, 26], merges: ['A1:K1', 'A2:K2'], freeze: 4 },
+    { name: 'สรุปรายรุ่น', rows: s2, styles: st2, widths: [16, 30, 30, 22, 12, 10, 8] }]);
+  const fn = 'รายชื่อผู้จอง_' + safeName(R.course.title) + '.xlsx';
+  saveBlobAs(blob, fn); toast('ดาวน์โหลด ' + fn + ' แล้ว (' + rows.length + ' คน)');
+}
+async function bkRosterPrint() {
+  const R = S.bk.roster, f = S.bk;
+  const runs = R.runs.filter(r => !f.rRun || r.id === f.rRun);
+  const groups = runs.map(r => ({ r, rows: R.rows.filter(x => x.runId === r.id && x.status === 'booked'), waits: R.rows.filter(x => x.runId === r.id && x.status === 'wait') })).filter(g => g.rows.length || g.waits.length);
+  if (!groups.length) return toast('ยังไม่มีผู้จองที่จะพิมพ์', 'err');
+  const w = openPrintWindow();
+  const logo = await fmLogo();
+  const E = fmEsc;
+  const tbl = (list, title) => `<h3>${E(title)} (${list.length} คน)</h3><table><thead><tr><th style="width:34px">ที่</th><th style="width:70px">รหัสบุคลากร</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>ฝ่าย</th><th style="width:120px">ลายมือชื่อ</th></tr></thead>
+    <tbody>${list.map((x, i) => `<tr><td class="c">${i + 1}</td><td class="c">${E(x.employeeId)}</td><td>${E(x.fullName)}</td><td>${E(joinPosLevel(x.position, x.level))}</td><td>${E(x.department || '')}</td><td></td></tr>`).join('')}</tbody></table>`;
+  const pages = groups.map(g => `<section class="pg">
+    <div class="hd">${logo ? `<img src="${logo}" alt="">` : ''}<div><b>โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา สภากาชาดไทย</b><div>${E(BK_ORG)}</div></div></div>
+    <h2>ใบลงชื่อผู้เข้าร่วม: ${E(R.course.title)}</h2>
+    <p class="meta">${E(g.r.name)} · ${E(bkWhen(g.r))} · ${E(g.r.place || '')} · ${E(BK_MODE_LONG[g.r.mode] || '')} · จัดโดย ${E(R.course.organizer)}</p>
+    ${tbl(g.rows, 'ผู้ได้ที่นั่ง')}${g.waits.length ? tbl(g.waits, 'รายชื่อสำรอง (ตามลำดับ)') : ''}
+    <p class="ft">พิมพ์จากระบบ HRD Center เมื่อ ${E(new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }))}</p></section>`).join('');
+  const SC = 'scr' + 'ipt';
+  const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>ใบลงชื่อ ' + E(R.course.title) + '</title><style>' +
+    '@page{size:A4;margin:12mm}body{font-family:Sarabun,"TH SarabunPSK",Tahoma,sans-serif;font-size:14px;color:#000;margin:0}' +
+    '.bar{position:sticky;top:0;background:#0b2545;color:#fff;padding:8px 14px;display:flex;gap:10px;align-items:center;font-family:Tahoma,sans-serif;font-size:13px}.bar button{margin-left:auto;padding:6px 14px;border:0;border-radius:6px;cursor:pointer}.bar button+button{margin-left:0}' +
+    '.pg{padding:10mm 4mm;page-break-after:always}.pg:last-child{page-break-after:auto}.hd{display:flex;gap:10px;align-items:center;margin-bottom:6px}.hd img{height:46px}' +
+    'h2{font-size:18px;margin:8px 0 2px}h3{font-size:15px;margin:12px 0 4px}.meta{margin:0 0 6px;color:#333}' +
+    'table{width:100%;border-collapse:collapse}th,td{border:1px solid #555;padding:5px 6px;vertical-align:top}th{background:#eef3f8}td{height:24px}.c{text-align:center}.ft{font-size:11px;color:#666;margin-top:10px}' +
+    '@media print{.bar{display:none}.pg{padding:0}}</style></head><body>' +
+    '<div class="bar"><span>ใบลงชื่อผู้เข้าร่วม · กระดาษ A4</span><button onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="window.close()">ปิด</button></div>' + pages +
+    '<' + SC + '>(function(){var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap";document.head.appendChild(l)})();</' + SC + '></body></html>';
+  if (w && !w.closed) { w.document.open(); w.document.write(html); w.document.close(); w.focus(); }
+  else toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้', 'err');
+}
+
+async function bkAction(a, d) {
+  const busy = async (fn, okMsg) => { loader(true); try { await fn(); if (okMsg) toast(okMsg); } catch (e) { toast(e.message, 'err'); } finally { loader(false); } };
+  switch (a) {
+    case 'bkRefresh': return busy(async () => { await loadBk(); render(); });
+    case 'bkBook': return bkBookOpen(d.id);
+    case 'bkCancelMine': return bkCancelMine(d.id);
+    case 'bkCourseNew': return bkCourseForm(null);
+    case 'bkCourseEdit': return bkCourseForm(bkCourseById(d.id));
+    case 'bkCourseDel': {
+      const c = bkCourseById(d.id); if (!c) return;
+      const nb = c.runs.reduce((n, r) => n + r.booked + r.wait, 0);
+      if (!(await confirmBox('ลบกิจกรรม/โครงการ "' + c.title + '" ?', 'รุ่นทั้งหมด ' + c.runs.length + ' รุ่น และรายชื่อผู้จอง ' + nb + ' คนจะถูกลบด้วย (แนะนำให้ดาวน์โหลด Excel รายชื่อก่อน) — กู้คืนไม่ได้'))) return;
+      return busy(async () => { await api('bkDeleteCourse', S.token, c.id); await loadBk(); render(); }, 'ลบกิจกรรม/โครงการแล้ว');
+    }
+    case 'bkRunNew': return bkRunForm(d.id);
+    case 'bkRunEdit': { const x = bkRunById(d.id); return x && bkRunForm(x.c.id, x.r); }
+    case 'bkRunToggle': return bkRunToggle(d.id);
+    case 'bkRunDel': {
+      const x = bkRunById(d.id); if (!x) return;
+      if (!(await confirmBox('ลบ "' + x.r.name + '" ของ ' + x.c.title + ' ?', 'รายชื่อผู้จอง ' + (x.r.booked + x.r.wait) + ' คนของรุ่นนี้จะถูกลบด้วย — กู้คืนไม่ได้'))) return;
+      return busy(async () => { await api('bkDeleteRun', S.token, x.r.id); await loadBk(); render(); }, 'ลบรุ่นแล้ว');
+    }
+    case 'bkRoster': return busy(async () => { S.bk.rRun = ''; S.bk.rSt = 'active'; S.bk.rQ = ''; await bkLoadRoster(d.id); render(); window.scrollTo(0, 0); });
+    case 'bkRosterBack': S.bk.roster = null; return render();
+    case 'bkRosterRefresh': return busy(async () => { await bkLoadRoster(S.bk.roster.course.id); render(); });
+    case 'bkRosterXlsx': return bkRosterXlsx();
+    case 'bkRosterPrint': return bkRosterPrint();
+    case 'bkStaffCancel': return bkStaffCancel(d.id);
+  }
+}
+document.addEventListener('input', e => {
+  const id = e.target.id;
+  if (id === 'bkQ' || id === 'bkRQ') {
+    S.bk[id === 'bkQ' ? 'q' : 'rQ'] = e.target.value; clearTimeout(S.bk.qt);
+    S.bk.qt = setTimeout(() => { if (S.page !== 'booking') return; render(); const i = $('#' + id); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250);
+  }
+});
+document.addEventListener('change', e => {
+  const n = e.target.name || e.target.id;
+  if (n === 'bkTab') { S.bk.tab = e.target.value; S.bk.q = ''; return render(); }
+  if (n === 'bkPast') { S.bk.past = e.target.checked; return render(); }
+  if (n === 'bkRRun') { S.bk.rRun = e.target.value; return render(); }
+  if (n === 'bkRSt') { S.bk.rSt = e.target.value; return render(); }
 });
 
 const PIP_ST = { draft: ['กำหนดเป้าหมาย', 'b-gray', 'edit_note'], signing: ['รอลงนาม', 'b-amber', 'draw'], review: ['รอ ผบ.ที่สูงขึ้นไปลงนาม', 'b-amber', 'forward_to_inbox'], active: ['ลงนามครบ · รอรอบประเมิน', 'b-blue', 'lock_clock'], evalOpen: ['เปิดประเมินผล', 'b-purple', 'grading'], evalReview: ['รอ ผบ.ที่สูงขึ้นไปอนุมัติผล', 'b-amber', 'approval'], evaluated: ['อนุมัติผลแล้ว', 'b-green', 'task_alt'] };
@@ -6932,14 +7401,14 @@ function renderNav() {
   applyNavOrder();
   $$('#nav a[data-page]').forEach(a => a.classList.toggle('active', a.dataset.page === S.page));
 }
-const NAV_MAIN = ['dashboard', 'systems', 'documents', 'announcements', 'forms', 'checkin', 'pip', 'printforms', 'trreport'];
-const NAV_LABEL = { dashboard: 'หน้าแรก', systems: 'ระบบย่อย', documents: 'คลังข้อมูล', announcements: 'ประกาศ / ข่าวสาร', forms: 'ขออนุมัติไปอบรม/ประชุม', checkin: 'QR Code ของฉัน', pip: 'แผนพัฒนาการปฏิบัติงาน (PIP)', printforms: 'พิมพ์แบบฟอร์ม', trreport: 'รายงานผลการพัฒนา' };
+const NAV_MAIN = ['dashboard', 'systems', 'documents', 'announcements', 'forms', 'checkin', 'pip', 'printforms', 'trreport', 'booking'];
+const NAV_LABEL = { dashboard: 'หน้าแรก', systems: 'ระบบย่อย', documents: 'คลังข้อมูล', announcements: 'ประกาศ / ข่าวสาร', forms: 'ขออนุมัติไปอบรม/ประชุม', checkin: 'QR Code ของฉัน', pip: 'แผนพัฒนาการปฏิบัติงาน (PIP)', printforms: 'พิมพ์แบบฟอร์ม', trreport: 'รายงานผลการพัฒนา', booking: 'จองกิจกรรม/โครงการ' };
 /* ---------- เมนูหลักที่ระบบสร้างขึ้น: ผู้ดูแลตั้งชื่อ / การเข้าถึงเองได้ (build 2569-11-18.2) ---------- */
 const NAV_DEF = Object.assign({}, NAV_LABEL);   // ชื่อเดิมของระบบ
 const PAGE_TITLE0 = {}; Object.keys(PAGES).forEach(k => { PAGE_TITLE0[k] = PAGES[k].title; });
-const NAV_ICON = { dashboard: 'space_dashboard', systems: 'apps', documents: 'folder_open', announcements: 'campaign', forms: 'assignment', checkin: 'qr_code_2', pip: 'trending_up', printforms: 'print', trreport: 'assignment_turned_in' };
+const NAV_ICON = { dashboard: 'space_dashboard', systems: 'apps', documents: 'folder_open', announcements: 'campaign', forms: 'assignment', checkin: 'qr_code_2', pip: 'trending_up', printforms: 'print', trreport: 'assignment_turned_in', booking: 'event_seat' };
 const NAV_DESC = { dashboard: 'หน้าสรุปหลังเข้าสู่ระบบ', systems: 'การ์ดลิงก์เข้าระบบงาน', documents: 'เอกสาร/ไฟล์ตามหมวดหมู่', announcements: 'ข่าวสารถึงบุคลากร',
-  forms: 'แบบฟอร์ม FM-HRD-008', checkin: 'QR สำหรับลงทะเบียนกิจกรรม (ผู้ใช้งาน)', pip: 'แผนพัฒนาการปฏิบัติงาน · ลงนามอิเล็กทรอนิกส์', printforms: 'ใบรับรองการจ่ายเงิน · ใบรับรองค่าพาหนะ · รายงานการเดินทาง' , trreport: 'รายงานผลการเข้าร่วมดูงาน/อบรม/ประชุม · ลงนามตามสายงาน'};
+  forms: 'แบบฟอร์ม FM-HRD-008', checkin: 'QR สำหรับลงทะเบียนกิจกรรม (ผู้ใช้งาน)', pip: 'แผนพัฒนาการปฏิบัติงาน · ลงนามอิเล็กทรอนิกส์', printforms: 'ใบรับรองการจ่ายเงิน · ใบรับรองค่าพาหนะ · รายงานการเดินทาง' , trreport: 'รายงานผลการเข้าร่วมดูงาน/อบรม/ประชุม · ลงนามตามสายงาน', booking: 'จองกิจกรรม/โครงการ · รุ่น · ผู้สำรอง' };
 function navCfgOf(k) { return (S.navCfg || {})[k] || {}; }
 function navName(k) { return navCfgOf(k).label || NAV_DEF[k] || k; }
 function applyNavLabels() {
@@ -8009,6 +8478,7 @@ function bindEvents() {
     if (d.userst) { S.f.userSt = d.userst; return render(); }
     if (d.action && d.action.indexOf('pf') === 0) return pfAction(d.action, d);
     if (d.action && d.action.indexOf('tr') === 0) return trAction(d.action, d, el);
+    if (d.action && d.action.indexOf('bk') === 0) return bkAction(d.action, d);
     switch (d.action) {
       case 'logout': return doLogout();
       case 'profile': return openProfile();
