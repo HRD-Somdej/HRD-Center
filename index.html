@@ -496,7 +496,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px}
 .cat-row .input{height:40px}
 .cat-row .cnt{font-size:12px;color:var(--muted);white-space:nowrap;min-width:54px;text-align:right}
 .cat-add{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
-.modal-box.lg{max-width:980px}
+.modal-box.lg{max-width:980px}.modal-box.wide{max-width:820px}
 .img-view{display:grid;place-items:center;background:repeating-conic-gradient(#f1f4f8 0% 25%,#fff 0% 50%) 50%/20px 20px;border-radius:14px;padding:10px;min-height:200px}
 .img-view img{display:block;max-width:100%;max-height:68vh;border-radius:8px;box-shadow:0 6px 24px -8px rgba(0,0,0,.25)}
 .img-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;font-size:13.5px;color:var(--muted)}
@@ -798,7 +798,11 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .pf-sub{margin:16px 0 8px;font-size:14.5px;color:#0b2545}
 .input.pf-over{border-color:#ea8a0c;background:#fff8ee;box-shadow:0 0 0 2px rgba(234,138,12,.18)}
 .pf-lines{margin-left:6px;color:var(--muted,#64748b)}.pf-lines.pf-lines-over{color:#b45309;font-weight:600}.pf-fitwarn{margin:14px 0 0}
-.tr-order{display:grid;grid-template-columns:1fr 1fr;gap:12px}.tr-order .field>span{font-size:12.5px}
+.tr-order{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tr-dates{display:flex;flex-direction:column;gap:8px}.tr-dr{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:10px;align-items:end}
+.tr-dn{width:26px;height:26px;border-radius:50%;background:var(--teal-50);color:var(--teal);font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.tr-dfoot{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-top:10px}.tr-days{width:140px;margin:0}.tr-to{margin-bottom:10px}
+@media (max-width:640px){.tr-dr{grid-template-columns:24px 1fr 36px}.tr-dr .field:nth-of-type(2){grid-column:2}}.tr-order .field>span{font-size:12.5px}
 .tr-sub{font-weight:600;color:#0b2545;margin:16px 0 8px}.tr-cnt{text-align:right}
 .tr-photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
 .tr-ph{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff;text-align:left;font:inherit}
@@ -1110,8 +1114,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.13.0',
-  BUILD: '2569-11-25.1'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.13.1',
+  BUILD: '2569-11-25.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -4347,7 +4351,11 @@ function pfSignerEdit() {
  * ร่าง (แนบรูปได้ 6 รูป) → ผู้รายงานลงนามและเรียนผู้บังคับบัญชา → ผู้บังคับบัญชาลงความเห็น แล้วเรียนคนถัดไป (ไม่จำกัด)
  * หรือส่งถึงฝ่ายทรัพยากรบุคคล → เจ้าหน้าที่รับเรื่อง/ข้อเสนอแนะ/ลงนาม → หัวหน้าฝ่าย HR → ผู้บริหารสูงสุด → พิมพ์ / PDF
  * เอกสารพิมพ์สร้างที่หลังบ้าน (ชุดเดียวกับไฟล์สำรองใน Google Drive) */
-const TR_KIND = { visit: 'ดูงาน', train: 'ฝึกอบรม', seminar: 'สัมมนา', meeting: 'ประชุม', learn: 'เพิ่มพูนความรู้และประสบการณ์' };
+const TR_KIND = { visit: 'ดูงาน', train: 'ฝึกอบรม', seminar: 'สัมมนา', meeting: 'ประชุมวิชาการ' };
+const TR_KIND_ALL = Object.assign({ learn: 'เพิ่มพูนความรู้และประสบการณ์' }, TR_KIND);   // รายงานเดิมก่อน 25.2
+const TR_T1 = 'แบบรายงานผลการเข้าร่วมดูงาน ฝึกอบรม สัมมนา ประชุม หรือเพิ่มพูนความรู้และประสบการณ์เป็นครั้งคราว';
+const TR_T2 = 'ภายในประเทศ ' + PF_ORG;
+const TR_MAXRG = 10;
 const TR_FUND = { hosp: 'งบประมาณโรงพยาบาล', org: 'ผู้จัดออกค่าใช้จ่าย', self: 'ทุนส่วนตัว', none: 'ไม่มีค่าใช้จ่าย', other: 'อื่น ๆ' };
 const TR_APPLY = { share: 'ถ่ายทอดความรู้ให้บุคลากรในหน่วยงาน', manual: 'จัดทำคู่มือ / สื่อความรู้', improve: 'ปรับปรุงงาน / ระบบงาน', inhouse: 'จัดอบรมหรือประชุมภายใน', other: 'อื่น ๆ' };
 const TR_STL = { draft: ['ร่าง', 'b-gray', 'edit_note'], returned: ['ส่งกลับแก้ไข', 'b-red', 'undo'], line: ['รอผู้บังคับบัญชาลงนาม', 'b-amber', 'draw'],
@@ -4376,6 +4384,10 @@ function renderTr() {
 function trBadge(st) { const s = TR_STL[st] || [st, 'b-gray', 'help']; return `<span class="badge ${s[1]}"><span class="msr" style="font-size:15px">${s[2]}</span>${esc(s[0])}</span>`; }
 function trRange(a, b) { return a ? (thDateShort(a) + (b && b !== a ? ' – ' + thDateShort(b) : '')) : '-'; }
 function trDays(a, b) { if (!a || !b) return 0; const n = Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000) + 1; return n > 0 && n < 1000 ? n : 0; }
+/** ช่วงวันที่ของรายงาน (รายงานเดิมมีแค่ startDate/endDate) */
+function trRanges(d) { d = d || {}; return Array.isArray(d.dates) && d.dates.length ? d.dates.map(x => ({ s: x.s || '', e: x.e || '' })) : (d.startDate ? [{ s: d.startDate, e: d.endDate || '' }] : []); }
+function trCountDays(rg) { return rg.reduce((n, x) => n + (x.s ? (trDays(x.s, x.e || x.s) || 0) : 0), 0); }
+function trRangesShort(d) { const rg = trRanges(d); return rg.length ? rg.map(x => trRange(x.s, x.e || x.s)).join(', ') : '-'; }
 function trFY(iso) { const m = String(iso || '').match(/^([0-9]{4})-([0-9]{2})/); return m ? String(Number(m[1]) + 543 + (Number(m[2]) >= 10 ? 1 : 0)) : ''; }
 
 /* ---------- รายการ ---------- */
@@ -4384,10 +4396,10 @@ function trListHtml() {
   const tabs = [['', 'ทั้งหมด' + (A ? ' (ทุกคน)' : ''), L.length], ['todo', 'รอฉันดำเนินการ', L.filter(r => r.todo).length], ['mine', 'รายงานของฉัน', L.filter(r => r.owner).length]];
   const fys = Array.from(new Set(L.map(r => r.fy).filter(Boolean))).sort().reverse();
   const list = L.filter(r => (f.tab !== 'todo' || r.todo) && (f.tab !== 'mine' || r.owner) && (!f.st || r.status === f.st) && (!f.fy || r.fy === f.fy) &&
-    match(f.q, r.title, r.fullName, r.department, r.place, r.hrNo, TR_KIND[r.kind]));
+    match(f.q, r.title, r.fullName, r.department, r.place, r.hrNo, TR_KIND_ALL[r.kind]));
   const cfg = S.trCfg;
   return `
-  <div class="req-note"><span class="msr">info</span><div><b>รายงานผลการเข้าร่วมดูงาน ฝึกอบรม สัมมนา ประชุม หรือเพิ่มพูนความรู้และประสบการณ์ (ภายในประเทศ)</b>
+  <div class="req-note"><span class="msr">info</span><div><b>${esc(TR_T1)} ${esc(TR_T2)}</b>
     เขียนรายงานและแนบรูปได้ ${TR_MAXPH} รูป → ลงนามและเรียนผู้บังคับบัญชาตามสายงาน (เพิ่มได้ไม่จำกัด) → ส่งถึงฝ่ายทรัพยากรบุคคล → หัวหน้าฝ่ายทรัพยากรบุคคล → ผู้บริหารสูงสุด
     เมื่อลงนามครบ พิมพ์หรือบันทึกเป็น PDF ได้ และระบบสำรองไฟล์ไว้ให้</div></div>
   <div class="toolbar">
@@ -4408,7 +4420,7 @@ function trListHtml() {
     <thead><tr><th>เรื่อง</th><th>วันที่</th><th>ผู้รายงาน</th><th>สถานะ</th><th></th></tr></thead>
     <tbody>${list.map(r => `<tr${r.todo ? ' class="tr-todo"' : ''}>
       <td><div class="t-main"><div class="doc-ic" style="${cvar('teal')}"><span class="msr">${r.kind === 'visit' ? 'travel_explore' : r.kind === 'meeting' ? 'groups' : r.kind === 'seminar' ? 'co_present' : 'school'}</span></div>
-        <div><a class="doc-link" data-action="trView" data-id="${esc(r.id)}">${esc(r.title)}</a><small>${esc(TR_KIND[r.kind] || '-')}${r.place ? ' · ' + esc(r.place) : ''}${r.nPhotos ? ' · <span class="msr" style="font-size:14px;vertical-align:-2px">photo_library</span>' + r.nPhotos : ''}${r.hrNo ? ' · เลขที่รับ ' + esc(r.hrNo) : ''}</small></div></div></td>
+        <div><a class="doc-link" data-action="trView" data-id="${esc(r.id)}">${esc(r.title)}</a><small>${esc(TR_KIND_ALL[r.kind] || '-')}${r.place ? ' · ' + esc(r.place) : ''}${r.nPhotos ? ' · <span class="msr" style="font-size:14px;vertical-align:-2px">photo_library</span>' + r.nPhotos : ''}${r.hrNo ? ' · เลขที่รับ ' + esc(r.hrNo) : ''}</small></div></div></td>
       <td style="white-space:nowrap">${esc(trRange(r.startDate, r.endDate))}</td>
       <td>${esc(r.fullName)}<br><small class="muted">${esc(r.department || '')}</small></td>
       <td>${trBadge(r.status)}${r.cur ? `<br><small class="muted">ขั้นปัจจุบัน: ${esc(r.cur.name)}</small>` : ''}${r.todo ? '<br><small class="tr-todo-t"><span class="msr" style="font-size:14px;vertical-align:-2px">notification_important</span>รอท่านดำเนินการ</small>' : ''}</td>
@@ -4448,12 +4460,14 @@ function trRadios(k, map, extra) {
 }
 function trEditHtml() {
   const d = S.tr.data, rep = S.tr.rep, ret = rep && rep.status === 'returned';
-  const days = trDays(d.startDate, d.endDate), due = d.endDate ? new Date(new Date(d.endDate + 'T00:00:00').getTime() + TR_DUE_DAYS * 86400000) : null;
+  const rg = trRanges(d); if (!rg.length) rg.push({ s: '', e: '' });
+  const cnt = trCountDays(rg), endD = rg.reduce((m, x) => ((x.e || x.s) > m ? (x.e || x.s) : m), '');
+  const due = endD ? new Date(new Date(endD + 'T00:00:00').getTime() + TR_DUE_DAYS * 86400000) : null;
   const dueIso = due ? due.getFullYear() + '-' + String(due.getMonth() + 1).padStart(2, '0') + '-' + String(due.getDate()).padStart(2, '0') : '';
   const costs = [['costReg', 'ค่าลงทะเบียน'], ['costStay', 'ค่าที่พัก'], ['costTravel', 'ค่าพาหนะเดินทาง'], ['costAllow', 'ค่าเบี้ยเลี้ยง'], ['costOther', 'ค่าใช้จ่ายอื่น ๆ']];
   const ph = S.tr.photos;
-  return `<div class="pf-ed-head" style="${cvar('teal')}"><div class="doc-ic"><span class="msr">assignment_turned_in</span></div><div><b>แบบรายงานผลการเข้าร่วมดูงาน ฝึกอบรม สัมมนา ประชุม หรือเพิ่มพูนความรู้และประสบการณ์เป็นครั้งคราว ภายในประเทศ</b>
-    <small>${esc(PF_ORG)} · ${S.tr.id ? 'แก้ไขร่าง' : 'เขียนรายงานใหม่'} · ช่องที่มี <span class="req">*</span> ต้องกรอกก่อนส่ง</small></div></div>
+  return `<div class="pf-ed-head" style="${cvar('teal')}"><div class="doc-ic"><span class="msr">assignment_turned_in</span></div><div><b>${esc(TR_T1)}<br>${esc(TR_T2)}</b>
+    <small>${S.tr.id ? 'แก้ไขร่าง' : 'เขียนรายงานใหม่'} · ช่องที่มี <span class="req">*</span> ต้องกรอกก่อนส่ง</small></div></div>
   ${ret ? `<div class="pf-warn"><span class="msr">undo</span><span><b>ถูกส่งกลับให้แก้ไข:</b> ${esc(rep.returnNote || '')}</span></div>` : ''}
   <form id="trForm" onsubmit="return false" autocomplete="off">
   ${pfSec('badge', 'ส่วนที่ 1 ข้อมูลผู้รายงาน', `<div class="req-grid">
@@ -4463,20 +4477,25 @@ function trEditHtml() {
   ${pfSec('event_note', 'ส่วนที่ 2 ข้อมูลการเข้าร่วม', `
       <div class="req-grid">
         <div class="field c4"><span>ตามคำสั่ง${esc(PF_ORG)}</span><div class="tr-order">${trIn('orderNo', 'ที่', { max: 40, ph: 'เช่น 123/2569' })}${trIn('orderDate', 'ลงวันที่', { type: 'date' })}</div></div>
-        <div class="field c4"><span>ประเภท <span class="req">*</span></span>${trRadios('kind', TR_KIND)}</div>
+        <div class="field c4"><span>ประเภท <span class="req">*</span></span>${trRadios('kind', d.kind === 'learn' ? TR_KIND_ALL : TR_KIND)}</div>
         ${trIn('title', 'เรื่อง / หลักสูตร', { cls: 'c4', req: true, max: 300 })}
         ${trIn('organizer', 'หน่วยงานผู้จัด', { cls: 'c2', req: true, max: 200 })}${trIn('place', 'สถานที่', { req: true, max: 200 })}${trIn('province', 'จังหวัด', { max: 60, list: 'trProv' })}
-        ${trIn('startDate', 'วันที่เริ่ม', { type: 'date', req: true })}${trIn('endDate', 'วันที่สิ้นสุด', { type: 'date', req: true })}
-        <div class="field"><span>รวม</span><div class="pf-fixed" data-out="trDays">${days ? days + ' วัน' : '-'}</div></div>
-        ${trIn('ceHours', 'ชั่วโมง / หน่วยคะแนนที่ได้รับ (ถ้ามี)', { max: 60, ph: 'เช่น 18 ชั่วโมง, CNEU 15.5' })}
       </div>
       <datalist id="trProv">${TH_PROVINCES.map(p => `<option value="${esc(p)}">`).join('')}</datalist>
+      <div class="tr-sub">ระหว่างวันที่ <span class="req">*</span> <small class="muted" style="font-weight:400">ไปหลายวันแต่ไม่ติดต่อกัน กด "เพิ่มช่วงวันที่"</small></div>
+      <div class="tr-dates">${rg.map((x, i) => `<div class="tr-dr"><span class="tr-dn">${i + 1}</span>
+          <label class="field"><span>วันที่</span><input class="input" type="date" name="dS.${i}" value="${esc(x.s || '')}"></label>
+          <label class="field"><span>ถึงวันที่ (ถ้าวันเดียว เว้นว่างได้)</span><input class="input" type="date" name="dE.${i}" value="${esc(x.e || '')}"></label>
+          ${rg.length > 1 ? `<button type="button" class="icon-btn danger" data-action="trDateDel" data-i="${i}" title="ลบช่วงนี้"><span class="msr">delete</span></button>` : '<span></span>'}</div>`).join('')}</div>
+      <div class="tr-dfoot">${rg.length < TR_MAXRG ? `<button type="button" class="btn btn-light btn-sm" data-action="trDateAdd"><span class="msr">add</span>เพิ่มช่วงวันที่</button>` : ''}
+        <label class="field tr-days"><span>รวม (วัน) <span class="req">*</span></span><input class="input" name="days" value="${esc(d.days || '')}" inputmode="decimal" maxlength="5" placeholder="พิมพ์เอง เช่น 3"></label>
+        <small class="hint" data-out="trDays">${cnt ? 'นับจากช่วงวันที่ได้ ' + cnt + ' วัน' : ''}</small></div>
       ${dueIso ? `<p class="small muted" style="margin:6px 0 0"><span class="msr" style="font-size:16px;vertical-align:-3px">schedule</span> ควรส่งรายงานภายใน ${TR_DUE_DAYS} วันหลังเสร็จสิ้น (ภายใน ${esc(thDateLong(dueIso))})</p>` : ''}
-      <div class="tr-sub">ค่าใช้จ่าย (บาท)</div>
+      <div class="field" style="margin-top:14px"><span>แหล่งงบประมาณ</span>${trRadios('fund', TR_FUND)}</div>
+      <div class="req-grid tr-other${d.fund === 'other' ? '' : ' hidden'}" data-show="fund">${trIn('fundOther', 'ระบุแหล่งงบประมาณ', { cls: 'c2', max: 120 })}</div>
+      <div class="tr-costs${d.fund === 'hosp' ? '' : ' hidden'}" data-show="cost"><div class="tr-sub">ค่าใช้จ่าย (บาท) — เฉพาะงบประมาณโรงพยาบาล</div>
       <div class="req-grid">${costs.map(c => trIn(c[0], c[1], { mode: 'decimal', ph: '0.00', max: 12 })).join('')}
-        <div class="field"><span>รวมทั้งสิ้น</span><div class="pf-fixed" data-out="trTotal">-</div></div></div>
-      <div class="field" style="margin-top:12px"><span>แหล่งงบประมาณ</span>${trRadios('fund', TR_FUND)}</div>
-      <div class="req-grid tr-other${d.fund === 'other' ? '' : ' hidden'}" data-show="fund">${trIn('fundOther', 'ระบุแหล่งงบประมาณ', { cls: 'c2', max: 120 })}</div>`,
+        <div class="field"><span>รวมทั้งสิ้น</span><div class="pf-fixed" data-out="trTotal">-</div></div></div></div>`,
       `<button type="button" class="btn btn-light btn-sm" data-action="trFrom008"><span class="msr">download</span>ดึงจากคำขอ FM-HRD-008</button>`)}
   ${pfSec('menu_book', 'ส่วนที่ 3 สาระสำคัญ', `<div class="req-grid">
       ${trTa('objective', '3.1 วัตถุประสงค์', { req: true, max: 1500, rows: 3 })}
@@ -4486,8 +4505,7 @@ function trEditHtml() {
       <div class="field c4"><span>3.5 การนำไปใช้ / ขยายผล <span class="req">*</span></span>
         <div class="seg">${Object.keys(TR_APPLY).map(x => `<label><input type="checkbox" name="applyHow" value="${x}"${(d.applyHow || []).indexOf(x) > -1 ? ' checked' : ''}><span>${esc(TR_APPLY[x])}</span></label>`).join('')}</div></div>
       <div class="req-grid c4 tr-other${(d.applyHow || []).indexOf('other') > -1 ? '' : ' hidden'}" data-show="applyHow" style="grid-column:1/-1">${trIn('applyOther', 'ระบุวิธีอื่น', { cls: 'c2', max: 150 })}</div>
-      ${trTa('applyDetail', 'รายละเอียดการนำไปใช้ / ขยายผล', { req: true, max: 2000, rows: 3, cls: 'c3', ph: 'เช่น ถ่ายทอดความรู้ในการประชุมประจำเดือนของหน่วยงาน' })}
-      ${trIn('applyBy', 'ดำเนินการภายในวันที่', { type: 'date' })}
+      ${trTa('applyDetail', 'รายละเอียดการนำไปใช้ / ขยายผล', { req: true, max: 2000, rows: 3, ph: 'เช่น ถ่ายทอดความรู้ในการประชุมประจำเดือนของหน่วยงาน' })}
       ${trTa('problems', '3.6 ปัญหา อุปสรรค และข้อเสนอแนะ', { max: 1500, rows: 3 })}</div>`)}
   ${pfSec('photo_library', `ส่วนที่ 4 ภาพประกอบ (${ph.length}/${TR_MAXPH} รูป)`, `
       <div class="tr-photos">${ph.map((p, i) => `<div class="tr-ph">
@@ -4519,18 +4537,25 @@ function trRead() {
   $$('input[name],textarea[name]', f).forEach(el => {
     const n = el.name;
     if (n.indexOf('cap.') === 0) { const p = S.tr.photos[Number(n.slice(4))]; if (p) p.caption = el.value; return; }
+    if (/^d[SE]\.[0-9]+$/.test(n)) return;
     if (n === 'applyHow') return;
     if (el.type === 'radio') { if (el.checked) d[n] = el.value; return; }
     d[n] = el.value;
   });
   d.applyHow = $$('input[name=applyHow]', f).filter(x => x.checked).map(x => x.value);
+  const rows = $$('input[name^="dS."]', f);
+  if (rows.length) d.dates = rows.map(x => { const i = x.name.slice(3), e = $(`input[name="dE.${i}"]`, f); return { s: x.value, e: e ? e.value : '' }; });
+  const rg = (d.dates || []).filter(x => x.s || x.e).map(x => ({ s: x.s || x.e, e: x.e || x.s })).sort((a, b) => (a.s < b.s ? -1 : 1));
+  d.startDate = rg.length ? rg[0].s : ''; d.endDate = rg.reduce((m, x) => (x.e > m ? x.e : m), '');
+  delete d.ceHours; delete d.applyBy;
 }
 function trCostTotal(d) { return ['costReg', 'costStay', 'costTravel', 'costAllow', 'costOther'].reduce((s, k) => s + (Number(String(d[k] || '').replace(/[,\s]/g, '')) || 0), 0); }
 function trRefresh() {
   const f = $('#trForm'); if (!f) return;
   trRead();
-  const d = S.tr.data, days = trDays(d.startDate, d.endDate), t = trCostTotal(d);
-  const o1 = $('[data-out=trDays]', f); if (o1) o1.textContent = days ? days + ' วัน' : '-';
+  const d = S.tr.data, cnt = trCountDays(trRanges(d)), t = trCostTotal(d);
+  const o1 = $('[data-out=trDays]', f); if (o1) o1.textContent = cnt ? 'นับจากช่วงวันที่ได้ ' + cnt + ' วัน' : '';
+  const sc = $('[data-show=cost]', f); if (sc) sc.classList.toggle('hidden', d.fund !== 'hosp');
   const o2 = $('[data-out=trTotal]', f); if (o2) o2.textContent = t ? t.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-';
   const sf = $('[data-show=fund]', f); if (sf) sf.classList.toggle('hidden', d.fund !== 'other');
   const sa = $('[data-show=applyHow]', f); if (sa) sa.classList.toggle('hidden', (d.applyHow || []).indexOf('other') < 0);
@@ -4538,11 +4563,14 @@ function trRefresh() {
 }
 function trMissing() {
   const d = S.tr.data, miss = [];
-  const R = { fullName: 'ชื่อ-สกุล', kind: 'ประเภท', title: 'เรื่อง / หลักสูตร', organizer: 'หน่วยงานผู้จัด', place: 'สถานที่', startDate: 'วันที่เริ่ม', endDate: 'วันที่สิ้นสุด',
+  const R = { fullName: 'ชื่อ-สกุล', kind: 'ประเภท', title: 'เรื่อง / หลักสูตร', organizer: 'หน่วยงานผู้จัด', place: 'สถานที่', days: 'จำนวนวันรวม',
     objective: 'วัตถุประสงค์', knowledge: 'สาระสำคัญ / ความรู้ที่ได้รับ', benefitOrg: 'ประโยชน์ต่อหน่วยงาน', applyDetail: 'รายละเอียดการนำไปใช้ / ขยายผล' };
   $$('#trForm .req-field-err').forEach(e => e.classList.remove('req-field-err'));
   Object.keys(R).forEach(k => { if (!String(d[k] || '').trim()) { miss.push(R[k]); const el = $(`#trForm [name="${k}"]`); if (el && el.type !== 'radio') el.classList.add('req-field-err'); } });
-  if (d.startDate && d.endDate && d.endDate < d.startDate) { miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม'); const el = $('#trForm [name=endDate]'); if (el) el.classList.add('req-field-err'); }
+  const rg = trRanges(d).filter(x => x.s || x.e);
+  if (!rg.length) { miss.push('วันที่เข้าร่วม'); const el = $('#trForm [name="dS.0"]'); if (el) el.classList.add('req-field-err'); }
+  trRanges(d).forEach((x, i) => { if (x.s && x.e && x.e < x.s) { miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม (ช่วงที่ ' + (i + 1) + ')'); const el = $(`#trForm [name="dE.${i}"]`); if (el) el.classList.add('req-field-err'); } });
+  if (d.days && !/^[0-9]{1,3}(\.[0-9])?$/.test(String(d.days).trim())) { miss.push('จำนวนวันรวมต้องเป็นตัวเลข'); const el = $('#trForm [name=days]'); if (el) el.classList.add('req-field-err'); }
   return miss;
 }
 function trPayload() { return { id: S.tr.id || undefined, data: S.tr.data, photos: S.tr.photos.map(p => ({ fileId: p.fileId, caption: p.caption || '' })) }; }
@@ -4550,7 +4578,7 @@ function trPayload() { return { id: S.tr.id || undefined, data: S.tr.data, photo
 async function trSave(silent) {
   trRead();
   const d = S.tr.data;
-  if (d.startDate && d.endDate && d.endDate < d.startDate) { toast('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', 'err'); return null; }
+  if (trRanges(d).some(x => x.s && x.e && x.e < x.s)) { toast('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', 'err'); return null; }
   loader(true);
   try {
     const rep = await api('saveTrainReport', S.token, trPayload());
@@ -4619,7 +4647,7 @@ async function trFrom008() {
       if (!r) return;
       trRead();
       const d = S.tr.data;
-      d.title = r.subject || d.title; d.place = r.place || d.place; d.startDate = r.startDate || d.startDate; d.endDate = r.endDate || r.startDate || d.endDate; d.fromReq = r.id;
+      d.title = r.subject || d.title; d.place = r.place || d.place; if (r.startDate) d.dates = [{ s: r.startDate, e: r.endDate || r.startDate }]; d.fromReq = r.id;
       render(); setTimeout(trRefresh, 0);
       toast('ดึงข้อมูลแล้ว กรุณาตรวจและแก้ไขให้ถูกต้อง');
     }
@@ -4653,6 +4681,7 @@ async function trLookup(pre) {
     if (r.found) {
       $('#f_' + pre + 'Name').value = r.fullName || '';
       if (!$('#f_' + pre + 'Pos').value) $('#f_' + pre + 'Pos').value = r.position || '';
+      if (pre === 'sup' || pre === 'up' || pre === 'hrh') trToAuto($('#f_' + pre + 'Pos').value || r.fullName);
       if (msg) msg.textContent = r.hasAccount ? 'พบในระบบ HRD Center — ระบบแจ้งเตือนทางอีเมล (ถ้ามี) และแสดงในงานของท่านผู้นี้' : 'พบใน HR Connect — ท่านผู้นี้จะเห็นรายงานเมื่อเข้าสู่ระบบ HRD Center';
     } else if (msg) msg.textContent = 'ยังไม่พบในระบบ (ยังไม่เคยเข้า HRD Center) — พิมพ์ชื่อและตำแหน่งเองได้ ท่านผู้นี้จะเห็นรายงานเมื่อเข้าสู่ระบบด้วย HR Connect';
   } catch (e) { if (msg) msg.textContent = 'ค้นหาไม่ได้: ' + e.message + ' — พิมพ์ชื่อเองได้'; }
@@ -4664,20 +4693,20 @@ async function trSubmit() {
   if (!(await trSave(true))) return;
   const rep = S.tr.rep, prev = (rep.chain || []).filter(s => s.role === 'sup');
   openModal({
-    title: 'ลงนามและเรียนผู้บังคับบัญชา', icon: 'send', okText: 'ลงนามและส่ง', size: 'sm',
-    body: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--teal-50);border-color:#bfe6e6"><b>${esc(rep.title)}</b><div class="small muted">${esc(TR_KIND[rep.data.kind] || '')} · ${esc(trRange(rep.startDate, rep.endDate))} · รูป ${rep.photos.length} รูป</div></div>
+    title: 'ลงนามและเรียนผู้บังคับบัญชา', icon: 'send', okText: 'ลงนามและส่ง', size: 'wide',
+    body: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--teal-50);border-color:#bfe6e6"><b>${esc(rep.title)}</b><div class="small muted">${esc(TR_KIND_ALL[rep.data.kind] || '')} · ${esc(trRange(rep.startDate, rep.endDate))} · รูป ${rep.photos.length} รูป</div></div>
       ${prev.length ? `<div class="small" style="margin-bottom:8px">ผู้บังคับบัญชาเดิม: ${prev.map((s, i) => `<button type="button" class="btn btn-light btn-sm" data-trpick="${i}">${esc(s.name)}</button>`).join(' ')}</div>` : ''}
-      <form id="mForm" onsubmit="return false">${trPersonHtml('sup', prev[0] || {}, 'เรียน ผู้บังคับบัญชาตามสายงาน (คนแรก)')}
+      <form id="mForm" onsubmit="return false">${trPersonHtml('sup', prev[0] || {}, 'ผู้บังคับบัญชาตามสายงาน (คนแรก)')}${trToHtml((prev[0] || {}).pos, 'ข้อความ "เรียน" ในกล่องลงนามของท่าน · เติมจากตำแหน่งผู้บังคับบัญชา แก้ไขได้')}
         <p class="small muted">หลังผู้บังคับบัญชาลงนาม ท่านผู้นั้นเรียนผู้บังคับบัญชาที่สูงขึ้นต่อได้ หรือส่งถึงฝ่ายทรัพยากรบุคคลเมื่อครบตามสายงาน</p>
         <label class="check-field" for="f_trAck" style="margin:10px 0 12px"><input type="checkbox" id="f_trAck" required><span><b>ข้าพเจ้าขอรับรองว่าข้อมูลในรายงานนี้เป็นความจริง</b><small class="hint">เมื่อส่งแล้วแก้ไขไม่ได้ จนกว่าจะดึงกลับ (ก่อนผู้บังคับบัญชาลงนาม) หรือถูกส่งกลับ</small></span></label>
         ${fieldHtml({ k: 'trPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => {
-      $$('[data-trpick]').forEach(b => b.addEventListener('click', () => { const s = prev[Number(b.dataset.trpick)]; $('#f_supEmp').value = s.emp; $('#f_supName').value = s.name; $('#f_supPos').value = s.pos || ''; }));
+      $$('[data-trpick]').forEach(b => b.addEventListener('click', () => { const s = prev[Number(b.dataset.trpick)]; $('#f_supEmp').value = s.emp; $('#f_supName').value = s.name; $('#f_supPos').value = s.pos || ''; trToAuto(s.pos || s.name); }));
       trPwEnter();
     },
     validate: () => { if (!trPersonCheck('sup', 'ผู้บังคับบัญชา')) return false; if (!$('#f_trAck').checked) { toast('กรุณาติ๊กรับรองความถูกต้องของรายงาน', 'err'); return false; } },
     onOk: async () => {
-      const r = await api('submitTrainReport', S.token, S.tr.id, { sup: trPersonRead('sup'), password: $('#f_trPw').value, ack: true });
+      const r = await api('submitTrainReport', S.token, S.tr.id, { sup: trPersonRead('sup'), to: trToVal(), password: $('#f_trPw').value, ack: true });
       trAfter(r); toast('ส่งเรียน ' + r.cur.name + ' แล้ว');
     }
   });
@@ -4699,15 +4728,15 @@ async function trOpen(id) {
 function trTxt(v) { const s = String(v || '').trim(); return s ? esc(s).replace(/\n/g, '<br>') : '<span class="muted">-</span>'; }
 function trViewHtml() {
   const r = S.tr.rep, d = r.data || {}, c = r.can || {}, chain = r.chain || [];
-  const days = trDays(d.startDate, d.endDate), total = trCostTotal(d);
+  const total = trCostTotal(d);
   const row = (k, v) => `<div class="tr-kv"><span>${esc(k)}</span><div>${v}</div></div>`;
   let nSup = 0;
   const steps = chain.map(s => {
-    const lab = s.role === 'sup' ? 'ผู้บังคับบัญชาลำดับที่ ' + (++nSup) : TR_ROLEL[s.role];
+    const lab = s.role === 'sup' ? 'ผู้บังคับบัญชาลำดับที่ ' + (++nSup) : s.role === 'exec' ? 'ผู้บริหาร (ลงนามคนสุดท้าย)' : TR_ROLEL[s.role];
     const g = s.sign, cur = !g && r.cur && s.name === r.cur.name;
     return `<div class="tr-step ${g ? 'ok' : cur ? 'cur' : ''}"><div class="tr-dot"><span class="msr">${g ? 'check' : cur ? 'hourglass_top' : 'more_horiz'}</span></div>
       <div><b>${esc(lab)}</b> · ${esc(g ? g.name : s.name)}<small>${esc(s.pos || '')}</small>
-      ${g ? `<small>ลงนามอิเล็กทรอนิกส์ ${esc(fmtDate(g.at, true))}</small>${s.role !== 'rep' ? `<div class="tr-cm">${trTxt(g.comment)}</div>` : ''}` : `<small>${cur ? 'รอลงนาม' : 'ยังไม่ถึงขั้น'}</small>`}</div></div>`;
+      ${g ? `<small>ลงนามอิเล็กทรอนิกส์ ${esc(fmtDate(g.at, true))}</small>${g.to ? `<small>เรียน ${esc(g.to)}</small>` : ''}${s.role !== 'rep' ? `<div class="tr-cm">${trTxt(g.comment)}</div>` : ''}` : `<small>${cur ? 'รอลงนาม' : 'ยังไม่ถึงขั้น'}</small>`}</div></div>`;
   }).join('') + (r.status === 'hr' ? `<div class="tr-step cur"><div class="tr-dot"><span class="msr">hourglass_top</span></div><div><b>${TR_ROLEL.hro}</b><small>รอรับเรื่อง</small></div></div>` : '');
   const acts = [];
   acts.push(`<button class="btn btn-light" data-action="trBack"><span class="msr">arrow_back</span>กลับ</button>`);
@@ -4718,7 +4747,7 @@ function trViewHtml() {
   if (c.backup) acts.push(`<button class="btn btn-light" data-action="trBackup" title="สร้าง PDF และไฟล์ข้อมูลในโฟลเดอร์สำรองใหม่"><span class="msr">cloud_upload</span>${r.hasPdf ? 'สร้างไฟล์สำรองใหม่' : 'สำรองลง Drive'}</button>`);
   if (c.del) acts.push(`<button class="btn btn-light danger" data-action="trDel"><span class="msr">delete</span>ลบ</button>`);
   return `<div class="pf-ed-head" style="${cvar('teal')}"><div class="doc-ic"><span class="msr">assignment_turned_in</span></div><div><b>${esc(r.title)}</b>
-      <small>${esc(TR_KIND[d.kind] || '')} · ${esc(trRange(d.startDate, d.endDate))}${days ? ' (' + days + ' วัน)' : ''} · ${esc(r.fullName)}${r.hrNo ? ' · เลขที่รับ ' + esc(r.hrNo) : ''}</small><div style="margin-top:6px">${trBadge(r.status)}</div></div></div>
+      <small>${esc(TR_KIND_ALL[d.kind] || '')} · ${esc(trRangesShort(d))}${d.days ? ' (' + esc(d.days) + ' วัน)' : ''} · ${esc(r.fullName)}${r.hrNo ? ' · เลขที่รับ ' + esc(r.hrNo) : ''}</small><div style="margin-top:6px">${trBadge(r.status)}</div></div></div>
     ${r.status === 'returned' ? `<div class="pf-warn"><span class="msr">undo</span><span><b>ส่งกลับให้แก้ไข:</b> ${esc(r.returnNote || '')}</span></div>` : ''}
     ${r.status === 'done' && isAdmin() && !r.hasPdf ? `<div class="pf-warn"><span class="msr">cloud_off</span><span>ยังไม่มีไฟล์ PDF สำรองใน Google Drive กด "สำรองลง Drive"</span></div>` : ''}
     <div class="tr-btns tr-top">${acts.join('')}</div>
@@ -4728,13 +4757,14 @@ function trViewHtml() {
         ${pfSec('badge', 'ข้อมูลผู้รายงาน', row('ชื่อ-สกุล', esc(d.fullName)) + row('ตำแหน่ง', esc([d.position, d.level ? 'ระดับ ' + d.level : ''].filter(Boolean).join(' ')) || '-') +
           row('งาน / ฝ่าย', esc([d.unit, d.department].filter(Boolean).join(' · ')) || '-') + (d.companions ? row('ผู้ร่วมเดินทาง', esc(d.companions)) : ''))}
         ${pfSec('event_note', 'ข้อมูลการเข้าร่วม', row('ตามคำสั่ง รพ.', d.orderNo ? 'ที่ ' + esc(d.orderNo) + (d.orderDate ? ' ลงวันที่ ' + esc(thDateLong(d.orderDate)) : '') : '-') +
-          row('ประเภท', esc(TR_KIND[d.kind] || '-')) + row('เรื่อง / หลักสูตร', esc(d.title)) + row('จัดโดย', esc(d.organizer)) + row('สถานที่', esc([d.place, d.province].filter(Boolean).join(' จังหวัด'))) +
-          row('วันที่', esc(trRange(d.startDate, d.endDate)) + (days ? ' (' + days + ' วัน)' : '')) + (d.ceHours ? row('ชั่วโมง / คะแนน', esc(d.ceHours)) : '') +
-          row('ค่าใช้จ่ายรวม', total ? total.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' บาท' : '-') + row('แหล่งงบประมาณ', esc((TR_FUND[d.fund] || '-') + (d.fund === 'other' && d.fundOther ? ' (' + d.fundOther + ')' : ''))))}
+          row('ประเภท', esc(TR_KIND_ALL[d.kind] || '-')) + row('เรื่อง / หลักสูตร', esc(d.title)) + row('จัดโดย', esc(d.organizer)) + row('สถานที่', esc([d.place, d.province].filter(Boolean).join(' จังหวัด'))) +
+          row('ระหว่างวันที่', esc(trRangesShort(d)) + (d.days ? ' รวม ' + esc(d.days) + ' วัน' : '')) +
+          row('แหล่งงบประมาณ', esc((TR_FUND[d.fund] || '-') + (d.fund === 'other' && d.fundOther ? ' (' + d.fundOther + ')' : ''))) +
+          (d.fund === 'hosp' ? row('ค่าใช้จ่ายรวม', total ? total.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' บาท' : '-') : ''))}
         ${pfSec('menu_book', 'สาระสำคัญ', `<h4 class="tr-h">วัตถุประสงค์</h4><p>${trTxt(d.objective)}</p><h4 class="tr-h">สาระสำคัญ / ความรู้ที่ได้รับ</h4><p>${trTxt(d.knowledge)}</p>
           <h4 class="tr-h">ประโยชน์ต่อตนเอง</h4><p>${trTxt(d.benefitSelf)}</p><h4 class="tr-h">ประโยชน์ต่อหน่วยงาน / โรงพยาบาล</h4><p>${trTxt(d.benefitOrg)}</p>
           <h4 class="tr-h">การนำไปใช้ / ขยายผล</h4><p>${(d.applyHow || []).map(k => '✓ ' + esc(TR_APPLY[k] + (k === 'other' && d.applyOther ? ' (' + d.applyOther + ')' : ''))).join('<br>')}</p><p>${trTxt(d.applyDetail)}</p>
-          ${d.applyBy ? `<p class="small muted">ดำเนินการภายใน ${esc(thDateLong(d.applyBy))}</p>` : ''}<h4 class="tr-h">ปัญหา อุปสรรค และข้อเสนอแนะ</h4><p>${trTxt(d.problems)}</p>`)}
+<h4 class="tr-h">ปัญหา อุปสรรค และข้อเสนอแนะ</h4><p>${trTxt(d.problems)}</p>`)}
         ${(r.photos || []).length ? pfSec('photo_library', 'ภาพประกอบ (' + r.photos.length + ' รูป)', `<div class="tr-photos">${r.photos.map((p, i) => `<button type="button" class="tr-ph tr-ph-v" data-action="trPhView" data-f="${esc(p.fileId)}">
             <div class="tr-ph-img">${p.thumb ? `<img src="${esc(p.thumb)}" alt="">` : '<span class="msr">image</span>'}<span class="tr-ph-n">ภาพที่ ${i + 1}</span></div><small>${esc(p.caption || '')}</small></button>`).join('')}</div>`) : ''}
       </div>
@@ -4742,13 +4772,21 @@ function trViewHtml() {
         ${r.docHash ? `<p class="small muted">รหัสยืนยันเอกสาร ${esc(r.docHash)}</p>` : ''}</div>
     </div>`;
 }
+/** ช่อง "เรียน …" — เติมจากตำแหน่งผู้รับคนถัดไปจนกว่าผู้ใช้จะพิมพ์เอง */
+function trToHtml(v, hint) {
+  return `<label class="field tr-to"><span>เรียน</span><input class="input" id="trTo" value="${esc(v || '')}" maxlength="150" data-auto="1" placeholder="เช่น หัวหน้าฝ่ายการพยาบาล">
+    <small class="hint">${esc(hint || 'ระบบเติมตำแหน่งของผู้รับให้ แก้ไขได้')}</small></label>`;
+}
+function trToAuto(v) { const i = $('#trTo'); if (i && i.dataset.auto === '1') i.value = v || ''; }
+function trToVal() { const i = $('#trTo'); return i ? i.value.trim() : ''; }
 function trQuickHtml(id) { return `<div class="tr-quick">${TR_QUICK.map(q => `<button type="button" class="btn btn-light btn-sm" data-trq="${esc(id)}" data-v="${esc(q)}">${esc(q)}</button>`).join('')}</div>`; }
 function trSignHtml(r) {
   const step = (r.chain || []).find(s => !s.sign) || {};
   const isSup = step.role === 'sup';
   return `<div class="card req-sec tr-act"><div class="card-h"><h3><span class="msr">draw</span>ลงความเห็นและลงนาม (${esc(isSup ? 'ผู้บังคับบัญชาตามสายงาน' : TR_ROLEL[step.role] || '')})</h3></div><div class="card-b">
     <p class="small muted" style="margin-top:0">กรุณาอ่านรายงานด้านล่างก่อนลงนาม · ความเห็นว่าง ระบบบันทึกว่า "ทราบ"</p>
-    <label class="field"><span>ความเห็น</span><textarea class="input" id="trCm" rows="3" maxlength="500" placeholder="เช่น ทราบ และให้นำไปขยายผลในหน่วยงาน"></textarea></label>${trQuickHtml('trCm')}
+    ${step.role === 'exec' ? '' : trToHtml(isSup ? '' : ((r.chain || [])[(r.chain || []).indexOf(step) + 1] || {}).pos, isSup ? 'เติมจากผู้รับที่เลือกด้านล่าง (ส่งถึง HR = "ฝ่ายทรัพยากรบุคคล") แก้ไขได้' : '')}
+    <label class="field"><span>${step.role === 'exec' ? 'ความคิดเห็นผู้บริหาร' : 'ความเห็น'}</span><textarea class="input" id="trCm" rows="3" maxlength="500" placeholder="เช่น ทราบ และให้นำไปขยายผลในหน่วยงาน"></textarea></label>${trQuickHtml('trCm')}
     ${isSup ? `<div class="field" style="margin-top:14px"><span>หลังลงนาม</span><div class="seg">
         <label><input type="radio" name="trNext" value="up" checked><span>เรียนผู้บังคับบัญชาที่สูงขึ้นตามสายงาน</span></label>
         <label><input type="radio" name="trNext" value="hr"><span>ส่งถึงฝ่ายทรัพยากรบุคคล</span></label></div>
@@ -4761,6 +4799,7 @@ function trReceiveHtml(r) {
   const cfg = S.trCfg || { hrh: {}, exec: {} };
   return `<div class="card req-sec tr-act"><div class="card-h"><h3><span class="msr">move_to_inbox</span>รับเรื่อง (เจ้าหน้าที่ฝ่ายทรัพยากรบุคคล)</h3></div><div class="card-b">
     <p class="small muted" style="margin-top:0">ตรวจรายงานแล้วลงข้อเสนอแนะ ลงนาม และเรียนหัวหน้าฝ่ายทรัพยากรบุคคลและผู้บริหารสูงสุดตามลำดับ · ระบบออกเลขที่รับให้อัตโนมัติ</p>
+    ${trToHtml(cfg.hrh && cfg.hrh.pos, 'เติมจากตำแหน่งหัวหน้าฝ่ายทรัพยากรบุคคลด้านล่าง แก้ไขได้')}
     <label class="field"><span>ข้อเสนอแนะของเจ้าหน้าที่</span><textarea class="input" id="trHrCm" rows="3" maxlength="500" placeholder="เช่น ได้ตรวจสอบรายงานแล้ว เห็นควรเรียนเพื่อโปรดทราบ"></textarea></label>${trQuickHtml('trHrCm')}
     <div class="tr-two">${trPersonHtml('hrh', cfg.hrh, 'เรียน หัวหน้าฝ่ายทรัพยากรบุคคล')}${trPersonHtml('exec', cfg.exec, 'เรียน ผู้บริหารสูงสุด (ลงนามคนสุดท้าย)')}</div>
     <div class="tr-btns"><button class="btn btn-light" data-action="trReturn"><span class="msr">undo</span>ส่งกลับแก้ไข</button>
@@ -4768,7 +4807,7 @@ function trReceiveHtml(r) {
 }
 function trSignModal(title, info, run) {
   openModal({
-    title, icon: 'draw', okText: 'ลงนาม', size: 'sm',
+    title, icon: 'draw', okText: 'ลงนาม', size: 'wide',
     body: `<div class="card" style="padding:12px 14px;margin-bottom:12px;background:var(--teal-50);border-color:#bfe6e6"><b>${esc(S.tr.rep.title)}</b><div class="small muted">ผู้รายงาน ${esc(S.tr.rep.fullName)}<br>${info}<br>รหัสยืนยันเอกสาร ${esc(S.tr.rep.docHash || '-')}</div></div>
       <form id="mForm" onsubmit="return false"><label class="check-field" for="f_trAck2" style="margin-bottom:12px"><input type="checkbox" id="f_trAck2" required>
         <span><b>ข้าพเจ้าได้อ่านรายงานนี้แล้ว</b><small class="hint">การใส่รหัสผ่านถือเป็นการลงลายมือชื่ออิเล็กทรอนิกส์ของข้าพเจ้า</small></span></label>
@@ -4788,7 +4827,9 @@ function trSign() {
     if (mode === 'hr') { next = 'hr'; info += '<br>แล้ว <b>ส่งถึงฝ่ายทรัพยากรบุคคล</b>'; }
     else { next = trPersonCheck('up', 'ผู้บังคับบัญชาที่สูงขึ้นไป'); if (!next) return; info += '<br>แล้วเรียน <b>' + esc(next.name) + '</b>'; }
   } else if (step.role === 'exec') info += '<br><b>ท่านเป็นผู้ลงนามคนสุดท้าย</b> — รายงานจะเสร็จสิ้นและสำรองลง Drive';
-  trSignModal('ลงความเห็นและลงนาม', info, pw => api('signTrainReport', S.token, r.id, { comment, next, password: pw, ack: true }).then(rep => {
+  const to = trToVal();
+  if (to) info = 'เรียน ' + esc(to) + '<br>' + info;
+  trSignModal('ลงความเห็นและลงนาม', info, pw => api('signTrainReport', S.token, r.id, { comment, next, to, password: pw, ack: true }).then(rep => {
     toast(rep.status === 'done' ? 'ลงนามแล้ว — รายงานเสร็จสิ้น' : next === 'hr' ? 'ลงนามและส่งถึงฝ่ายทรัพยากรบุคคลแล้ว' : next ? 'ลงนามและเรียน ' + next.name + ' แล้ว' : 'ลงนามแล้ว'); return rep; }));
 }
 function trReceive() {
@@ -4796,12 +4837,12 @@ function trReceive() {
   const hrh = trPersonCheck('hrh', 'หัวหน้าฝ่ายทรัพยากรบุคคล'); if (!hrh) return;
   const ex = trPersonCheck('exec', 'ผู้บริหารสูงสุด'); if (!ex) return;
   trSignModal('รับเรื่อง ลงนาม และเรียนต่อ', 'เรียน <b>' + esc(hrh.name) + '</b> → <b>' + esc(ex.name) + '</b>',
-    pw => api('receiveTrainReport', S.token, r.id, { comment, hrh, exec: ex, password: pw, ack: true }).then(rep => { toast('รับเรื่องแล้ว เลขที่รับ ' + rep.hrNo); return rep; }));
+    pw => api('receiveTrainReport', S.token, r.id, { comment, hrh, exec: ex, to: trToVal(), password: pw, ack: true }).then(rep => { toast('รับเรื่องแล้ว เลขที่รับ ' + rep.hrNo); return rep; }));
 }
 function trReturn() {
   const r = S.tr.rep;
   openModal({
-    title: 'ส่งกลับให้ผู้รายงานแก้ไข', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn',
+    title: 'ส่งกลับให้ผู้รายงานแก้ไข', icon: 'undo', okText: 'ส่งกลับแก้ไข', okClass: 'btn-warn', size: 'wide',
     body: `<p class="small" style="color:var(--text-2);margin-top:0">รายงานของ <b>${esc(r.fullName)}</b> จะกลับไปเป็น "ส่งกลับแก้ไข" ลายมือชื่อที่ลงไว้แล้วทั้งหมดถูกยกเลิก เมื่อแก้ไขแล้วผู้รายงานต้องส่งลงนามใหม่ · ระบบแจ้งผู้รายงานทางอีเมล (ถ้ามี)</p>
       <form id="mForm" onsubmit="return false">${fieldHtml({ k: 'trWhy', label: 'เหตุผล / สิ่งที่ต้องการให้แก้ไข', type: 'textarea', req: true, ph: 'เช่น ขอให้เพิ่มรายละเอียดการนำไปขยายผล' }, '')}</form>`,
     validate: () => { if (String($('#f_trWhy').value).trim().length < 5) { toast('กรุณาระบุเหตุผลให้ชัดเจน', 'err'); return false; } },
@@ -4819,11 +4860,13 @@ async function trPrint(id, auto) {
       '.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;background:#0b2545;color:#fff;padding:8px 14px;font:14px Tahoma,sans-serif}' +
       '.bar span{flex:1}.bar button{font:14px Tahoma,sans-serif;padding:6px 14px;border-radius:6px;border:0;cursor:pointer}.bar .pr{background:#14b8a6;color:#fff}' +
       '@media screen{body{background:#e5e7eb}.doc{background:#fff;max-width:210mm;margin:16px auto;padding:18mm 18mm 16mm 22mm;box-shadow:0 2px 12px rgba(0,0,0,.15)}}' +
-      '@media print{.bar{display:none}}</style></head><body>' +
+      '@media print{.bar{display:none}}.hd h1 .t1{white-space:nowrap}</style></head><body>' +
       '<div class="bar"><span>' + (doc.done ? 'รายงานผลการพัฒนา · ลงนามครบแล้ว' : 'ตัวอย่างเอกสาร (ยังลงนามไม่ครบ)') + ' · กระดาษ A4 · ขนาด 100% (ปิด "ส่วนหัวและส่วนท้าย")</span>' +
       '<button class="pr" onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="window.close()">ปิด</button></div>' + doc.body +
       '<' + SC + '>(function(){var auto=' + (auto ? 'true' : 'false') + ',done=false;function fin(){if(done)return;done=true;' +
-      'var q=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();q.then(function(){if(auto)setTimeout(function(){window.print()},400)})}' +
+      'var q=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();q.then(function(){fit();if(auto)setTimeout(function(){window.print()},400)})}' +
+      'function fit(){var h=document.querySelector(".hd h1");if(!h)return;var w=h.clientWidth,s=16;h.style.fontSize=s+"pt";' +
+      'while(s>11&&Array.prototype.some.call(h.querySelectorAll(".t1"),function(x){return x.scrollWidth>w+1})){s-=0.5;h.style.fontSize=s+"pt"}}' +
       'var l=document.createElement("link");l.rel="stylesheet";l.href="' + fontUrl + '";l.onload=fin;l.onerror=fin;document.head.appendChild(l);setTimeout(fin,3500)})();</' + SC + '></body></html>';
     if (w && !w.closed) { w.document.open(); w.document.write(html); w.document.close(); w.focus(); return; }
     toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้', 'err');
@@ -4864,6 +4907,8 @@ async function trAction(a, d, el) {
     case 'trEdit': return trEditOpen(r);
     case 'trEditSubmit': trEditOpen(r); return setTimeout(trSubmit, 0);
     case 'trFrom008': return trFrom008();
+    case 'trDateAdd': { trRead(); const rg = trRanges(S.tr.data); if (!rg.length) rg.push({ s: '', e: '' }); if (rg.length >= TR_MAXRG) return; rg.push({ s: '', e: '' }); S.tr.data.dates = rg; render(); setTimeout(trRefresh, 0); return; }
+    case 'trDateDel': { trRead(); const rg = trRanges(S.tr.data); rg.splice(Number(d.i), 1); S.tr.data.dates = rg; render(); setTimeout(trRefresh, 0); return; }
     case 'trPhDel': { trRead(); const i = Number(d.i); if (!(await ask({ tone: 'danger', icon: 'delete', title: 'นำรูปที่ ' + (i + 1) + ' ออก?', message: 'รูปจะถูกลบเมื่อกด "บันทึกร่าง" หรือส่งลงนาม', okText: 'นำออก' }))) return;
       S.tr.photos.splice(i, 1); render(); return; }
     case 'trPhUp': { trRead(); const i = Number(d.i), p = S.tr.photos; [p[i - 1], p[i]] = [p[i], p[i - 1]]; render(); return; }
@@ -4890,6 +4935,8 @@ document.addEventListener('input', e => {
   if (e.target.id === 'trQ') { S.tr.q = e.target.value; clearTimeout(S.tr.qt); S.tr.qt = setTimeout(() => { render(); const i = $('#trQ'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); return; }
   if (e.target.closest && e.target.closest('#trForm')) trRefresh();
   if (/^f_(sup|up|hrh|exec)Emp$/.test(e.target.id || '')) { const v = e.target.value.replace(/\D/g, ''); if (v !== e.target.value) e.target.value = v; }
+  if (e.target.id === 'trTo') e.target.dataset.auto = e.target.value ? '0' : '1';
+  if (/^f_(sup|up|hrh)(Pos|Name)$/.test(e.target.id || '')) { const pre = e.target.id.replace(/^f_|(Pos|Name)$/g, ''); trToAuto(($('#f_' + pre + 'Pos') || {}).value || ($('#f_' + pre + 'Name') || {}).value); }
 });
 document.addEventListener('change', e => {
   const n = e.target.name || e.target.id;
@@ -4897,7 +4944,8 @@ document.addEventListener('change', e => {
   if (e.target.id === 'trSt') { S.tr.st = e.target.value; return render(); }
   if (e.target.id === 'trFy') { S.tr.fy = e.target.value; return render(); }
   if (e.target.id === 'trPhFile') { const fs = e.target.files; trAddPhotos(fs); e.target.value = ''; return; }
-  if (n === 'trNext') { const b = $('#trUpBox'); if (b) b.classList.toggle('hidden', e.target.value === 'hr'); return; }
+  if (n === 'trNext') { const b = $('#trUpBox'); if (b) b.classList.toggle('hidden', e.target.value === 'hr');
+    trToAuto(e.target.value === 'hr' ? 'ฝ่ายทรัพยากรบุคคล' : (($('#f_upPos') || {}).value || ($('#f_upName') || {}).value || '')); return; }
   if (e.target.closest && e.target.closest('#trForm')) trRefresh();
 });
 document.addEventListener('click', e => {
