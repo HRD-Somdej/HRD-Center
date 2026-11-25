@@ -823,6 +823,10 @@ input.input[readonly].hrc-lock{background:#f4f7fb;color:#334155;cursor:not-allow
 .tr-cm{margin-top:4px;padding:6px 10px;background:#f8fafc;border-left:3px solid var(--teal);border-radius:6px;font-size:14px}
 .tr-act{border:2px solid var(--teal)}.tr-ph-warn{margin:10px 0 0;color:#b45309}.tr-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:14px}.tr-btns.tr-top{justify-content:flex-start;margin:0 0 16px}.tr-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .tr-person{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}.tr-person-h{font-weight:600;color:#0b2545;margin-bottom:6px}
+.tr-link{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}@media (max-width:700px){.tr-link{grid-template-columns:1fr auto}.tr-link [name^="lU."]{grid-column:1}}
+.tr-files{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}.tr-file{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;text-align:left;font:inherit;color:inherit;text-decoration:none;cursor:pointer}
+.tr-file>.msr:first-child{color:#c62828}.tr-file:hover{border-color:var(--teal-500,#14b8a6)}.tr-file .grow{flex:1;min-width:0;word-break:break-word}
+.tr-mail{display:block;font-size:12px;margin-top:2px}.tr-mail.ok{color:#0a7d55}.tr-mail.no{color:#b45309}
 .tr-emp{display:flex;gap:6px}.tr-emp .input{flex:1}.tr-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:900px){.tr-two{grid-template-columns:1fr}}
 tr.tr-todo td{background:#fffbeb}.tr-todo-t{color:#b45309;font-weight:600}
 .pf-warn{display:flex;gap:8px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:10px;background:#fff4e0;color:#92400e;border:1px solid #f6dfb5;font-size:13.5px}
@@ -1114,8 +1118,8 @@ const APP_INFO = {
   TITLE: 'ศูนย์รวมระบบงานพัฒนาบุคลากร',
   ORG: 'โรงพยาบาลสมเด็จพระบรมราชเทวี ณ ศรีราชา',
   DEPT: 'งานพัฒนาบุคลากร ฝ่ายทรัพยากรบุคคล',
-  VERSION: '4.13.1',
-  BUILD: '2569-11-25.2'   // ต้องตรงกับ APP.BUILD ใน Code.gs
+  VERSION: '4.13.2',
+  BUILD: '2569-11-25.3'   // ต้องตรงกับ APP.BUILD ใน Code.gs
 };
 const HRC_WEB_DEFAULT = 'https://hr-somdej.github.io/hr-connect/';
 /** หน้าที่เปิดตรงได้จากลิงก์ ?page=… (เช่น เมนูย่อยในแอป HR Connect) */
@@ -1662,6 +1666,7 @@ function canSee(page) {
   if (p.staff) return !isAdmin() && isStaff();
   if (isAdmin()) return (!p.userOnly || !!S.me) && (!p.su || S.user.role === 'superadmin');
   if (page === 'pip' && !(S.pip && S.pip.count)) return false;
+  if (page === 'trreport' && S.trSum && S.trSum.signOnly) return S.trSum.count > 0;   // ถูกจำกัดเมนู แต่มีรายงานรอ/เคยลงนาม (build 2569-11-25.3)
   return !p.admin && !p.su && (S.settings.modules || {})[p.mod] !== false;
 }
 function firstPage() { return Object.keys(PAGES).concat(S.menus.map(m => 'm:' + m.id)).find(canSee) || ''; }
@@ -2232,7 +2237,7 @@ function applyBoot(d) {
   S.me = d.me || null;
   S.navCfg = d.navCfg || {};
   S.pfCfg = d.pfCfg || null;
-  S.trSum = d.trSum || { todo: 0, draft: 0, count: 0 };
+  S.trSum = d.trSum || { todo: 0, draft: 0, count: 0 }; S.trCanWrite = !S.trSum.signOnly;
   applyNavLabels();
   bootSave(d);
 }
@@ -4368,13 +4373,13 @@ S.trs = []; S.trCfg = null; S.trSum = { todo: 0, draft: 0, count: 0 };
 
 async function loadTr() {
   const r = await api('listTrainReports', S.token);
-  S.trs = r.list || []; S.trCfg = r.cfg || null; S.trMyEmp = r.myEmp || '';
+  S.trs = r.list || []; S.trCfg = r.cfg || null; S.trMyEmp = r.myEmp || ''; S.trCanWrite = r.canWrite !== false;
   trSetSum();
   if (S.tr.mode === 'view' && S.tr.id) { try { S.tr.rep = await api('getTrainReport', S.token, S.tr.id); } catch (e) { S.tr.mode = 'list'; S.tr.id = null; } }
 }
 function trSetSum() {
   const L = S.trs || [];
-  S.trSum = { todo: L.filter(r => r.todo).length, draft: L.filter(r => r.owner && (r.status === 'draft' || r.status === 'returned')).length, count: L.length };
+  S.trSum = { todo: L.filter(r => r.todo).length, draft: L.filter(r => r.owner && (r.status === 'draft' || r.status === 'returned')).length, count: L.length, signOnly: !!(S.trSum && S.trSum.signOnly) || S.trCanWrite === false };
   refreshCounts();
 }
 function renderTr() {
@@ -4407,7 +4412,7 @@ function trListHtml() {
     <div class="grow"></div>
     ${A ? `<button class="btn btn-light" data-action="trCfg"><span class="msr">settings</span>ผู้ลงนามฝ่าย HR</button>
       <button class="btn btn-light" data-action="trFolder" title="โฟลเดอร์สำรองใน Google Drive"><span class="msr">folder_open</span>โฟลเดอร์สำรอง</button>` : ''}
-    <button class="btn btn-primary" data-action="trNew"><span class="msr">edit_document</span>เขียนรายงานใหม่</button>
+    ${S.trCanWrite === false ? '' : `<button class="btn btn-primary" data-action="trNew"><span class="msr">edit_document</span>เขียนรายงานใหม่</button>`}
   </div>
   <div class="toolbar">
     <div class="search"><span class="msr">search</span><input id="trQ" placeholder="ค้นหาเรื่อง ชื่อผู้รายงาน ฝ่าย สถานที่ เลขที่รับ..." value="${esc(f.q)}"></div>
@@ -4435,12 +4440,12 @@ function trDefaults() {
     kind: 'train', fund: 'hosp', applyHow: ['share'], province: '' };
 }
 function trNew() {
-  S.tr = Object.assign(S.tr, { mode: 'edit', id: null, rep: null, data: trDefaults(), photos: [] });
+  S.tr = Object.assign(S.tr, { mode: 'edit', id: null, rep: null, data: trDefaults(), photos: [], files: [] });
   if (S.page !== 'trreport') return go('trreport');
   render(); window.scrollTo(0, 0);
 }
 function trEditOpen(rep) {
-  S.tr = Object.assign(S.tr, { mode: 'edit', id: rep.id, rep: rep, data: JSON.parse(JSON.stringify(rep.data || {})), photos: (rep.photos || []).map(p => Object.assign({}, p)) });
+  S.tr = Object.assign(S.tr, { mode: 'edit', id: rep.id, rep: rep, data: JSON.parse(JSON.stringify(rep.data || {})), photos: (rep.photos || []).map(p => Object.assign({}, p)), files: (rep.files || []).map(f => Object.assign({}, f)) });
   render(); window.scrollTo(0, 0);
 }
 function trIn(k, label, o) {
@@ -4516,6 +4521,7 @@ function trEditHtml() {
         ${ph.length < TR_MAXPH ? `<label class="tr-ph tr-ph-add" for="trPhFile"><span class="msr">add_photo_alternate</span><b>เพิ่มรูปภาพ</b><small>JPG / PNG · เลือกได้หลายรูป · ระบบย่อขนาดให้</small></label>` : ''}
       </div><input type="file" id="trPhFile" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple hidden>
       <p class="small tr-ph-warn"><span class="msr" style="font-size:16px;vertical-align:-3px">privacy_tip</span> <b>ห้ามแนบรูปที่เห็นหน้าผู้ป่วย ชื่อ HN หรือเอกสารของผู้ป่วย</b> และรูปบุคคลอื่นควรได้รับความยินยอมก่อน</p><p class="small muted" style="margin:8px 0 0">รูปเก็บในโฟลเดอร์ Google Drive ของระบบ (จำกัดสิทธิ์) · ผู้ที่เห็นรูปได้: ท่าน ผู้ลงนามในสายงาน และเจ้าหน้าที่ฝ่ายทรัพยากรบุคคล · ระบบบันทึกร่างให้ก่อนแนบรูปแรก</p>`)}
+  ${trAttEditHtml()}
   </form>
   <div class="req-actions">
     <button class="btn btn-light" data-action="trCancel">ยกเลิก</button>
@@ -4537,7 +4543,7 @@ function trRead() {
   $$('input[name],textarea[name]', f).forEach(el => {
     const n = el.name;
     if (n.indexOf('cap.') === 0) { const p = S.tr.photos[Number(n.slice(4))]; if (p) p.caption = el.value; return; }
-    if (/^d[SE]\.[0-9]+$/.test(n)) return;
+    if (/^(d[SE]|l[TU])\.[0-9]+$/.test(n)) return;
     if (n === 'applyHow') return;
     if (el.type === 'radio') { if (el.checked) d[n] = el.value; return; }
     d[n] = el.value;
@@ -4547,6 +4553,8 @@ function trRead() {
   if (rows.length) d.dates = rows.map(x => { const i = x.name.slice(3), e = $(`input[name="dE.${i}"]`, f); return { s: x.value, e: e ? e.value : '' }; });
   const rg = (d.dates || []).filter(x => x.s || x.e).map(x => ({ s: x.s || x.e, e: x.e || x.s })).sort((a, b) => (a.s < b.s ? -1 : 1));
   d.startDate = rg.length ? rg[0].s : ''; d.endDate = rg.reduce((m, x) => (x.e > m ? x.e : m), '');
+  const lk = $$('input[name^="lU."]', f);
+  if (lk.length || $('.tr-links', f)) d.links = lk.map(x => { const i = x.name.slice(3), t = $(`input[name="lT.${i}"]`, f); return { title: t ? t.value.trim() : '', url: x.value.trim() }; });
   delete d.ceHours; delete d.applyBy;
 }
 function trCostTotal(d) { return ['costReg', 'costStay', 'costTravel', 'costAllow', 'costOther'].reduce((s, k) => s + (Number(String(d[k] || '').replace(/[,\s]/g, '')) || 0), 0); }
@@ -4570,20 +4578,24 @@ function trMissing() {
   const rg = trRanges(d).filter(x => x.s || x.e);
   if (!rg.length) { miss.push('วันที่เข้าร่วม'); const el = $('#trForm [name="dS.0"]'); if (el) el.classList.add('req-field-err'); }
   trRanges(d).forEach((x, i) => { if (x.s && x.e && x.e < x.s) { miss.push('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม (ช่วงที่ ' + (i + 1) + ')'); const el = $(`#trForm [name="dE.${i}"]`); if (el) el.classList.add('req-field-err'); } });
+  trLinks(d).forEach((x, i) => { if ((x.url || x.title) && !/^https?:\/\/[^\s<>"'`]+$/i.test(x.url)) { miss.push('ลิงก์เอกสารแนบที่ ' + (i + 1) + ' ต้องขึ้นต้นด้วย https://'); const el = $(`#trForm [name="lU.${i}"]`); if (el) el.classList.add('req-field-err'); } });
   if (d.days && !/^[0-9]{1,3}(\.[0-9])?$/.test(String(d.days).trim())) { miss.push('จำนวนวันรวมต้องเป็นตัวเลข'); const el = $('#trForm [name=days]'); if (el) el.classList.add('req-field-err'); }
   return miss;
 }
-function trPayload() { return { id: S.tr.id || undefined, data: S.tr.data, photos: S.tr.photos.map(p => ({ fileId: p.fileId, caption: p.caption || '' })) }; }
+function trPayload() { return { id: S.tr.id || undefined, data: S.tr.data, photos: S.tr.photos.map(p => ({ fileId: p.fileId, caption: p.caption || '' })), files: (S.tr.files || []).map(f => ({ fileId: f.fileId })) }; }
 /** บันทึกร่าง (silent = ไม่แจ้ง ใช้ก่อนแนบรูป / ก่อนส่ง) */
 async function trSave(silent) {
   trRead();
   const d = S.tr.data;
   if (trRanges(d).some(x => x.s && x.e && x.e < x.s)) { toast('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม', 'err'); return null; }
+  const badL = trLinks(d).findIndex(x => (x.url || x.title) && !/^https?:\/\/[^\s<>"'`]+$/i.test(x.url));
+  if (badL > -1) { toast('ลิงก์เอกสารแนบที่ ' + (badL + 1) + ' ต้องขึ้นต้นด้วย http:// หรือ https://', 'err'); const el = $(`#trForm [name="lU.${badL}"]`); if (el) { el.classList.add('req-field-err'); el.focus(); } return null; }
   loader(true);
   try {
     const rep = await api('saveTrainReport', S.token, trPayload());
     S.tr.id = rep.id; S.tr.rep = rep;
     S.tr.photos = (rep.photos || []).map(p => Object.assign({}, p));
+    S.tr.files = (rep.files || []).map(f => Object.assign({}, f));
     const i = S.trs.findIndex(x => x.id === rep.id); if (i > -1) S.trs[i] = rep; else S.trs.unshift(rep);
     trSetSum();
     if (!silent) toast('บันทึกร่างแล้ว');
@@ -4654,6 +4666,70 @@ async function trFrom008() {
   });
 }
 
+/* ---------- เอกสารแนบรายงานผลเพิ่มเติม (ลิงก์ / PDF) — build 2569-11-25.3 ---------- */
+const TR_MAXLK = 5, TR_MAXF = 5, TR_FMB = 10;
+function trLinks(d) { return Array.isArray((d || {}).links) ? d.links : []; }
+function trFmtSize(n) { n = Number(n) || 0; return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function trAttEditHtml() {
+  const L = trLinks(S.tr.data), F = S.tr.files || [];
+  return pfSec('attach_file', `ส่วนที่ 5 เอกสารแนบรายงานผลเพิ่มเติม (ถ้ามี)`, `
+    <p class="small muted" style="margin-top:0">เช่น สไลด์ที่นำเสนอ เอกสารประกอบการอบรม ประกาศนียบัตร · แนบเป็น <b>ลิงก์</b> (Google Drive, OneDrive, เว็บไซต์) ได้ ${TR_MAXLK} รายการ หรือ <b>ไฟล์ PDF</b> ได้ ${TR_MAXF} ไฟล์ (ไม่เกิน ${TR_FMB} MB ต่อไฟล์)</p>
+    <h4 class="tr-h">ลิงก์</h4>
+    <div class="tr-links">${L.map((x, i) => `<div class="tr-link">
+        <input class="input" name="lT.${i}" value="${esc(x.title || '')}" maxlength="150" placeholder="ชื่อเอกสาร เช่น สไลด์การบรรยาย">
+        <input class="input" name="lU.${i}" value="${esc(x.url || '')}" maxlength="500" placeholder="https://..." inputmode="url">
+        <button type="button" class="icon-btn danger" data-action="trLinkDel" data-i="${i}" title="นำลิงก์ออก"><span class="msr">delete</span></button></div>`).join('')}</div>
+    ${L.length < TR_MAXLK ? `<button type="button" class="btn btn-light btn-sm" data-action="trLinkAdd"><span class="msr">add_link</span>เพิ่มลิงก์</button>` : ''}
+    <small class="hint">ตรวจให้แน่ใจว่าผู้ลงนามเปิดลิงก์ได้ (ตั้งค่าแชร์ให้ผู้ที่มีลิงก์ในโรงพยาบาลดูได้)</small>
+    <h4 class="tr-h" style="margin-top:14px">ไฟล์ PDF</h4>
+    <div class="tr-files">${F.map((f, i) => `<div class="tr-file"><span class="msr">picture_as_pdf</span><span class="grow">${esc(f.name)}<small class="muted"> · ${trFmtSize(f.size)}</small></span>
+        <button type="button" class="icon-btn danger" data-action="trFileDel" data-i="${i}" title="นำไฟล์ออก"><span class="msr">delete</span></button></div>`).join('')}</div>
+    ${F.length < TR_MAXF ? `<label class="btn btn-light btn-sm" for="trPdfFile"><span class="msr">upload_file</span>แนบไฟล์ PDF</label><input type="file" id="trPdfFile" accept="application/pdf,.pdf" multiple hidden>` : ''}
+    <p class="small tr-ph-warn"><span class="msr" style="font-size:16px;vertical-align:-3px">privacy_tip</span> <b>ห้ามแนบเอกสารที่มีข้อมูลผู้ป่วย</b> หรือข้อมูลส่วนบุคคลของผู้อื่น · ไฟล์เก็บในโฟลเดอร์ Google Drive ของระบบ (จำกัดสิทธิ์)</p>`);
+}
+function trAttViewHtml(r) {
+  const L = trLinks(r.data), F = r.files || [];
+  if (!L.length && !F.length) return '';
+  return pfSec('attach_file', 'เอกสารแนบรายงานผลเพิ่มเติม (' + (L.length + F.length) + ')', `<div class="tr-files">
+    ${L.map(x => `<a class="tr-file" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer"><span class="msr">link</span><span class="grow">${esc(x.title || x.url)}<small class="muted" style="display:block;word-break:break-all">${esc(x.url)}</small></span><span class="msr">open_in_new</span></a>`).join('')}
+    ${F.map(f => `<button type="button" class="tr-file" data-action="trFileView" data-f="${esc(f.fileId)}"><span class="msr">picture_as_pdf</span><span class="grow">${esc(f.name)}<small class="muted"> · ${trFmtSize(f.size)}</small></span><span class="msr">open_in_new</span></button>`).join('')}</div>`);
+}
+async function trAddPdfs(files) {
+  files = Array.from(files || []);
+  const bad = files.filter(f => !(/\.pdf$/i.test(f.name) || f.type === 'application/pdf'));
+  if (bad.length) toast('แนบได้เฉพาะไฟล์ PDF (ข้าม ' + bad.length + ' ไฟล์) — ไฟล์ชนิดอื่นให้แนบเป็นลิงก์', 'err');
+  files = files.filter(f => bad.indexOf(f) < 0);
+  const big = files.filter(f => f.size > TR_FMB * 1048576);
+  if (big.length) toast('ไฟล์ใหญ่เกิน ' + TR_FMB + ' MB: ' + big.map(f => f.name).join(', ') + ' — กรุณาย่อไฟล์ หรือแนบเป็นลิงก์แทน', 'err');
+  files = files.filter(f => big.indexOf(f) < 0);
+  if (!files.length) return;
+  const room = TR_MAXF - (S.tr.files || []).length;
+  if (room <= 0) return toast('แนบไฟล์ PDF ได้สูงสุด ' + TR_MAXF + ' ไฟล์', 'err');
+  if (files.length > room) toast('แนบได้อีก ' + room + ' ไฟล์ ระบบจะใช้ ' + room + ' ไฟล์แรก', 'info');
+  if (!(await trSave(true))) return;
+  loader(true);
+  try {
+    for (const f of files.slice(0, room)) {
+      const rep = await api('trUploadFile', S.token, S.tr.id, { name: f.name, data: await fileToBase64(f) });
+      S.tr.files = (rep.files || []).map(x => Object.assign({}, x)); S.tr.rep = rep;
+    }
+    toast('แนบไฟล์แล้ว');
+  } catch (e) { toast(e.message, 'err'); } finally { loader(false); render(); }
+}
+async function trFileView(fileId) {
+  const w = window.open('', '_blank');
+  loader(true);
+  try {
+    const f = await api('trAttach', S.token, S.tr.rep.id, fileId);
+    const bin = atob(f.data), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' }));
+    if (w && !w.closed) w.location.href = url;
+    else { const a = document.createElement('a'); a.href = url; a.download = f.name || 'เอกสารแนบ.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  } catch (e) { if (w && !w.closed) w.close(); toast(e.message, 'err'); } finally { loader(false); }
+}
+
 /* ---------- ช่องผู้ลงนาม: รหัสบุคลากร + ค้นชื่อ ---------- */
 function trPersonHtml(pre, p, title) {
   p = p || {};
@@ -4662,14 +4738,18 @@ function trPersonHtml(pre, p, title) {
         <input class="input" id="f_${pre}Emp" value="${esc(p.emp || '')}" inputmode="numeric" maxlength="7" placeholder="7 หลัก">
         <button type="button" class="btn btn-light btn-sm" data-action="trLookup" data-p="${pre}" title="ค้นชื่อจากรหัส"><span class="msr">person_search</span></button></div></label>
       <label class="field"><span>ชื่อ-สกุล <span class="req">*</span></span><input class="input" id="f_${pre}Name" value="${esc(p.name || '')}" maxlength="100"></label>
-      <label class="field c2"><span>ตำแหน่ง (พิมพ์ในแบบฟอร์ม)</span><input class="input" id="f_${pre}Pos" value="${esc(p.pos || '')}" maxlength="150" placeholder="เช่น หัวหน้างาน / หัวหน้าฝ่าย / รักษาการในตำแหน่ง..."></label></div>
+      <label class="field c2"><span>ตำแหน่ง (พิมพ์ในแบบฟอร์ม)</span><input class="input" id="f_${pre}Pos" value="${esc(p.pos || '')}" maxlength="150" placeholder="เช่น หัวหน้างาน / หัวหน้าฝ่าย / รักษาการในตำแหน่ง..."></label>
+      <label class="field c2"><span>อีเมลแจ้งเตือน${p.hasEmail ? ' <small class="muted">(ระบุไว้แล้ว)</small>' : ''}</span><input class="input" id="f_${pre}Mail" type="email" value="${esc(p.email || '')}" maxlength="120" placeholder="${p.hasEmail ? 'เว้นว่าง = ใช้อีเมลเดิม' : 'ถ้าทราบ (ไม่บังคับ)'}" inputmode="email" autocomplete="off">
+        <small class="hint">ระบบส่งอีเมลแจ้งให้ลงนาม · ถ้ามีอีเมลในระบบ HRD Center อยู่แล้ว ไม่ต้องกรอก</small></label></div>
     <small class="hint tr-person-msg" id="f_${pre}Msg"></small></div>`;
 }
-function trPersonRead(pre) { return { emp: ($('#f_' + pre + 'Emp') || {}).value || '', name: ($('#f_' + pre + 'Name') || {}).value || '', pos: ($('#f_' + pre + 'Pos') || {}).value || '' }; }
+function trPersonRead(pre) { return { emp: ($('#f_' + pre + 'Emp') || {}).value || '', name: ($('#f_' + pre + 'Name') || {}).value || '', pos: ($('#f_' + pre + 'Pos') || {}).value || '', email: (($('#f_' + pre + 'Mail') || {}).value || '').trim() }; }
+const TR_MAIL = /^[^@\s<>"']+@[^@\s<>"']+\.[^@\s<>"']+$/;
 function trPersonCheck(pre, label) {
   const p = trPersonRead(pre);
   if (!/^[0-9]{7}$/.test(p.emp.trim())) { toast('กรุณาระบุรหัสบุคลากร 7 หลักของ' + label, 'err'); return null; }
   if (!p.name.trim()) { toast('กรุณาระบุชื่อ-สกุลของ' + label + ' (กดปุ่มค้นหาหลังกรอกรหัส)', 'err'); return null; }
+  if (p.email && !TR_MAIL.test(p.email)) { toast('อีเมลของ' + label + 'ไม่ถูกต้อง', 'err'); const i = $('#f_' + pre + 'Mail'); if (i) i.focus(); return null; }
   return p;
 }
 async function trLookup(pre) {
@@ -4682,7 +4762,7 @@ async function trLookup(pre) {
       $('#f_' + pre + 'Name').value = r.fullName || '';
       if (!$('#f_' + pre + 'Pos').value) $('#f_' + pre + 'Pos').value = r.position || '';
       if (pre === 'sup' || pre === 'up' || pre === 'hrh') trToAuto($('#f_' + pre + 'Pos').value || r.fullName);
-      if (msg) msg.textContent = r.hasAccount ? 'พบในระบบ HRD Center — ระบบแจ้งเตือนทางอีเมล (ถ้ามี) และแสดงในงานของท่านผู้นี้' : 'พบใน HR Connect — ท่านผู้นี้จะเห็นรายงานเมื่อเข้าสู่ระบบ HRD Center';
+      if (msg) msg.textContent = r.hasAccount ? (r.hasEmail ? 'พบในระบบ HRD Center และมีอีเมลแล้ว — ระบบส่งอีเมลแจ้งให้ลงนาม และแสดงในงานของท่านผู้นี้' : 'พบในระบบ HRD Center แต่ยังไม่มีอีเมล — กรอกอีเมลด้านบนเพื่อให้ระบบแจ้งเตือนได้') : 'พบใน HR Connect — ท่านผู้นี้จะเห็นรายงานเมื่อเข้าสู่ระบบ HRD Center';
     } else if (msg) msg.textContent = 'ยังไม่พบในระบบ (ยังไม่เคยเข้า HRD Center) — พิมพ์ชื่อและตำแหน่งเองได้ ท่านผู้นี้จะเห็นรายงานเมื่อเข้าสู่ระบบด้วย HR Connect';
   } catch (e) { if (msg) msg.textContent = 'ค้นหาไม่ได้: ' + e.message + ' — พิมพ์ชื่อเองได้'; }
 }
@@ -4701,7 +4781,7 @@ async function trSubmit() {
         <label class="check-field" for="f_trAck" style="margin:10px 0 12px"><input type="checkbox" id="f_trAck" required><span><b>ข้าพเจ้าขอรับรองว่าข้อมูลในรายงานนี้เป็นความจริง</b><small class="hint">เมื่อส่งแล้วแก้ไขไม่ได้ จนกว่าจะดึงกลับ (ก่อนผู้บังคับบัญชาลงนาม) หรือถูกส่งกลับ</small></span></label>
         ${fieldHtml({ k: 'trPw', label: pwLabel(), type: 'password', req: true, auto: 'current-password' }, '')}</form>`,
     onOpen: () => {
-      $$('[data-trpick]').forEach(b => b.addEventListener('click', () => { const s = prev[Number(b.dataset.trpick)]; $('#f_supEmp').value = s.emp; $('#f_supName').value = s.name; $('#f_supPos').value = s.pos || ''; trToAuto(s.pos || s.name); }));
+      $$('[data-trpick]').forEach(b => b.addEventListener('click', () => { const s = prev[Number(b.dataset.trpick)]; $('#f_supEmp').value = s.emp; $('#f_supName').value = s.name; $('#f_supPos').value = s.pos || ''; $('#f_supMail').value = s.email || ''; trToAuto(s.pos || s.name); }));
       trPwEnter();
     },
     validate: () => { if (!trPersonCheck('sup', 'ผู้บังคับบัญชา')) return false; if (!$('#f_trAck').checked) { toast('กรุณาติ๊กรับรองความถูกต้องของรายงาน', 'err'); return false; } },
@@ -4736,7 +4816,7 @@ function trViewHtml() {
     const g = s.sign, cur = !g && r.cur && s.name === r.cur.name;
     return `<div class="tr-step ${g ? 'ok' : cur ? 'cur' : ''}"><div class="tr-dot"><span class="msr">${g ? 'check' : cur ? 'hourglass_top' : 'more_horiz'}</span></div>
       <div><b>${esc(lab)}</b> · ${esc(g ? g.name : s.name)}<small>${esc(s.pos || '')}</small>
-      ${g ? `<small>ลงนามอิเล็กทรอนิกส์ ${esc(fmtDate(g.at, true))}</small>${g.to ? `<small>เรียน ${esc(g.to)}</small>` : ''}${s.role !== 'rep' ? `<div class="tr-cm">${trTxt(g.comment)}</div>` : ''}` : `<small>${cur ? 'รอลงนาม' : 'ยังไม่ถึงขั้น'}</small>`}</div></div>`;
+      ${cur && s.mail ? trMailHtml(s.mail) : ''}${g ? `<small>ลงนามอิเล็กทรอนิกส์ ${esc(fmtDate(g.at, true))}</small>${g.to ? `<small>เรียน ${esc(g.to)}</small>` : ''}${s.role !== 'rep' ? `<div class="tr-cm">${trTxt(g.comment)}</div>` : ''}` : `<small>${cur ? 'รอลงนาม' : 'ยังไม่ถึงขั้น'}</small>`}</div></div>`;
   }).join('') + (r.status === 'hr' ? `<div class="tr-step cur"><div class="tr-dot"><span class="msr">hourglass_top</span></div><div><b>${TR_ROLEL.hro}</b><small>รอรับเรื่อง</small></div></div>` : '');
   const acts = [];
   acts.push(`<button class="btn btn-light" data-action="trBack"><span class="msr">arrow_back</span>กลับ</button>`);
@@ -4767,10 +4847,15 @@ function trViewHtml() {
 <h4 class="tr-h">ปัญหา อุปสรรค และข้อเสนอแนะ</h4><p>${trTxt(d.problems)}</p>`)}
         ${(r.photos || []).length ? pfSec('photo_library', 'ภาพประกอบ (' + r.photos.length + ' รูป)', `<div class="tr-photos">${r.photos.map((p, i) => `<button type="button" class="tr-ph tr-ph-v" data-action="trPhView" data-f="${esc(p.fileId)}">
             <div class="tr-ph-img">${p.thumb ? `<img src="${esc(p.thumb)}" alt="">` : '<span class="msr">image</span>'}<span class="tr-ph-n">ภาพที่ ${i + 1}</span></div><small>${esc(p.caption || '')}</small></button>`).join('')}</div>`) : ''}
+        ${trAttViewHtml(r)}
       </div>
       <div>${pfSec('account_tree', 'ลำดับการลงนาม', chain.length ? `<div class="tr-steps">${steps}</div>` : '<p class="muted small">ยังไม่ได้ส่งลงนาม</p>')}
         ${r.docHash ? `<p class="small muted">รหัสยืนยันเอกสาร ${esc(r.docHash)}</p>` : ''}</div>
     </div>`;
+}
+function trMailHtml(m) {
+  return m.st === 'sent' ? `<span class="tr-mail ok"><span class="msr" style="font-size:14px;vertical-align:-2px">mark_email_read</span> แจ้งทางอีเมลแล้ว ${esc(fmtDate(m.at, true))}</span>`
+    : `<span class="tr-mail no"><span class="msr" style="font-size:14px;vertical-align:-2px">mail_lock</span> ${m.st === 'noemail' ? 'ไม่มีอีเมลของท่านผู้นี้ — กรุณาแจ้งให้เข้ามาลงนามในระบบ' : m.st === 'quota' ? 'ส่งอีเมลไม่ได้ (โควตาอีเมลวันนี้หมด) — กรุณาแจ้งท่านผู้นี้เอง' : 'ส่งอีเมลไม่สำเร็จ — กรุณาแจ้งท่านผู้นี้เอง'}</span>`;
 }
 /** ช่อง "เรียน …" — เติมจากตำแหน่งผู้รับคนถัดไปจนกว่าผู้ใช้จะพิมพ์เอง */
 function trToHtml(v, hint) {
@@ -4854,23 +4939,37 @@ async function trPrint(id, auto) {
   try {
     loader(true);
     const doc = await api('trPrintDoc', S.token, id);
+    let font = null; try { font = fmDetectFont(); } catch (e) { /* ไม่มี canvas = ใช้ Sarabun ย่อขนาดเหมือนแบบฟอร์มอื่น */ }
+    const css = trDocCss(doc.css, font), k = css.k;
     const fontUrl = 'https:' + '/' + '/fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap';
     const SC = 'scr' + 'ipt';
-    const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + fmEsc(doc.title) + '</title><style>' + doc.css +
+    const html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>' + fmEsc(doc.title) + '</title><style>' + css.css +
       '.bar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;background:#0b2545;color:#fff;padding:8px 14px;font:14px Tahoma,sans-serif}' +
       '.bar span{flex:1}.bar button{font:14px Tahoma,sans-serif;padding:6px 14px;border-radius:6px;border:0;cursor:pointer}.bar .pr{background:#14b8a6;color:#fff}' +
       '@media screen{body{background:#e5e7eb}.doc{background:#fff;max-width:210mm;margin:16px auto;padding:18mm 18mm 16mm 22mm;box-shadow:0 2px 12px rgba(0,0,0,.15)}}' +
       '@media print{.bar{display:none}}.hd h1 .t1{white-space:nowrap}</style></head><body>' +
-      '<div class="bar"><span>' + (doc.done ? 'รายงานผลการพัฒนา · ลงนามครบแล้ว' : 'ตัวอย่างเอกสาร (ยังลงนามไม่ครบ)') + ' · กระดาษ A4 · ขนาด 100% (ปิด "ส่วนหัวและส่วนท้าย")</span>' +
+      '<div class="bar"><span>' + (doc.done ? 'รายงานผลการพัฒนา · ลงนามครบแล้ว' : 'ตัวอย่างก่อนพิมพ์ — เหมือนฉบับจริงทุกอย่าง ต่างเพียงลายน้ำ "ฉบับร่าง"') + ' · กระดาษ A4 · ขนาด 100% (ปิด "ส่วนหัวและส่วนท้าย")</span>' +
       '<button class="pr" onclick="window.print()">🖨 พิมพ์ / บันทึกเป็น PDF</button><button onclick="window.close()">ปิด</button></div>' + doc.body +
       '<' + SC + '>(function(){var auto=' + (auto ? 'true' : 'false') + ',done=false;function fin(){if(done)return;done=true;' +
       'var q=document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve();q.then(function(){fit();if(auto)setTimeout(function(){window.print()},400)})}' +
-      'function fit(){var h=document.querySelector(".hd h1");if(!h)return;var w=h.clientWidth,s=16;h.style.fontSize=s+"pt";' +
-      'while(s>11&&Array.prototype.some.call(h.querySelectorAll(".t1"),function(x){return x.scrollWidth>w+1})){s-=0.5;h.style.fontSize=s+"pt"}}' +
+      'function fit(){var h=document.querySelector(".hd h1");if(!h)return;var k=' + k + ',w=h.clientWidth,s=16;h.style.fontSize=(s*k)+"pt";' +
+      'while(s>11&&Array.prototype.some.call(h.querySelectorAll(".t1"),function(x){return x.scrollWidth>w+1})){s-=0.5;h.style.fontSize=(s*k)+"pt"}}' +
       'var l=document.createElement("link");l.rel="stylesheet";l.href="' + fontUrl + '";l.onload=fin;l.onerror=fin;document.head.appendChild(l);setTimeout(fin,3500)})();</' + SC + '></body></html>';
     if (w && !w.closed) { w.document.open(); w.document.write(html); w.document.close(); w.focus(); return; }
     toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้', 'err');
   } catch (e) { if (w && !w.closed) w.close(); toast(e.message, 'err'); } finally { loader(false); }
+}
+/** ฟอนต์เอกสารให้เหมือนแบบฟอร์มอื่นในระบบ: เครื่องที่มี TH Sarabun ใช้ตามจริง
+ *  เครื่องที่ไม่มี ใช้ Sarabun ย่อขนาดตัวอักษร × 0.64 (ระยะบรรทัดคงเดิม) ให้ตัดบรรทัด/แบ่งหน้าเท่ากัน */
+function trDocCss(css, font) {
+  const k = font && font.family !== 'Sarabun' ? 1 : 0.64;
+  let out = String(css || '');
+  if (k !== 1) {
+    out = out.replace(/font-size:([0-9.]+)pt/g, (m, v) => 'font-size:' + (+(v * k).toFixed(2)) + 'pt')
+      .replace(/line-height:([0-9.]+)(?=[;}])/g, (m, v) => 'line-height:' + (+(v / k).toFixed(3)))
+      .replace(/font-family:"TH Sarabun New","TH SarabunPSK","Sarabun"/, 'font-family:"Sarabun"');
+  } else if (font && font.family) out = out.replace(/font-family:"TH Sarabun New"/, 'font-family:"' + font.family + '","TH Sarabun New"');
+  return { css: out, k };
 }
 async function trPhView(fileId) {
   loader(true);
@@ -4914,6 +5013,12 @@ async function trAction(a, d, el) {
     case 'trPhUp': { trRead(); const i = Number(d.i), p = S.tr.photos; [p[i - 1], p[i]] = [p[i], p[i - 1]]; render(); return; }
     case 'trPhView': return trPhView(d.f);
     case 'trLookup': return trLookup(d.p);
+    case 'trLinkAdd': { trRead(); const L = trLinks(S.tr.data).slice(); if (L.length >= TR_MAXLK) return; L.push({ title: '', url: '' }); S.tr.data.links = L; render(); const el = $(`#trForm [name="lT.${L.length - 1}"]`); if (el) el.focus(); return; }
+    case 'trLinkDel': { trRead(); const L = trLinks(S.tr.data).slice(); L.splice(Number(d.i), 1); S.tr.data.links = L; render(); return; }
+    case 'trFileDel': { trRead(); const i = Number(d.i), f = (S.tr.files || [])[i]; if (!f) return;
+      if (!(await ask({ tone: 'danger', icon: 'delete', title: 'นำไฟล์ "' + f.name + '" ออก?', message: 'ไฟล์จะถูกย้ายไปถังขยะเมื่อกด "บันทึกร่าง" หรือส่งลงนาม', okText: 'นำออก' }))) return;
+      S.tr.files.splice(i, 1); render(); return; }
+    case 'trFileView': return trFileView(d.f);
     case 'trSign': return trSign();
     case 'trReceive': return trReceive();
     case 'trReturn': return trReturn();
@@ -4944,6 +5049,7 @@ document.addEventListener('change', e => {
   if (e.target.id === 'trSt') { S.tr.st = e.target.value; return render(); }
   if (e.target.id === 'trFy') { S.tr.fy = e.target.value; return render(); }
   if (e.target.id === 'trPhFile') { const fs = e.target.files; trAddPhotos(fs); e.target.value = ''; return; }
+  if (e.target.id === 'trPdfFile') { trRead(); const fs = Array.from(e.target.files || []); e.target.value = ''; trAddPdfs(fs); return; }
   if (n === 'trNext') { const b = $('#trUpBox'); if (b) b.classList.toggle('hidden', e.target.value === 'hr');
     trToAuto(e.target.value === 'hr' ? 'ฝ่ายทรัพยากรบุคคล' : (($('#f_upPos') || {}).value || ($('#f_upName') || {}).value || '')); return; }
   if (e.target.closest && e.target.closest('#trForm')) trRefresh();
